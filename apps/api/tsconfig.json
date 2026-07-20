@@ -1,0 +1,12 @@
+{
+	"extends": "@korapay/typescript-config/nestjs.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"baseUrl": "./",
+		"paths": {
+			"@/*": ["./src/*"]
+		}
+	},
+	"include": ["src", "prisma"],
+	"exclude": ["node_modules", "dist"]
+}

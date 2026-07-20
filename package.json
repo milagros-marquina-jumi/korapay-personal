@@ -1,0 +1,36 @@
+{
+	"name": "korapay",
+	"private": true,
+	"packageManager": "pnpm@10.28.2",
+	"scripts": {
+		"dev": "turbo dev",
+		"build": "turbo build",
+		"lint": "turbo lint",
+		"typecheck": "turbo typecheck",
+		"test": "turbo test",
+		"clean": "turbo clean",
+		"format": "biome format --write .",
+		"fix": "biome check --write --unsafe .",
+		"db:generate": "pnpm --filter @korapay/api db:generate",
+		"db:push": "pnpm --filter @korapay/api db:push",
+		"db:migrate": "pnpm --filter @korapay/api db:migrate",
+		"db:seed": "pnpm --filter @korapay/api db:seed",
+		"db:studio": "pnpm --filter @korapay/api db:studio",
+		"api:openapi": "pnpm --filter @korapay/api openapi",
+		"api:client": "pnpm --filter @korapay/api-client generate",
+		"api:client:check": "pnpm api:openapi && pnpm api:client && git diff --exit-code -- packages/api-client/src/",
+		"docker:up": "docker compose -f docker/docker-compose.dev.yml up -d",
+		"docker:down": "docker compose -f docker/docker-compose.dev.yml down",
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.13",
+		"husky": "^9.1.7",
+		"prisma": "6.19.3",
+		"turbo": "^2.5.0",
+		"typescript": "^5.8.3"
+	},
+	"dependencies": {
+		"@prisma/client": "6.19.3"
+	}
+}

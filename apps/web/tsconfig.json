@@ -1,0 +1,20 @@
+{
+	"extends": "@korapay/typescript-config/nextjs.json",
+	"compilerOptions": {
+		"plugins": [
+			{
+				"name": "next"
+			}
+		],
+		"paths": {
+			"@/*": ["./src/*"],
+			"@korapay/domain": ["../../packages/domain/src/index.ts"],
+			"@korapay/ui/*": ["../../packages/ui/src/*"]
+		},
+		"allowJs": true,
+		"noEmit": true,
+		"jsx": "preserve"
+	},
+	"include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+	"exclude": ["node_modules"]
+}

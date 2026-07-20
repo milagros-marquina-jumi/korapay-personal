@@ -1,0 +1,737 @@
+// ============================================================
+// KoraPay — Prisma Schema
+// PostgreSQL via Supabase
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// Auth & Users
+// ============================================================
+
+model Profile {
+  id        String   @id @default(uuid())
+  authId    String   @unique @map("auth_id")
+  name      String
+  email     String   @unique
+  avatarUrl String?  @map("avatar_url")
+  currency  String   @default("PEN")
+  theme     String   @default("system")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  memberships WorkspaceMember[]
+  auditLogs   AuditLog[]
+  notifications Notification[]
+  calendarEvents CalendarEvent[]
+
+  @@map("profiles")
+}
+
+// ============================================================
+// Workspaces (Bolsillitos)
+// ============================================================
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   @default("PERSONAL")
+  description String?
+  emoji       String   @default("💰")
+  color       String?
+  currency    String   @default("PEN")
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  members          WorkspaceMember[]
+  transactions     Transaction[]
+  accounts         Account[]
+  categories       Category[]
+  people           Person[]
+  companies        Company[]
+  clients          Client[]
+  projects         Project[]
+  applications     Application[]
+  pendingItems     PendingItem[]
+  debts            Debt[]
+  savingGoals      SavingGoal[]
+  contracts        EmploymentContract[]
+  subscriptions    Subscription[]
+  talentProfiles   TalentProfile[]
+  taxObligations   TaxObligation[]
+  calendarEvents   CalendarEvent[]
+  importBatches    ImportBatch[]
+  auditLogs        AuditLog[]
+
+  @@index([status])
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  profileId   String   @map("profile_id")
+  role        String   @default("EDITOR")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, profileId])
+  @@index([profileId])
+  @@map("workspace_members")
+}
+
+// ============================================================
+// Catalogs
+// ============================================================
+
+model Currency {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  symbol    String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  exchangeRatesFrom ExchangeRate[] @relation("ExchangeRateFrom")
+  exchangeRatesTo   ExchangeRate[] @relation("ExchangeRateTo")
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id            String   @id @default(uuid())
+  fromCurrencyId String  @map("from_currency_id")
+  toCurrencyId   String  @map("to_currency_id")
+  rate           Decimal @db.Decimal(18, 6)
+  date           DateTime @db.Date
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  fromCurrency Currency @relation("ExchangeRateFrom", fields: [fromCurrencyId], references: [id])
+  toCurrency   Currency @relation("ExchangeRateTo", fields: [toCurrencyId], references: [id])
+
+  @@unique([fromCurrencyId, toCurrencyId, date])
+  @@map("exchange_rates")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  emoji       String?
+  color       String?
+  parentId    String?   @map("parent_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent     Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children   Category[] @relation("CategoryTree")
+  transactions Transaction[]
+
+  @@index([workspaceId])
+  @@map("categories")
+}
+
+model Bank {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  country   String   @default("PE")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("banks")
+}
+
+model Account {
+  id             String    @id @default(uuid())
+  workspaceId    String    @map("workspace_id")
+  name           String
+  bank           String
+  kind           String    @default("SAVINGS")
+  currency       String    @default("PEN")
+  lastFour       String?   @map("last_four")
+  holder         String?
+  initialBalance Decimal   @default(0) @map("initial_balance") @db.Decimal(18, 2)
+  color          String?
+  emoji          String?
+  status         String    @default("ACTIVE")
+  principal      Boolean   @default(false)
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions   Transaction[] @relation("TransactionAccount")
+  transferToTransactions   Transaction[] @relation("TransactionDestAccount")
+
+  @@index([workspaceId])
+  @@map("accounts")
+}
+
+model PaymentMethod {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("payment_methods")
+}
+
+model Person {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  email       String?
+  phone       String?
+  initials    String?
+  color       String?
+  role        String?
+  status      String    @default("ACTIVE")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("people")
+}
+
+model Company {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  ruc         String?
+  industry    String?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("companies")
+}
+
+model Client {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  company     String?
+  email       String?
+  phone       String?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("clients")
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  description String?
+  status      String    @default("ACTIVE")
+  color       String?
+  emoji       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+model Application {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  provider    String?
+  category    String?
+  url         String?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@index([workspaceId])
+  @@map("applications")
+}
+
+// ============================================================
+// Financial Core
+// ============================================================
+
+model Transaction {
+  id                String    @id @default(uuid())
+  workspaceId       String    @map("workspace_id")
+  type              String
+  concept           String
+  description       String?
+  date              DateTime  @db.Date
+  amountOriginal    Decimal   @map("amount_original") @db.Decimal(18, 2)
+  currency          String    @default("PEN")
+  exchangeRate      Decimal?  @map("exchange_rate") @db.Decimal(18, 6)
+  amountBase        Decimal   @map("amount_base") @db.Decimal(18, 2)
+  categoryId        String?   @map("category_id")
+  accountId         String?   @map("account_id")
+  destAccountId     String?   @map("dest_account_id")
+  status            String    @default("PAID")
+  paymentMethodId   String?   @map("payment_method_id")
+  personId          String?   @map("person_id")
+  companyId         String?   @map("company_id")
+  clientId          String?   @map("client_id")
+  projectId         String?   @map("project_id")
+  applicationId     String?   @map("application_id")
+  contractId        String?   @map("contract_id")
+  linkedTransactionId String? @map("linked_transaction_id")
+  recurrenceRuleId  String?   @map("recurrence_rule_id")
+  dueDate           DateTime? @map("due_date") @db.Date
+  paidDate          DateTime? @map("paid_date") @db.Date
+  isRecurring       Boolean   @default(false) @map("is_recurring")
+  notes             String?
+  receiptUrl        String?   @map("receipt_url")
+  tags              String[]
+  importBatchId     String?   @map("import_batch_id")
+  importRowHash     String?   @map("import_row_hash")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category           Category?       @relation(fields: [categoryId], references: [id])
+  account            Account?        @relation("TransactionAccount", fields: [accountId], references: [id])
+  destAccount        Account?        @relation("TransactionDestAccount", fields: [destAccountId], references: [id])
+  linkedTransaction  Transaction?    @relation("LinkedTransactions", fields: [linkedTransactionId], references: [id])
+  linkedFrom         Transaction[]   @relation("LinkedTransactions")
+  recurrenceRule     RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
+  splits             TransactionSplit[]
+
+  @@index([workspaceId, date])
+  @@index([workspaceId, type])
+  @@index([workspaceId, status])
+  @@index([workspaceId, personId])
+  @@index([workspaceId, companyId])
+  @@index([workspaceId, projectId])
+  @@index([importRowHash])
+  @@map("transactions")
+}
+
+model TransactionSplit {
+  id            String  @id @default(uuid())
+  transactionId String  @map("transaction_id")
+  personId      String? @map("person_id")
+  amount        Decimal @db.Decimal(18, 2)
+  percentage    Decimal? @db.Decimal(7, 4)
+  notes         String?
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("transaction_splits")
+}
+
+model RecurrenceRule {
+  id            String   @id @default(uuid())
+  frequency     String
+  interval      Int      @default(1)
+  endDate       DateTime? @map("end_date") @db.Date
+  endAfterCount Int?     @map("end_after_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  transactions Transaction[]
+
+  @@map("recurrence_rules")
+}
+
+// ============================================================
+// Pending Items
+// ============================================================
+
+model PendingItem {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  kind        String
+  personId    String?   @map("person_id")
+  concept     String
+  amount      Decimal   @db.Decimal(18, 2)
+  currency    String    @default("PEN")
+  dueDate     DateTime  @map("due_date") @db.Date
+  status      String    @default("PENDING")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, dueDate])
+  @@map("pending_items")
+}
+
+// ============================================================
+// Debts
+// ============================================================
+
+model Debt {
+  id              String       @id @default(uuid())
+  workspaceId     String       @map("workspace_id")
+  personId        String?      @map("person_id")
+  direction       String       @default("DEBO")
+  concept         String
+  originalAmount  Decimal      @map("original_amount") @db.Decimal(18, 2)
+  currency        String       @default("PEN")
+  interestRate    Decimal?     @map("interest_rate") @db.Decimal(7, 4)
+  dueDate         DateTime?    @map("due_date") @db.Date
+  status          String       @default("PENDING")
+  notes           String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  payments  DebtPayment[]
+
+  @@index([workspaceId, status])
+  @@map("debts")
+}
+
+model DebtPayment {
+  id          String   @id @default(uuid())
+  debtId      String   @map("debt_id")
+  amount      Decimal  @db.Decimal(18, 2)
+  date        DateTime @db.Date
+  method      String?
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  debt Debt @relation(fields: [debtId], references: [id], onDelete: Cascade)
+
+  @@map("debt_payments")
+}
+
+// ============================================================
+// Savings
+// ============================================================
+
+model SavingGoal {
+  id               String       @id @default(uuid())
+  workspaceId      String       @map("workspace_id")
+  name             String
+  targetAmount     Decimal      @map("target_amount") @db.Decimal(18, 2)
+  currency         String       @default("PEN")
+  targetDate       DateTime?    @map("target_date") @db.Date
+  monthlyRecommend Decimal?     @map("monthly_recommend") @db.Decimal(18, 2)
+  status           String       @default("ACTIVE")
+  notes            String?
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  deletedAt        DateTime?    @map("deleted_at")
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  entries   SavingEntry[]
+
+  @@index([workspaceId])
+  @@map("saving_goals")
+}
+
+model SavingEntry {
+  id           String   @id @default(uuid())
+  goalId       String   @map("goal_id")
+  amount       Decimal  @db.Decimal(18, 2)
+  type         String   @default("CONTRIBUTION")
+  date         DateTime @db.Date
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  goal SavingGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+
+  @@map("saving_entries")
+}
+
+// ============================================================
+// Professional / Business
+// ============================================================
+
+model EmploymentContract {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  companyId   String?   @map("company_id")
+  position    String?
+  type        String?
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  salary      Decimal?  @db.Decimal(18, 2)
+  currency    String    @default("PEN")
+  status      String    @default("ACTIVE")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("employment_contracts")
+}
+
+model Subscription {
+  id            String    @id @default(uuid())
+  workspaceId   String    @map("workspace_id")
+  applicationId String    @map("application_id")
+  plan          String?
+  amount        Decimal   @db.Decimal(18, 2)
+  currency      String    @default("PEN")
+  billingCycle  String?   @map("billing_cycle")
+  nextRenewal   DateTime? @map("next_renewal") @db.Date
+  status        String    @default("ACTIVE")
+  notes         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  application Application @relation(fields: [applicationId], references: [id])
+
+  @@index([workspaceId])
+  @@map("subscriptions")
+}
+
+model TaxObligation {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  name        String
+  dueDate     DateTime  @map("due_date") @db.Date
+  amount      Decimal?  @db.Decimal(18, 2)
+  status      String    @default("PENDING")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("tax_obligations")
+}
+
+// ============================================================
+// Mimotalents
+// ============================================================
+
+model TalentProfile {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  personId    String?   @map("person_id")
+  name        String
+  email       String?
+  phone       String?
+  status      String    @default("ACTIVE")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contracts TalentContract[]
+
+  @@index([workspaceId])
+  @@map("talent_profiles")
+}
+
+model TalentContract {
+  id              String   @id @default(uuid())
+  talentProfileId String   @map("talent_profile_id")
+  companyId       String?  @map("company_id")
+  clientId        String?  @map("client_id")
+  position        String?
+  rate            Decimal? @db.Decimal(18, 2)
+  currency        String   @default("PEN")
+  startDate       DateTime @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  status          String   @default("ACTIVE")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  talentProfile      TalentProfile          @relation(fields: [talentProfileId], references: [id], onDelete: Cascade)
+  incomeDistributions TalentIncomeDistribution[]
+
+  @@index([talentProfileId])
+  @@map("talent_contracts")
+}
+
+model TalentIncomeDistribution {
+  id               String  @id @default(uuid())
+  contractId       String  @map("contract_id")
+  transactionId    String? @map("transaction_id")
+  amountWithDiscount Decimal @map("amount_with_discount") @db.Decimal(18, 2)
+  amountReceived   Decimal @map("amount_received") @db.Decimal(18, 2)
+  amountRetained   Decimal @map("amount_retained") @db.Decimal(18, 2)
+  discountType     String? @map("discount_type")
+  discountAmount   Decimal? @map("discount_amount") @db.Decimal(18, 2)
+  notes            String?
+  status           String  @default("PENDING_REVIEW")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  contract TalentContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@map("talent_income_distributions")
+}
+
+// ============================================================
+// Attachments
+// ============================================================
+
+model Attachment {
+  id             String    @id @default(uuid())
+  transactionId  String?   @map("transaction_id")
+  fileName       String    @map("file_name")
+  fileType       String    @map("file_type")
+  fileSize       Int       @map("file_size")
+  storageKey     String    @map("storage_key")
+  storageBucket  String    @map("storage_bucket")
+  url            String?
+  status         String    @default("UPLOADED")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  @@map("attachments")
+}
+
+// ============================================================
+// Import System
+// ============================================================
+
+model ImportBatch {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  fileName    String   @map("file_name")
+  fileSize    Int      @map("file_size")
+  storageKey  String   @map("storage_key")
+  status      String   @default("UPLOADED")
+  totalRows   Int      @default(0) @map("total_rows")
+  importedRows Int     @default(0) @map("imported_rows")
+  errorRows   Int      @default(0) @map("error_rows")
+  startedAt   DateTime? @map("started_at")
+  finishedAt  DateTime? @map("finished_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sheets    ImportSheet[]
+  issues    ImportIssue[]
+
+  @@index([workspaceId])
+  @@map("import_batches")
+}
+
+model ImportSheet {
+  id            String @id @default(uuid())
+  importBatchId String @map("import_batch_id")
+  sheetName     String @map("sheet_name")
+  sheetType     String @map("sheet_type")
+  rowCount      Int    @default(0) @map("row_count")
+  status        String @default("PENDING")
+
+  batch ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  @@map("import_sheets")
+}
+
+model ImportIssue {
+  id            String   @id @default(uuid())
+  importBatchId String   @map("import_batch_id")
+  sheetName     String   @map("sheet_name")
+  rowNumber     Int      @map("row_number")
+  severity      String
+  field         String?
+  message       String
+  rawValue      String?  @map("raw_value")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  batch ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  @@map("import_issues")
+}
+
+// ============================================================
+// Notifications & Audit
+// ============================================================
+
+model Notification {
+  id        String    @id @default(uuid())
+  profileId String    @map("profile_id")
+  title     String
+  body      String
+  type      String    @default("INFO")
+  readAt    DateTime? @map("read_at")
+  link      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, readAt])
+  @@map("notifications")
+}
+
+model CalendarEvent {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  profileId   String   @map("profile_id")
+  title       String
+  description String?
+  date        DateTime @db.Date
+  type        String   @default("PAYMENT")
+  entityId    String?  @map("entity_id")
+  entityType  String?  @map("entity_type")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile   Profile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, date])
+  @@index([profileId, date])
+  @@map("calendar_events")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  workspaceId String?  @map("workspace_id")
+  profileId   String   @map("profile_id")
+  action      String
+  entity      String
+  entityId    String   @map("entity_id")
+  changes     Json?
+  ip          String?
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([profileId])
+  @@map("audit_logs")
+}

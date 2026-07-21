@@ -379,11 +379,7 @@ export default function DeudasPage() {
           })}
         </div>
       ) : (
-        <EmptyState
-          title="Sin deudas"
-          description="No tienes deudas registradas."
-          action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} /> : undefined}
-        />
+        <EmptyState title="Sin deudas" description="No tienes deudas registradas." />
       )}
     </div>
   );

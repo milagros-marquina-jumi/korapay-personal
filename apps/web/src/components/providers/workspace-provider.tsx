@@ -32,9 +32,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     if (!workspaces.length) return;
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem(STORAGE_KEY) : null;
     const exists = stored && workspaces.some((w) => w.id === stored);
+    if (stored && !exists && typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY);
     setActiveWorkspaceIdState((current) => {
       if (current && workspaces.some((w) => w.id === current)) return current;
-      return exists ? stored : (workspaces[0]?.id ?? null);
+      const next = exists ? stored : (workspaces[0]?.id ?? null);
+      if (next && typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, next);
+      return next;
     });
   }, [workspaces]);
 

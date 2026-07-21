@@ -12,6 +12,12 @@ export const queryKeys = {
   pendingItems: (workspaceId: string) => ['pending-items', workspaceId] as const,
   talents: (workspaceId: string) => ['talents', workspaceId] as const,
   talent: (workspaceId: string, id: string) => ['talents', workspaceId, id] as const,
+  talentLedgerSummary: (workspaceId: string) => ['talent-ledger-summary', workspaceId] as const,
+  talentLedger: (workspaceId: string, talentId: string, filters?: Record<string, unknown>) =>
+    ['talent-ledger', workspaceId, talentId, filters ?? {}] as const,
+  talentAudit: (workspaceId: string, talentId: string) => ['talent-audit', workspaceId, talentId] as const,
+  portal: (token: string) => ['portal', token] as const,
+  portalLedger: (token: string, filters?: Record<string, unknown>) => ['portal-ledger', token, filters ?? {}] as const,
   employmentContracts: (workspaceId: string) => ['employment-contracts', workspaceId] as const,
   taxObligations: (workspaceId: string) => ['tax-obligations', workspaceId] as const,
   projects: (workspaceId: string) => ['projects', workspaceId] as const,

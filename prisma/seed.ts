@@ -585,6 +585,9 @@ async function main() {
   const talentEgresos = load<{
     nombre: string;
     fecha: string;
+    anio: number | null;
+    nMes: number | null;
+    mes: string | null;
     tipoPago: string | null;
     cantidadE: number | null;
     cantidadD: number | null;
@@ -592,43 +595,43 @@ async function main() {
     descripcion: string | null;
     estado: string | null;
   }>('talents_egresos');
-  let talentExpenseCount = 0;
-  let pendingCount = 0;
+  const talentByFullName: Record<string, string> = {};
+  for (const [key, id] of Object.entries(talentByName)) talentByFullName[key] = id;
+  async function ensureTalentByName(name: string): Promise<string> {
+    const matched = matchTalent(name);
+    if (matched) return matched;
+    const key = name.trim().toLowerCase();
+    if (talentByFullName[key]) return talentByFullName[key];
+    const t = await prisma.talentProfile.create({
+      data: { workspaceId: mimotech.id, name: name.trim(), status: 'ACTIVE' },
+    });
+    talentByFullName[key] = t.id;
+    return t.id;
+  }
+  let talentLedgerCount = 0;
   for (const r of talentEgresos) {
-    const amount = r.cantidadE ?? r.cantidadD ?? 0;
-    await prisma.transaction.create({
+    const talentId = await ensureTalentByName(r.nombre);
+    const d = date(r.fecha);
+    const type = (r.tipoPago ?? '').toLowerCase().includes('deuda') ? 'DEUDA' : 'EGRESO';
+    await prisma.talentLedgerEntry.create({
       data: {
+        talentId,
         workspaceId: mimotech.id,
-        type: 'EXPENSE',
-        concept: `Pago ${r.nombre}`,
-        description: r.descripcion ?? null,
-        date: date(r.fecha),
-        amountOriginal: money(amount),
+        date: d,
+        year: r.anio != null ? Math.trunc(r.anio) : d.getUTCFullYear(),
+        month: r.nMes != null ? Math.trunc(r.nMes) : d.getUTCMonth() + 1,
+        type,
+        paidAmount: money(r.cantidadE ?? 0),
+        debtAmount: money(r.cantidadD ?? 0),
+        pendingAmount: money(r.faltaPagar ?? 0),
         currency: 'PEN',
-        amountBase: money(amount),
         status: mapExcelStatus(r.estado),
-        tags: [r.tipoPago ?? '', 'TALENTO'].filter(Boolean),
+        description: r.descripcion ?? null,
+        source: 'ADMIN',
+        createdBy: profile.id,
       },
     });
-    talentExpenseCount++;
-
-    if (r.faltaPagar && r.faltaPagar > 0) {
-      const personId = await ensurePerson(mimotech.id, r.nombre, 'TALENT_REF');
-      await prisma.pendingItem.create({
-        data: {
-          workspaceId: mimotech.id,
-          kind: 'PAGAR',
-          concept: `Falta pagar a ${r.nombre}`,
-          amount: money(r.faltaPagar),
-          currency: 'PEN',
-          dueDate: date(r.fecha),
-          status: 'PENDING',
-          personId,
-          notes: r.descripcion ?? null,
-        },
-      });
-      pendingCount++;
-    }
+    talentLedgerCount++;
   }
 
   // ============================================================
@@ -652,8 +655,7 @@ async function main() {
     'ws MIMOTECH (talentos)': talentsGeneral.length,
     'ws MIMOTECH (talent income)': talentIncomeCount,
     'ws MIMOTECH (distribuciones)': distCount,
-    'ws MIMOTECH (talent egresos)': talentExpenseCount,
-    'ws MIMOTECH (pendientes)': pendingCount,
+    'ws MIMOTECH (talent ledger)': talentLedgerCount,
     'ws MIMOTECH (apps)': Object.keys(appByName).length,
     'ws MIMOTECH (proyectos)': Object.keys(projectByName).length,
     'ws Qoryx (categorias)': qoryxCatCount,

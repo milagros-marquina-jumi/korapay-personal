@@ -355,11 +355,7 @@ export default function AhorrosPage() {
           })}
         </div>
       ) : (
-        <EmptyState
-          title="Sin metas de ahorro"
-          description="Crea tu primera meta para empezar a ahorrar."
-          action={activeWorkspaceId ? <GoalFormDialog workspaceId={activeWorkspaceId} /> : undefined}
-        />
+        <EmptyState title="Sin metas de ahorro" description="Crea tu primera meta para empezar a ahorrar." />
       )}
     </div>
   );

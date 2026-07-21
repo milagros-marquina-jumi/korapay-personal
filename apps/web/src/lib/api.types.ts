@@ -180,7 +180,60 @@ export interface Talent {
   phone?: string | null;
   status: string;
   notes?: string | null;
+  accessToken?: string | null;
+  tokenEnabledAt?: string | null;
   contracts?: TalentContract[];
+}
+
+export interface TalentLedgerEntry {
+  id: string;
+  talentId: string;
+  date: string;
+  year: number;
+  month: number;
+  type: string;
+  paidAmount: string;
+  debtAmount: string;
+  pendingAmount: string;
+  currency: string;
+  status: string;
+  description?: string | null;
+  source: string;
+}
+
+export interface TalentLedgerSummary {
+  talentId: string;
+  name: string;
+  status: string;
+  totalPaid: string;
+  totalDebt: string;
+  totalPending: string;
+  balance: string;
+}
+
+export interface TalentSummaryTotals {
+  totalPaid: string;
+  totalDebt: string;
+  totalPending: string;
+  balance: string;
+}
+
+export interface TalentAuditEntry {
+  id: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  changes: {
+    actor?: string;
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
+  } | null;
+  createdAt: string;
+}
+
+export interface TalentPortalProfile {
+  talent: { id: string; name: string; status: string };
+  summary: TalentSummaryTotals;
 }
 
 export interface CurrencyCatalog {

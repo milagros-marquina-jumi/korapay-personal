@@ -1,0 +1,224 @@
+'use client';
+
+import { formatMoney } from '@korapay/domain';
+import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Banknote, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { PeriodFilter, yearsFrom } from '@/components/data-table/period-filter';
+import { SortableHeader } from '@/components/data-table/sortable-header';
+import { Button } from '@/components/ui/button';
+import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
+import { formatDate } from '@/lib/utils';
+import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
+
+const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
+
+interface LedgerSectionProps {
+  entries: TalentLedgerEntry[];
+  summary?: TalentSummaryTotals;
+  isLoading?: boolean;
+  currency?: string;
+  canDelete?: boolean;
+  onCreate: (values: LedgerFormValues) => Promise<void>;
+  onUpdate: (id: string, values: LedgerFormValues) => Promise<void>;
+  onDelete?: (id: string) => void;
+  isMutating?: boolean;
+}
+
+export function LedgerSection({
+  entries,
+  summary,
+  isLoading,
+  currency = 'PEN',
+  canDelete = true,
+  onCreate,
+  onUpdate,
+  onDelete,
+  isMutating,
+}: LedgerSectionProps) {
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState(FILTER_ALL);
+  const [type, setType] = useState(FILTER_ALL);
+  const [year, setYear] = useState(FILTER_ALL);
+  const [month, setMonth] = useState(FILTER_ALL);
+
+  const cur = currency as 'PEN' | 'USD';
+  const years = useMemo(() => yearsFrom(entries.map((e) => e.year)), [entries]);
+  const statusOptions = useMemo(
+    () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: v })),
+    [entries],
+  );
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return entries.filter(
+      (e) =>
+        (!q || (e.description ?? '').toLowerCase().includes(q)) &&
+        (status === FILTER_ALL || e.status === status) &&
+        (type === FILTER_ALL || e.type === type) &&
+        (year === FILTER_ALL || String(e.year) === year) &&
+        (month === FILTER_ALL || String(e.month) === month),
+    );
+  }, [entries, search, status, type, year, month]);
+
+  const hasFilters =
+    search !== '' || status !== FILTER_ALL || type !== FILTER_ALL || year !== FILTER_ALL || month !== FILTER_ALL;
+  const clear = () => {
+    setSearch('');
+    setStatus(FILTER_ALL);
+    setType(FILTER_ALL);
+    setYear(FILTER_ALL);
+    setMonth(FILTER_ALL);
+  };
+
+  const columns = useMemo<ColumnDef<TalentLedgerEntry, unknown>[]>(() => {
+    const base: ColumnDef<TalentLedgerEntry, unknown>[] = [
+      {
+        accessorKey: 'date',
+        header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
+        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
+      },
+      {
+        accessorKey: 'type',
+        header: 'Tipo',
+        cell: ({ row }) => <span className="text-sm">{TYPE_LABELS[row.original.type] ?? row.original.type}</span>,
+      },
+      {
+        id: 'paid',
+        accessorFn: (r) => Number(r.paidAmount),
+        header: ({ column }) => <SortableHeader column={column} label="Pagado" className="ml-auto" />,
+        cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.paidAmount, cur)}</div>,
+      },
+      {
+        id: 'debt',
+        accessorFn: (r) => Number(r.debtAmount),
+        header: ({ column }) => <SortableHeader column={column} label="Deuda" className="ml-auto" />,
+        cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.debtAmount, cur)}</div>,
+      },
+      {
+        id: 'pending',
+        accessorFn: (r) => Number(r.pendingAmount),
+        header: ({ column }) => <SortableHeader column={column} label="Falta pagar" className="ml-auto" />,
+        cell: ({ row }) => (
+          <div
+            className={`text-right font-semibold tabular-nums ${
+              Number(row.original.pendingAmount) > 0 ? 'text-destructive' : ''
+            }`}
+          >
+            {formatMoney(row.original.pendingAmount, cur)}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Estado',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'description',
+        header: 'Descripcion',
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.description ?? '-'}</span>,
+      },
+    ];
+    base.push({
+      id: 'actions',
+      header: '',
+      cell: ({ row }) => (
+        <div className="flex justify-end gap-1">
+          <LedgerFormDialog
+            entry={row.original}
+            isPending={isMutating}
+            onSubmit={(v) => onUpdate(row.original.id, v)}
+            trigger={
+              <Button size="icon" variant="ghost" className="size-8" aria-label="Editar">
+                <Pencil className="size-4" />
+              </Button>
+            }
+          />
+          {canDelete && onDelete && (
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-8"
+              aria-label="Eliminar"
+              onClick={() => onDelete(row.original.id)}
+            >
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
+          )}
+        </div>
+      ),
+    });
+    return base;
+  }, [cur, canDelete, onDelete, onUpdate, isMutating]);
+
+  return (
+    <div className="space-y-6">
+      {summary && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPICard
+            label="Total pagado"
+            value={formatMoney(summary.totalPaid, cur)}
+            icon={Wallet}
+            color="text-success"
+          />
+          <KPICard label="Total deuda" value={formatMoney(summary.totalDebt, cur)} icon={Banknote} color="text-info" />
+          <KPICard
+            label="Falta pagar"
+            value={formatMoney(summary.totalPending, cur)}
+            icon={TrendingDown}
+            color="text-destructive"
+          />
+          <KPICard label="Saldo" value={formatMoney(summary.balance, cur)} icon={PiggyBank} color="text-brand" />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="font-display text-lg font-semibold">Estado de cuenta</h3>
+        <LedgerFormDialog onSubmit={onCreate} isPending={isMutating} />
+      </div>
+
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar descripcion..."
+        showClear={hasFilters}
+        onClear={clear}
+        filters={
+          <>
+            <FilterSelect
+              value={type}
+              onValueChange={setType}
+              options={[
+                { value: 'EGRESO', label: 'Egreso' },
+                { value: 'DEUDA', label: 'Deuda' },
+              ]}
+              placeholder="Tipo"
+              allLabel="Todo tipo"
+            />
+            <FilterSelect
+              value={status}
+              onValueChange={setStatus}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+            <PeriodFilter year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} years={years} />
+          </>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={rows}
+        isLoading={isLoading}
+        pageSize={20}
+        emptyState={<EmptyState title="Sin registros" description="Aun no hay movimientos registrados." />}
+      />
+    </div>
+  );
+}

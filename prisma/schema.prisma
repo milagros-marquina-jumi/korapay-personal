@@ -68,6 +68,7 @@ model Workspace {
   contracts        EmploymentContract[]
   subscriptions    Subscription[]
   talentProfiles   TalentProfile[]
+  talentLedgerEntries TalentLedgerEntry[]
   taxObligations   TaxObligation[]
   calendarEvents   CalendarEvent[]
   importBatches    ImportBatch[]
@@ -542,23 +543,54 @@ model TaxObligation {
 // ============================================================
 
 model TalentProfile {
-  id          String    @id @default(uuid())
-  workspaceId String    @map("workspace_id")
-  personId    String?   @map("person_id")
-  name        String
-  email       String?
-  phone       String?
-  status      String    @default("ACTIVE")
-  notes       String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  id             String    @id @default(uuid())
+  workspaceId    String    @map("workspace_id")
+  personId       String?   @map("person_id")
+  name           String
+  email          String?
+  phone          String?
+  status         String    @default("ACTIVE")
+  notes          String?
+  accessToken    String?   @unique @map("access_token")
+  tokenEnabledAt DateTime? @map("token_enabled_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  contracts TalentContract[]
+  workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contracts    TalentContract[]
+  ledgerEntries TalentLedgerEntry[]
 
   @@index([workspaceId])
   @@map("talent_profiles")
+}
+
+model TalentLedgerEntry {
+  id            String    @id @default(uuid())
+  talentId      String    @map("talent_id")
+  workspaceId   String    @map("workspace_id")
+  date          DateTime  @db.Date
+  year          Int
+  month         Int
+  type          String    @default("EGRESO")
+  paidAmount    Decimal   @default(0) @map("paid_amount") @db.Decimal(18, 2)
+  debtAmount    Decimal   @default(0) @map("debt_amount") @db.Decimal(18, 2)
+  pendingAmount Decimal   @default(0) @map("pending_amount") @db.Decimal(18, 2)
+  currency      String    @default("PEN")
+  status        String    @default("PENDING")
+  description   String?
+  source        String    @default("ADMIN")
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  talent    TalentProfile @relation(fields: [talentId], references: [id], onDelete: Cascade)
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([talentId, date])
+  @@index([workspaceId, type])
+  @@map("talent_ledger_entries")
 }
 
 model TalentContract {

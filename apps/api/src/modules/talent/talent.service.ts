@@ -1,8 +1,26 @@
+import { randomBytes } from 'node:crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class TalentService {
   constructor(private readonly prisma: PrismaService) {}
+  async generateAccessToken(id: string, workspaceId: string) {
+    const talent = await this.prisma.talentProfile.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!talent) throw new NotFoundException('Talent not found');
+    const token = randomBytes(24).toString('base64url');
+    return this.prisma.talentProfile.update({
+      where: { id },
+      data: { accessToken: token, tokenEnabledAt: new Date() },
+    });
+  }
+  async revokeAccessToken(id: string, workspaceId: string) {
+    const talent = await this.prisma.talentProfile.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!talent) throw new NotFoundException('Talent not found');
+    return this.prisma.talentProfile.update({
+      where: { id },
+      data: { accessToken: null, tokenEnabledAt: null },
+    });
+  }
   async findAll(workspaceId: string) {
     return this.prisma.talentProfile.findMany({
       where: { workspaceId, deletedAt: null },

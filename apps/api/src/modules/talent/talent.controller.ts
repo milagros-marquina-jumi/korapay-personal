@@ -49,4 +49,14 @@ export class TalentController {
   ) {
     return this.talentService.addDistribution(contractId, workspaceId, body);
   }
+  @Post(':id/access-token')
+  @ApiOperation({ summary: 'Generate talent portal access token' })
+  generateToken(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.talentService.generateAccessToken(id, workspaceId);
+  }
+  @Delete(':id/access-token')
+  @ApiOperation({ summary: 'Revoke talent portal access token' })
+  revokeToken(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.talentService.revokeAccessToken(id, workspaceId);
+  }
 }

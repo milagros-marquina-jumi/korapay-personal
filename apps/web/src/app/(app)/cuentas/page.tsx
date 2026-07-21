@@ -357,7 +357,6 @@ export default function CuentasPage() {
         <EmptyState
           title="Sin cuentas"
           description="Aun no tienes cuentas registradas. Crea la primera para empezar."
-          action={activeWorkspaceId ? <AccountFormDialog workspaceId={activeWorkspaceId} /> : undefined}
         />
       )}
 

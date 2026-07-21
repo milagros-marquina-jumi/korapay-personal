@@ -301,11 +301,7 @@ export default function PendientesPage() {
           })}
         </div>
       ) : (
-        <EmptyState
-          title="Sin pendientes"
-          description="No tienes cobros ni pagos pendientes."
-          action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} /> : undefined}
-        />
+        <EmptyState title="Sin pendientes" description="No tienes cobros ni pagos pendientes." />
       )}
     </div>
   );

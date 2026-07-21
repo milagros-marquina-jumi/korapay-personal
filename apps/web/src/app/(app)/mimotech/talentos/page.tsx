@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
@@ -31,7 +32,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
-import type { Talent } from '@/lib/api.types';
+import type { Talent, TalentLedgerSummary } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 function initials(name: string) {
@@ -146,6 +147,17 @@ function TalentosContent() {
     enabled: !!activeWorkspaceId,
   });
 
+  const { data: summaries } = useQuery({
+    queryKey: queryKeys.talentLedgerSummary(activeWorkspaceId ?? ''),
+    queryFn: () => apiFetch<TalentLedgerSummary[]>(`/talent-ledger/summary?workspaceId=${activeWorkspaceId}`),
+    enabled: !!activeWorkspaceId,
+  });
+  const summaryById = useMemo(() => {
+    const map: Record<string, TalentLedgerSummary> = {};
+    for (const s of summaries ?? []) map[s.talentId] = s;
+    return map;
+  }, [summaries]);
+
   const statusOptions = useMemo(() => {
     const distinct = [...new Set((data ?? []).map((t) => t.status).filter(Boolean))];
     return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
@@ -201,24 +213,41 @@ function TalentosContent() {
         </div>
       ) : talents.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {talents.map((talent) => (
-            <Link key={talent.id} href={`/mimotech/talentos/${talent.id}`}>
-              <Card className="h-full transition-shadow hover:shadow-lift">
-                <CardHeader className="flex flex-row items-center justify-between gap-4 p-6">
-                  <CardTitle className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarFallback>{initials(talent.name)}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-base">{talent.name}</span>
-                  </CardTitle>
-                  <StatusBadge status={talent.status} />
-                </CardHeader>
-                <CardContent className="px-6 pb-6 text-sm text-muted-foreground">
-                  <span className="tabular-nums">{talent.contracts?.length ?? 0}</span> contrato(s)
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+          {talents.map((talent) => {
+            const talentSummary = summaryById[talent.id];
+            return (
+              <Link key={talent.id} href={`/mimotech/talentos/${talent.id}`}>
+                <Card className="h-full transition-shadow hover:shadow-lift">
+                  <CardHeader className="flex flex-row items-center justify-between gap-4 p-6">
+                    <CardTitle className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback>{initials(talent.name)}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-base">{talent.name}</span>
+                    </CardTitle>
+                    <StatusBadge status={talent.status} />
+                  </CardHeader>
+                  <CardContent className="space-y-3 px-6 pb-6">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="tabular-nums">{talent.contracts?.length ?? 0}</span> contrato(s)
+                    </p>
+                    {talentSummary && (
+                      <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">Falta pagar</span>
+                        <span
+                          className={`font-semibold tabular-nums ${
+                            Number(talentSummary.totalPending) > 0 ? 'text-destructive' : 'text-success'
+                          }`}
+                        >
+                          {formatMoney(talentSummary.totalPending, 'PEN')}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <EmptyState title="Sin talentos" description="Registra tu primer talento con el boton de arriba." />

@@ -18,6 +18,8 @@ import { PendingItemModule } from './modules/pending-item/pending-item.module';
 import { PersonModule } from './modules/person/person.module';
 import { SavingGoalModule } from './modules/saving-goal/saving-goal.module';
 import { TalentModule } from './modules/talent/talent.module';
+import { TalentLedgerModule } from './modules/talent-ledger/talent-ledger.module';
+import { TalentPortalModule } from './modules/talent-portal/talent-portal.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
 @Module({
@@ -42,6 +44,8 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     SavingGoalModule,
     AuditModule,
     TalentModule,
+    TalentLedgerModule,
+    TalentPortalModule,
     CatalogModule,
     ExchangeRateModule,
   ],

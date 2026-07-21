@@ -7,6 +7,7 @@ import {
   ChangeTransactionStatusDto,
   CreateTransactionDto,
   ListTransactionsDto,
+  MonthlySummaryDto,
   TransferDto,
   UpdateTransactionDto,
 } from './transaction.dto';
@@ -23,6 +24,12 @@ export class TransactionController {
   @ApiOperation({ summary: 'List transactions' })
   findAll(@Query() query: ListTransactionsDto) {
     return this.transactionService.findAll(query);
+  }
+
+  @Get('monthly-summary')
+  @ApiOperation({ summary: 'Monthly summary grouped by company' })
+  monthlySummary(@Query() query: MonthlySummaryDto) {
+    return this.transactionService.monthlySummary(query);
   }
 
   @Get(':id')

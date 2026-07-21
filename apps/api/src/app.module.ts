@@ -9,6 +9,7 @@ import { AccountModule } from './modules/account/account.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CategoryModule } from './modules/category/category.module';
+import { ClientModule } from './modules/client/client.module';
 import { CompanyModule } from './modules/company/company.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DebtModule } from './modules/debt/debt.module';
@@ -44,6 +45,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     CategoryModule,
     PersonModule,
     CompanyModule,
+    ClientModule,
     DashboardModule,
     PendingItemModule,
     DebtModule,

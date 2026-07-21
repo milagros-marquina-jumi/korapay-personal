@@ -4,6 +4,7 @@ import {
   Banknote,
   Boxes,
   Building2,
+  CalendarRange,
   FileText,
   LayoutDashboard,
   MailCheck,
@@ -42,7 +43,13 @@ const PERSONAL: NavItem[] = [
 
 const EMPLOYMENT: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/ingresos', label: 'Ingresos', icon: ArrowLeftRight },
+  {
+    href: '/ingresos',
+    label: 'Ingresos',
+    icon: ArrowLeftRight,
+    linkable: true,
+    children: [{ href: '/ingresos/resumen-mes', label: 'Resumen por mes', icon: CalendarRange }],
+  },
   { href: '/empresas', label: 'Empresas', icon: Building2 },
   { href: '/contratos', label: 'Contratos', icon: FileText },
   { href: '/renta', label: 'Renta anual', icon: Banknote },

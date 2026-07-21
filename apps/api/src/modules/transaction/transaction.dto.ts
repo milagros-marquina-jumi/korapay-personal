@@ -265,3 +265,22 @@ export class ChangeTransactionStatusDto {
   @IsIn(TX_STATUS)
   status!: string;
 }
+
+export class MonthlySummaryDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @ApiPropertyOptional({ enum: TX_TYPES, default: 'INCOME' })
+  @IsOptional()
+  @IsIn(TX_TYPES)
+  type?: string;
+
+  @ApiPropertyOptional({ example: 2025 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  year?: number;
+}

@@ -39,6 +39,7 @@ const schema = z.object({
   isRecurring: z.boolean().optional(),
   recurrenceFrequency: z.enum(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']).optional(),
   recurrenceEndDate: z.string().optional(),
+  recurrenceCount: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -89,12 +90,14 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
+      const { recurrenceCount, ...rest } = values;
       const payload = {
-        ...values,
+        ...rest,
         workspaceId,
         recurrenceInterval: values.isRecurring ? 1 : undefined,
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
         recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate || undefined : undefined,
+        recurrenceCount: values.isRecurring && recurrenceCount ? Number(recurrenceCount) : undefined,
         dueDate: values.dueDate || undefined,
       };
       return apiFetch<{ id: string }>('/transactions', { method: 'POST', body: JSON.stringify(payload) });
@@ -209,42 +212,57 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="isRecurring">Pago recurrente</Label>
-                <p className="text-xs text-muted-foreground">Se repite periódicamente con fecha de vencimiento.</p>
+                <p className="text-xs text-muted-foreground">
+                  {isRecurring
+                    ? 'La fecha de arriba es el inicio. Se generará un movimiento por cada periodo.'
+                    : 'Se repite periódicamente y genera un movimiento por periodo.'}
+                </p>
               </div>
               <Switch id="isRecurring" checked={!!isRecurring} onCheckedChange={(v) => setValue('isRecurring', v)} />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            {!isRecurring && (
               <div className="space-y-2">
-                <Label htmlFor="dueDate">Vencimiento</Label>
+                <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
                 <Input id="dueDate" type="date" {...register('dueDate')} />
               </div>
-              {isRecurring && (
-                <div className="space-y-2">
-                  <Label>Frecuencia</Label>
-                  <Select
-                    defaultValue="MONTHLY"
-                    onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="WEEKLY">Semanal</SelectItem>
-                      <SelectItem value="MONTHLY">Mensual</SelectItem>
-                      <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                      <SelectItem value="YEARLY">Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
+            )}
 
             {isRecurring && (
-              <div className="space-y-2">
-                <Label htmlFor="recurrenceEndDate">Fin de la recurrencia (opcional)</Label>
-                <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Frecuencia</Label>
+                    <Select
+                      defaultValue="MONTHLY"
+                      onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="WEEKLY">Semanal</SelectItem>
+                        <SelectItem value="MONTHLY">Mensual</SelectItem>
+                        <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                        <SelectItem value="YEARLY">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrenceCount">Nº de repeticiones</Label>
+                    <Input
+                      id="recurrenceCount"
+                      inputMode="numeric"
+                      placeholder="Ej. 12"
+                      {...register('recurrenceCount')}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recurrenceEndDate">O fecha de fin (opcional)</Label>
+                  <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+                </div>
+              </>
             )}
           </div>
 

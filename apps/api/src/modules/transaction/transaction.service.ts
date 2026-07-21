@@ -3,6 +3,49 @@ import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/exchange-rate.service';
+
+const MAX_OCCURRENCES = 120;
+
+function addPeriod(base: Date, frequency: string, steps: number): Date {
+  const d = new Date(base);
+  switch (frequency) {
+    case 'DAILY':
+      d.setUTCDate(d.getUTCDate() + steps);
+      break;
+    case 'WEEKLY':
+      d.setUTCDate(d.getUTCDate() + steps * 7);
+      break;
+    case 'QUARTERLY':
+      d.setUTCMonth(d.getUTCMonth() + steps * 3);
+      break;
+    case 'YEARLY':
+      d.setUTCFullYear(d.getUTCFullYear() + steps);
+      break;
+    default:
+      d.setUTCMonth(d.getUTCMonth() + steps);
+      break;
+  }
+  return d;
+}
+
+function buildOccurrenceDates(params: {
+  start: Date;
+  frequency: string;
+  interval: number;
+  endDate?: Date | null;
+  count?: number | null;
+}): Date[] {
+  const { start, frequency, interval, endDate, count } = params;
+  const limit = count && count > 0 ? Math.min(count, MAX_OCCURRENCES) : MAX_OCCURRENCES;
+  const dates: Date[] = [];
+  for (let i = 0; i < limit; i++) {
+    const occurrence = addPeriod(start, frequency, i * Math.max(interval, 1));
+    if (endDate && occurrence > endDate) break;
+    dates.push(occurrence);
+  }
+  return dates.length ? dates : [start];
+}
+
 @Injectable()
 export class TransactionService {
   constructor(
@@ -77,6 +120,78 @@ export class TransactionService {
       },
     };
   }
+  async monthlySummary(params: { workspaceId: string; type?: string; year?: number }) {
+    const where: Prisma.TransactionWhereInput = {
+      workspaceId: params.workspaceId,
+      deletedAt: null,
+      type: params.type ?? 'INCOME',
+      ...(params.year
+        ? {
+            date: {
+              gte: new Date(Date.UTC(params.year, 0, 1)),
+              lt: new Date(Date.UTC(params.year + 1, 0, 1)),
+            },
+          }
+        : {}),
+    };
+    const rows = await this.prisma.transaction.findMany({
+      where,
+      orderBy: { date: 'desc' },
+      include: { company: true, category: true },
+    });
+
+    const periods = new Map<
+      string,
+      {
+        year: number;
+        month: number;
+        totalNet: string;
+        companies: Map<string, { name: string; net: Decimal; concept: string; status: string }>;
+      }
+    >();
+    const years = new Set<number>();
+
+    for (const t of rows) {
+      const year = t.date.getUTCFullYear();
+      const month = t.date.getUTCMonth() + 1;
+      years.add(year);
+      const key = `${year}-${month}`;
+      if (!periods.has(key)) {
+        periods.set(key, { year, month, totalNet: '0', companies: new Map() });
+      }
+      const period = periods.get(key);
+      if (!period) continue;
+      const companyName = t.company?.name ?? 'Sin empresa';
+      const net = new Decimal(t.amountBase);
+      const existing = period.companies.get(companyName);
+      if (existing) {
+        existing.net = existing.net.add(net);
+      } else {
+        period.companies.set(companyName, {
+          name: companyName,
+          net,
+          concept: t.category?.name ?? t.concept,
+          status: t.status,
+        });
+      }
+    }
+
+    const data = [...periods.values()]
+      .sort((a, b) => b.year - a.year || b.month - a.month)
+      .map((p) => {
+        const companies = [...p.companies.values()].map((c) => ({
+          name: c.name,
+          net: c.net.toFixed(2),
+          concept: c.concept,
+          status: c.status,
+        }));
+        const totalNet = companies.reduce((sum, c) => sum.add(new Decimal(c.net)), new Decimal(0)).toFixed(2);
+        return { year: p.year, month: p.month, totalNet, companies };
+      });
+
+    return { data, years: [...years].sort((a, b) => b - a) };
+  }
+
   async findOne(id: string, workspaceId: string) {
     const tx = await this.prisma.transaction.findFirst({
       where: { id, workspaceId, deletedAt: null },
@@ -122,43 +237,76 @@ export class TransactionService {
     }
     const amountBase =
       currency === 'PEN' ? data.amount : new Decimal(data.amount).mul(new Decimal(exchangeRate)).toFixed(2);
-    const recurrenceRuleId =
-      data.isRecurring && data.recurrenceFrequency
-        ? (
-            await this.prisma.recurrenceRule.create({
-              data: {
-                frequency: data.recurrenceFrequency,
-                interval: data.recurrenceInterval ?? 1,
-                endDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
-                endAfterCount: data.recurrenceCount ?? null,
-              },
-            })
-          ).id
-        : null;
-    return this.prisma.transaction.create({
-      data: {
-        workspaceId: data.workspaceId,
-        type: data.type,
-        concept: data.concept,
-        description: data.description,
-        date: new Date(data.date),
-        amountOriginal: data.amount,
-        currency,
-        exchangeRate: currency !== 'PEN' ? exchangeRate : null,
-        amountBase,
-        categoryId: data.categoryId,
-        accountId: data.accountId,
-        status: data.status ?? 'PAID',
-        personId: data.personId,
-        companyId: data.companyId,
-        clientId: data.clientId,
-        projectId: data.projectId,
-        applicationId: data.applicationId,
-        notes: data.notes,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        isRecurring: data.isRecurring ?? false,
-        recurrenceRuleId,
-      },
+
+    const baseData = {
+      workspaceId: data.workspaceId,
+      type: data.type,
+      concept: data.concept,
+      description: data.description,
+      amountOriginal: data.amount,
+      currency,
+      exchangeRate: currency !== 'PEN' ? exchangeRate : null,
+      amountBase,
+      categoryId: data.categoryId,
+      accountId: data.accountId,
+      personId: data.personId,
+      companyId: data.companyId,
+      clientId: data.clientId,
+      projectId: data.projectId,
+      applicationId: data.applicationId,
+      notes: data.notes,
+    };
+
+    const isRecurring = !!(data.isRecurring && data.recurrenceFrequency);
+    if (!isRecurring) {
+      return this.prisma.transaction.create({
+        data: {
+          ...baseData,
+          date: new Date(data.date),
+          status: data.status ?? 'PAID',
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          isRecurring: false,
+        },
+      });
+    }
+
+    const frequency = data.recurrenceFrequency as string;
+    const interval = data.recurrenceInterval ?? 1;
+    const start = new Date(data.date);
+    const occurrences = buildOccurrenceDates({
+      start,
+      frequency,
+      interval,
+      endDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
+      count: data.recurrenceCount ?? null,
+    });
+
+    return this.prisma.$transaction(async (tx) => {
+      const rule = await tx.recurrenceRule.create({
+        data: {
+          frequency,
+          interval,
+          endDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
+          endAfterCount: data.recurrenceCount ?? null,
+        },
+      });
+      let first: Awaited<ReturnType<typeof tx.transaction.create>> | null = null;
+      let index = 0;
+      for (const occurrence of occurrences) {
+        const created = await tx.transaction.create({
+          data: {
+            ...baseData,
+            date: occurrence,
+            dueDate: occurrence,
+            status: index === 0 ? (data.status ?? 'PENDING') : 'PENDING',
+            isRecurring: true,
+            recurrenceRuleId: rule.id,
+          },
+        });
+        if (index === 0) first = created;
+        index++;
+      }
+      return first;
     });
   }
   async update(id: string, workspaceId: string, data: Record<string, unknown>) {

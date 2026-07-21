@@ -340,17 +340,31 @@ async function main() {
     incomeCount++;
   }
 
-  const empresas = load<{ empresaOficial: string | null; fechaInicio: string | null; fechaFin: string | null }>(
-    'ingresos_empresas',
-  );
+  const empresas = load<{
+    empresaOficial: string | null;
+    empresas: string | null;
+    fechaInicio: string | null;
+    fechaFin: string | null;
+  }>('ingresos_empresas');
   let contractCount = 0;
   const seenContracts = new Set<string>();
+  const companyPeriods: Record<string, { ini: string[]; fin: string[] }> = {};
+  const companyClients: Record<string, Set<string>> = {};
   for (const r of empresas) {
-    if (!r.empresaOficial || !r.fechaInicio) continue;
-    const key = `${r.empresaOficial}-${r.fechaInicio}`;
+    if (!r.empresaOficial) continue;
+    const empresa = r.empresaOficial.trim();
+    companyPeriods[empresa] ??= { ini: [], fin: [] };
+    if (r.fechaInicio) companyPeriods[empresa].ini.push(r.fechaInicio);
+    if (r.fechaFin) companyPeriods[empresa].fin.push(r.fechaFin);
+    if (r.empresas && r.empresas.trim() !== empresa) {
+      companyClients[empresa] ??= new Set();
+      companyClients[empresa].add(r.empresas.trim());
+    }
+    if (!r.fechaInicio) continue;
+    const key = `${empresa}-${r.fechaInicio}`;
     if (seenContracts.has(key)) continue;
     seenContracts.add(key);
-    const companyId = await ensureCompany(empleos.id, r.empresaOficial);
+    const companyId = await ensureCompany(empleos.id, empresa);
     await prisma.employmentContract.create({
       data: {
         workspaceId: empleos.id,
@@ -361,6 +375,26 @@ async function main() {
       },
     });
     contractCount++;
+  }
+
+  let clientCount = 0;
+  for (const [empresa, periods] of Object.entries(companyPeriods)) {
+    const companyId = await ensureCompany(empleos.id, empresa);
+    const ini = periods.ini.sort()[0];
+    const fin = periods.fin.sort().at(-1);
+    await prisma.company.update({
+      where: { id: companyId },
+      data: {
+        startDate: ini ? date(ini) : null,
+        endDate: fin ? date(fin) : null,
+      },
+    });
+    for (const clientName of companyClients[empresa] ?? []) {
+      await prisma.client.create({
+        data: { workspaceId: empleos.id, companyId, name: clientName },
+      });
+      clientCount++;
+    }
   }
 
   const renta = load<{ anio: number; monto: number | null; estado: string | null; detalles: string | null }>(
@@ -696,6 +730,7 @@ async function main() {
     'ws Personal (savingEntries)': savingEntryCount,
     'ws Empleos (ingresos)': incomeCount,
     'ws Empleos (empresas)': Object.keys(companyByWs[empleos.id] ?? {}).length,
+    'ws Empleos (clientes)': clientCount,
     'ws Empleos (categorias)': Object.keys(catByWorkspace[empleos.id] ?? {}).length,
     'ws Empleos (contratos)': contractCount,
     'ws Empleos (renta)': renta.length,

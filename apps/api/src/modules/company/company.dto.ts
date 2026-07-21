@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCompanyDto {
   @ApiProperty()
@@ -21,6 +21,16 @@ export class CreateCompanyDto {
   @IsOptional()
   @IsString()
   industry?: string;
+
+  @ApiPropertyOptional({ example: '2025-01-01' })
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({ example: '2025-12-31' })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }
 
 export class UpdateCompanyDto extends PartialType(CreateCompanyDto) {}

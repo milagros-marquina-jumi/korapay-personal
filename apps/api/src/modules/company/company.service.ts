@@ -4,17 +4,38 @@ import { PrismaService } from '@/common/prisma/prisma.service';
 export class CompanyService {
   constructor(private readonly prisma: PrismaService) {}
   async findAll(workspaceId: string) {
-    return this.prisma.company.findMany({
+    const companies = await this.prisma.company.findMany({
       where: { workspaceId, deletedAt: null },
       orderBy: { name: 'asc' },
+      include: { _count: { select: { clients: { where: { deletedAt: null } } } } },
+    });
+    return companies.map((c) => {
+      const { _count, ...rest } = c;
+      return { ...rest, clientCount: _count.clients };
     });
   }
-  async create(data: { workspaceId: string; name: string; ruc?: string; industry?: string }) {
+  async create(data: {
+    workspaceId: string;
+    name: string;
+    ruc?: string;
+    industry?: string;
+    startDate?: string;
+    endDate?: string;
+  }) {
     const dup = await this.prisma.company.findFirst({
       where: { workspaceId: data.workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
     });
     if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
-    return this.prisma.company.create({ data });
+    return this.prisma.company.create({
+      data: {
+        workspaceId: data.workspaceId,
+        name: data.name,
+        ruc: data.ruc,
+        industry: data.industry,
+        startDate: data.startDate ? new Date(data.startDate) : null,
+        endDate: data.endDate ? new Date(data.endDate) : null,
+      },
+    });
   }
   async update(id: string, workspaceId: string, data: Record<string, unknown>) {
     const company = await this.prisma.company.findFirst({
@@ -27,7 +48,13 @@ export class CompanyService {
       });
       if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
     }
-    return this.prisma.company.update({ where: { id }, data: data as any });
+    const updateData: Record<string, unknown> = {};
+    for (const key of ['name', 'ruc', 'industry'] as const) {
+      if (data[key] !== undefined) updateData[key] = data[key];
+    }
+    if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate as string) : null;
+    if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
+    return this.prisma.company.update({ where: { id }, data: updateData as never });
   }
   async remove(id: string, workspaceId: string) {
     const company = await this.prisma.company.findFirst({

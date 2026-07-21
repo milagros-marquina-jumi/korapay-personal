@@ -217,12 +217,16 @@ model Company {
   name        String
   ruc         String?
   industry    String?
+  startDate   DateTime? @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
   notes       String?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clients      Client[]
+  transactions Transaction[]
 
   @@index([workspaceId])
   @@map("companies")
@@ -231,6 +235,7 @@ model Company {
 model Client {
   id          String    @id @default(uuid())
   workspaceId String    @map("workspace_id")
+  companyId   String?   @map("company_id")
   name        String
   company     String?
   email       String?
@@ -240,9 +245,11 @@ model Client {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  companyEntity Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
+  @@index([companyId])
   @@map("clients")
 }
 
@@ -325,6 +332,7 @@ model Transaction {
 
   workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   category           Category?       @relation(fields: [categoryId], references: [id])
+  company            Company?        @relation(fields: [companyId], references: [id])
   account            Account?        @relation("TransactionAccount", fields: [accountId], references: [id])
   destAccount        Account?        @relation("TransactionDestAccount", fields: [destAccountId], references: [id])
   linkedTransaction  Transaction?    @relation("LinkedTransactions", fields: [linkedTransactionId], references: [id])

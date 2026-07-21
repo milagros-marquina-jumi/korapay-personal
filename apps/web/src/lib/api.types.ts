@@ -130,6 +130,37 @@ export interface Company {
   name: string;
   ruc?: string | null;
   industry?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  clientCount?: number;
+}
+
+export interface Client {
+  id: string;
+  companyId?: string | null;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+}
+
+export interface MonthlySummaryCompany {
+  name: string;
+  net: string;
+  concept: string;
+  status: string;
+}
+
+export interface MonthlySummaryPeriod {
+  year: number;
+  month: number;
+  totalNet: string;
+  companies: MonthlySummaryCompany[];
+}
+
+export interface MonthlySummary {
+  data: MonthlySummaryPeriod[];
+  years: number[];
 }
 
 export interface Person {

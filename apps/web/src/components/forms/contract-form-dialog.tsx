@@ -183,8 +183,17 @@ export function ContractFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo</Label>
-              <Input id="type" placeholder="Ej. Planilla, RxH, Locación" {...register('type')} />
+              <Label>Tipo de pago</Label>
+              <Select value={watch('type') ?? ''} onValueChange={(v) => setValue('type', v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Planilla">Planilla</SelectItem>
+                  <SelectItem value="RxH">RxH</SelectItem>
+                  <SelectItem value="Transferencia">Transferencia</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

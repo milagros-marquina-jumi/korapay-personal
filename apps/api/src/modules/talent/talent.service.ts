@@ -36,8 +36,20 @@ export class TalentService {
     if (!talent) throw new NotFoundException('Talent not found');
     return talent;
   }
-  async create(data: { workspaceId: string; name: string; email?: string; phone?: string }) {
-    return this.prisma.talentProfile.create({ data });
+  private mapTalentData(data: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    for (const key of ['name', 'email', 'phone', 'notes', 'status', 'role', 'studyPlace', 'slideUrl'] as const) {
+      if (data[key] !== undefined) out[key] = data[key];
+    }
+    for (const key of ['startedWithMeAt', 'endedWithMeAt', 'firstJobAt', 'studyStartAt', 'studyEndAt'] as const) {
+      if (data[key] !== undefined) out[key] = data[key] ? new Date(data[key] as string) : null;
+    }
+    return out;
+  }
+  async create(data: Record<string, unknown>) {
+    return this.prisma.talentProfile.create({
+      data: { workspaceId: data.workspaceId as string, ...this.mapTalentData(data) } as never,
+    });
   }
   async update(id: string, workspaceId: string, data: Record<string, unknown>) {
     const talent = await this.prisma.talentProfile.findFirst({
@@ -46,7 +58,7 @@ export class TalentService {
     if (!talent) throw new NotFoundException('Talent not found');
     return this.prisma.talentProfile.update({
       where: { id },
-      data: data as any,
+      data: this.mapTalentData(data) as never,
     });
   }
   async remove(id: string, workspaceId: string) {

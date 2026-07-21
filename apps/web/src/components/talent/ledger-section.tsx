@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PeriodFilter } from '@/components/data-table/period-filter';
+import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { IconAction } from '@/components/ui/icon-action';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
@@ -59,6 +59,7 @@ export function LedgerSection({
     () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: STATUS_LABELS[v] ?? v })),
     [entries],
   );
+  const availableYears = useMemo(() => [...new Set(entries.map((e) => e.year))].sort((a, b) => b - a), [entries]);
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -197,7 +198,13 @@ export function LedgerSection({
               placeholder="Estado"
               allLabel="Todo estado"
             />
-            <PeriodFilter year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
+            <MonthYearFilter
+              year={year}
+              month={month}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+              years={availableYears}
+            />
           </>
         }
       />

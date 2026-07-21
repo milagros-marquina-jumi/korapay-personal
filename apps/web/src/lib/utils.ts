@@ -30,3 +30,22 @@ export function formatDateLong(value: string | Date): string {
     year: 'numeric',
   }).format(d);
 }
+
+export function monthsBetween(from: string | Date, to?: string | Date | null): number {
+  const start = new Date(from);
+  const end = to ? new Date(to) : new Date();
+  let months = (end.getUTCFullYear() - start.getUTCFullYear()) * 12 + (end.getUTCMonth() - start.getUTCMonth());
+  if (end.getUTCDate() < start.getUTCDate()) months -= 1;
+  return Math.max(0, months);
+}
+
+export function formatDuration(from?: string | Date | null, to?: string | Date | null): string {
+  if (!from) return '—';
+  const total = monthsBetween(from, to);
+  const years = Math.floor(total / 12);
+  const months = total % 12;
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+  parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
+  return parts.join(' ');
+}

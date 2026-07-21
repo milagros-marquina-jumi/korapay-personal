@@ -21,7 +21,7 @@ export class TalentController {
   }
   @Post()
   create(@Body() body: CreateTalentDto) {
-    return this.talentService.create(body);
+    return this.talentService.create({ ...body });
   }
   @Patch(':id')
   update(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto, @Body() body: UpdateTalentDto) {

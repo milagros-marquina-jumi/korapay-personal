@@ -315,11 +315,17 @@ async function main() {
     numeroCuenta: string | null;
     estado: string | null;
   }>('ingresos_trabajos');
+  const pagoCountByCompany: Record<string, Record<string, number>> = {};
   let incomeCount = 0;
   for (const r of ingresosTrabajos) {
     const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
     const original = currency === 'USD' ? (r.totalDolar ?? r.totalSoles ?? 0) : (r.totalSoles ?? 0);
     const companyId = await ensureCompany(empleos.id, r.empresa);
+    if (r.empresa && r.pago) {
+      const key = r.empresa.trim();
+      pagoCountByCompany[key] ??= {};
+      pagoCountByCompany[key][r.pago] = (pagoCountByCompany[key][r.pago] ?? 0) + 1;
+    }
     const categoryId = await ensureCategory(empleos.id, normalizeIncomeCategory(r.concepto));
     await prisma.transaction.create({
       data: {
@@ -339,6 +345,12 @@ async function main() {
       },
     });
     incomeCount++;
+  }
+
+  function dominantPago(empresa: string): string | null {
+    const counts = pagoCountByCompany[empresa.trim()];
+    if (!counts) return null;
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   }
 
   const empresas = load<{
@@ -370,6 +382,7 @@ async function main() {
       data: {
         workspaceId: empleos.id,
         companyId,
+        type: dominantPago(empresa),
         startDate: date(r.fechaInicio),
         endDate: r.fechaFin ? date(r.fechaFin) : null,
         status: r.fechaFin ? 'FINISHED' : 'ACTIVE',
@@ -581,24 +594,42 @@ async function main() {
     nombre: string;
     inicioConmigo: string | null;
     finConmigo: string | null;
+    inicioPrimerTrabajo: string | null;
     diapositiva: string | null;
     lugarEstudio: string | null;
+    inicioEstudios: string | null;
+    finEstudios: string | null;
     estado: string | null;
   }>('talents_general');
+  const cleanStudy = (v: string | null): string | null => {
+    const t = (v ?? '').trim();
+    return t === '' || t.toUpperCase() === 'NO TIENE' ? null : t;
+  };
+  const parseNameRole = (raw: string): { name: string; role: string | null } => {
+    const m = raw.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+    if (m) return { name: (m[1] ?? '').trim(), role: (m[2] ?? '').trim() };
+    return { name: raw.trim(), role: null };
+  };
   const talentByName: Record<string, string> = {};
   for (const r of talentsGeneral) {
-    const notes = [r.lugarEstudio ? `Estudios: ${r.lugarEstudio}` : '', r.diapositiva ? `Canva: ${r.diapositiva}` : '']
-      .filter(Boolean)
-      .join('\n');
+    const { name, role } = parseNameRole(r.nombre);
     const t = await prisma.talentProfile.create({
       data: {
         workspaceId: mimotech.id,
-        name: r.nombre,
+        name,
+        role,
         status: (r.estado ?? '').toLowerCase() === 'activo' ? 'ACTIVE' : 'INACTIVE',
-        notes: notes || null,
+        startedWithMeAt: r.inicioConmigo ? date(r.inicioConmigo) : null,
+        endedWithMeAt: r.finConmigo ? date(r.finConmigo) : null,
+        firstJobAt: r.inicioPrimerTrabajo ? date(r.inicioPrimerTrabajo) : null,
+        studyPlace: cleanStudy(r.lugarEstudio),
+        studyStartAt: r.inicioEstudios ? date(r.inicioEstudios) : null,
+        studyEndAt: r.finEstudios ? date(r.finEstudios) : null,
+        slideUrl: r.diapositiva ?? null,
       },
     });
-    talentByName[r.nombre.split(/[\s(]/)[0]?.toLowerCase() ?? r.nombre.toLowerCase()] = t.id;
+    const first = name.split(/\s+/)[0]?.toLowerCase() ?? name.toLowerCase();
+    if (!talentByName[first]) talentByName[first] = t.id;
   }
   function matchTalent(name: string | null | undefined): string | null {
     if (!name) return null;

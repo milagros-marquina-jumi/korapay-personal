@@ -117,6 +117,11 @@ function ContratosContent() {
         cell: ({ row }) => <span className="text-sm">{formatDateOrActive(row.original.endDate)}</span>,
       },
       {
+        id: 'type',
+        header: 'Tipo de pago',
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.type ?? '-'}</span>,
+      },
+      {
         id: 'salary',
         header: 'Salario',
         cell: ({ row }) =>

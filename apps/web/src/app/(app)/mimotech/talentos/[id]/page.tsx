@@ -3,7 +3,7 @@
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Copy, KeyRound, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Copy, ExternalLink, KeyRound, ShieldOff } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
 import type { Talent, TalentAuditEntry, TalentLedgerEntry, TalentLedgerSummary } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDuration } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
   return value ? formatDate(value) : 'Actual';
@@ -136,7 +136,52 @@ function TalentDetailContent() {
         </Link>
       </Button>
 
-      <PageHeader title={talent.name} action={<StatusBadge status={talent.status} />} />
+      <PageHeader
+        title={talent.name}
+        description={talent.role ?? undefined}
+        action={<StatusBadge status={talent.status} />}
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Perfil del talento</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+            <DetailItem
+              label="Inicio conmigo"
+              value={talent.startedWithMeAt ? formatDate(talent.startedWithMeAt) : '—'}
+            />
+            <DetailItem label="Tiempo conmigo" value={formatDuration(talent.startedWithMeAt, talent.endedWithMeAt)} />
+            <DetailItem
+              label="Fin conmigo"
+              value={talent.endedWithMeAt ? formatDate(talent.endedWithMeAt) : 'Actual'}
+            />
+            <DetailItem label="Inicio primer trabajo" value={talent.firstJobAt ? formatDate(talent.firstJobAt) : '—'} />
+            <DetailItem label="Tiempo trabajando" value={talent.firstJobAt ? formatDuration(talent.firstJobAt) : '—'} />
+            <DetailItem label="Lugar de estudio" value={talent.studyPlace ?? '—'} />
+            <DetailItem label="Inicio estudios" value={talent.studyStartAt ? formatDate(talent.studyStartAt) : '—'} />
+            <DetailItem label="Correo" value={talent.email ?? '—'} />
+            <DetailItem label="Teléfono" value={talent.phone ?? '—'} />
+          </dl>
+          {talent.slideUrl && (
+            <a
+              href={talent.slideUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline"
+            >
+              <ExternalLink className="size-4" /> Ver diapositiva (Canva)
+            </a>
+          )}
+          {talent.notes && (
+            <div className="rounded-lg bg-muted/50 px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground">Notas</p>
+              <p className="mt-0.5 whitespace-pre-wrap text-sm">{talent.notes}</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -315,6 +360,15 @@ function TalentDetailContent() {
           )}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium">{value}</dd>
     </div>
   );
 }

@@ -31,6 +31,46 @@ export class CreateTalentDto {
   @IsOptional()
   @IsIn(['ACTIVE', 'INACTIVE'])
   status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  role?: string;
+
+  @ApiPropertyOptional({ example: '2025-01-01' })
+  @IsOptional()
+  @IsDateString()
+  startedWithMeAt?: string;
+
+  @ApiPropertyOptional({ example: '2025-12-31' })
+  @IsOptional()
+  @IsDateString()
+  endedWithMeAt?: string;
+
+  @ApiPropertyOptional({ example: '2025-03-01' })
+  @IsOptional()
+  @IsDateString()
+  firstJobAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  studyPlace?: string;
+
+  @ApiPropertyOptional({ example: '2024-11-01' })
+  @IsOptional()
+  @IsDateString()
+  studyStartAt?: string;
+
+  @ApiPropertyOptional({ example: '2025-06-01' })
+  @IsOptional()
+  @IsDateString()
+  studyEndAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  slideUrl?: string;
 }
 
 export class UpdateTalentDto extends PartialType(CreateTalentDto) {}

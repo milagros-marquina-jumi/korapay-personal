@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { KPICard } from '@korapay/ui';
+import { KPICard, StatusBadge } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -21,7 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
-import type { BusinessReports, PersonalReports } from '@/lib/api.types';
+import type { BusinessReports, MonthlySummary, PersonalReports, TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -285,9 +285,156 @@ function BusinessReportsView({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+function EmploymentReportsView({ workspaceId }: { workspaceId: string }) {
+  const { data: summary, isLoading } = useQuery({
+    queryKey: queryKeys.monthlySummary(workspaceId, { type: 'INCOME' }),
+    queryFn: () => apiFetch<MonthlySummary>(`/transactions/monthly-summary?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+  });
+  const { data: renta } = useQuery({
+    queryKey: queryKeys.taxObligations(workspaceId),
+    queryFn: () => apiFetch<TaxObligation[]>(`/tax-obligations?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+  });
+
+  if (isLoading || !summary) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const byCompany = new Map<string, number>();
+  let totalIncome = 0;
+  const barData: MonthlyPoint[] = [];
+  for (const period of summary.data) {
+    barData.push({
+      label: `${MONTHS[period.month - 1]} ${String(period.year).slice(2)}`,
+      ingresos: Number(period.totalNet),
+      egresos: 0,
+    });
+    for (const c of period.companies) {
+      byCompany.set(c.name, (byCompany.get(c.name) ?? 0) + Number(c.net));
+      totalIncome += Number(c.net);
+    }
+  }
+  const companyDonut = [...byCompany.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+  const bars = barData.slice(0, 12).reverse();
+
+  const rentaRows = renta ?? [];
+  const rentaPaid = rentaRows.filter((r) => r.status === 'PAID').reduce((s, r) => s + Number(r.amount), 0);
+  const rentaPending = rentaRows.filter((r) => r.status !== 'PAID').reduce((s, r) => s + Number(r.amount), 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <KPICard
+          label="Ingresos totales"
+          value={formatMoney(String(totalIncome), 'PEN')}
+          icon={ArrowUpRight}
+          color="text-success"
+        />
+        <KPICard label="Empresas" value={String(byCompany.size)} icon={Landmark} color="text-brand" />
+        <KPICard
+          label="Renta pagada"
+          value={formatMoney(String(rentaPaid), 'PEN')}
+          icon={ArrowDownRight}
+          color="text-info"
+        />
+        <KPICard
+          label="Renta pendiente"
+          value={formatMoney(String(rentaPending), 'PEN')}
+          icon={AlertTriangle}
+          color="text-warning"
+        />
+      </div>
+
+      <Tabs defaultValue="empresa">
+        <TabsList>
+          <TabsTrigger value="empresa">Ingresos por empresa</TabsTrigger>
+          <TabsTrigger value="mes">Ingresos por mes</TabsTrigger>
+          <TabsTrigger value="renta">Renta</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="empresa" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ingresos por empresa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {companyDonut.length ? (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <CategoryDonut data={companyDonut} />
+                  <div className="divide-y">
+                    {companyDonut.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                        <span className="truncate">{c.name}</span>
+                        <span className="font-medium tabular-nums">{formatMoney(String(c.value), 'PEN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin ingresos registrados</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="mes" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ingresos por mes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {bars.length ? (
+                <MonthlyBar data={bars} />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="renta" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Obligaciones de renta</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {rentaRows.length ? (
+                <div className="divide-y">
+                  {rentaRows.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between py-2 text-sm">
+                      <span className="truncate">{r.name}</span>
+                      <div className="flex items-center gap-3">
+                        <StatusBadge status={r.status} />
+                        <span className="w-28 text-right font-medium tabular-nums">{formatMoney(r.amount, 'PEN')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin obligaciones de renta</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 export default function ReportesPage() {
   const { activeWorkspaceId, activeWorkspace } = useWorkspace();
   const isBusiness = activeWorkspace?.type === 'BUSINESS';
+  const isEmployment = activeWorkspace?.type === 'EMPLOYMENT';
   const isPersonal = activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED';
 
   return (
@@ -296,6 +443,8 @@ export default function ReportesPage() {
 
       {activeWorkspaceId && isBusiness ? (
         <BusinessReportsView workspaceId={activeWorkspaceId} />
+      ) : activeWorkspaceId && isEmployment ? (
+        <EmploymentReportsView workspaceId={activeWorkspaceId} />
       ) : activeWorkspaceId && isPersonal ? (
         <PersonalReportsView workspaceId={activeWorkspaceId} />
       ) : (

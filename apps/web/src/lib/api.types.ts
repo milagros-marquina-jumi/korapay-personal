@@ -344,6 +344,14 @@ export interface Talent {
   email?: string | null;
   phone?: string | null;
   status: string;
+  role?: string | null;
+  startedWithMeAt?: string | null;
+  endedWithMeAt?: string | null;
+  firstJobAt?: string | null;
+  studyPlace?: string | null;
+  studyStartAt?: string | null;
+  studyEndAt?: string | null;
+  slideUrl?: string | null;
   notes?: string | null;
   accessToken?: string | null;
   tokenEnabledAt?: string | null;

@@ -53,6 +53,7 @@ const EMPLOYMENT: NavItem[] = [
   { href: '/empresas', label: 'Empresas', icon: Building2 },
   { href: '/contratos', label: 'Contratos', icon: FileText },
   { href: '/renta', label: 'Renta anual', icon: Banknote },
+  { href: '/reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
 const BUSINESS: NavItem[] = [

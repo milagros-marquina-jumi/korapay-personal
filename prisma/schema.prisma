@@ -602,6 +602,14 @@ model TalentProfile {
   email          String?
   phone          String?
   status         String    @default("ACTIVE")
+  role           String?
+  startedWithMeAt DateTime? @map("started_with_me_at") @db.Date
+  endedWithMeAt   DateTime? @map("ended_with_me_at") @db.Date
+  firstJobAt      DateTime? @map("first_job_at") @db.Date
+  studyPlace      String?   @map("study_place")
+  studyStartAt    DateTime? @map("study_start_at") @db.Date
+  studyEndAt      DateTime? @map("study_end_at") @db.Date
+  slideUrl        String?   @map("slide_url")
   notes          String?
   accessToken    String?   @unique @map("access_token")
   tokenEnabledAt DateTime? @map("token_enabled_at")

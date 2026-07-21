@@ -4,10 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
@@ -240,12 +241,20 @@ function EntryFormDialog({ workspaceId, goalId }: { workspaceId: string; goalId:
 
 export default function AhorrosPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.savingGoals(activeWorkspaceId ?? ''),
     queryFn: () => apiFetch<SavingGoal[]>(`/saving-goals?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
+
+  const goals = useMemo(() => {
+    const all = data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((g) => g.name.toLowerCase().includes(q));
+  }, [data, search]);
 
   return (
     <div className="space-y-6">
@@ -255,15 +264,17 @@ export default function AhorrosPage() {
         action={activeWorkspaceId ? <GoalFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar metas..." />
+
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-56 rounded-xl" />
           ))}
         </div>
-      ) : data?.length ? (
+      ) : goals.length ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {data.map((goal) => {
+          {goals.map((goal) => {
             const currency = goal.currency as 'PEN' | 'USD';
             return (
               <Card key={goal.id}>

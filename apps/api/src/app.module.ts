@@ -12,6 +12,7 @@ import { CategoryModule } from './modules/category/category.module';
 import { CompanyModule } from './modules/company/company.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DebtModule } from './modules/debt/debt.module';
+import { ExchangeRateModule } from './modules/exchange-rate/exchange-rate.module';
 import { HealthModule } from './modules/health/health.module';
 import { PendingItemModule } from './modules/pending-item/pending-item.module';
 import { PersonModule } from './modules/person/person.module';
@@ -42,6 +43,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     AuditModule,
     TalentModule,
     CatalogModule,
+    ExchangeRateModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

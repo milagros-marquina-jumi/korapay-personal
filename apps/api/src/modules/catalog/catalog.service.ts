@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
 @Injectable()
@@ -12,11 +12,43 @@ export class CatalogService {
     });
   }
 
+  createApplication(data: { workspaceId: string; name: string; provider?: string; category?: string; url?: string }) {
+    return this.prisma.application.create({ data });
+  }
+
+  async updateApplication(id: string, workspaceId: string, data: Record<string, unknown>) {
+    const found = await this.prisma.application.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!found) throw new NotFoundException('Application not found');
+    return this.prisma.application.update({ where: { id }, data: data as never });
+  }
+
+  async removeApplication(id: string, workspaceId: string) {
+    const found = await this.prisma.application.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!found) throw new NotFoundException('Application not found');
+    return this.prisma.application.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
   projects(workspaceId: string) {
     return this.prisma.project.findMany({
       where: { workspaceId, deletedAt: null },
       orderBy: { name: 'asc' },
     });
+  }
+
+  createProject(data: { workspaceId: string; name: string; description?: string; emoji?: string }) {
+    return this.prisma.project.create({ data });
+  }
+
+  async updateProject(id: string, workspaceId: string, data: Record<string, unknown>) {
+    const found = await this.prisma.project.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!found) throw new NotFoundException('Project not found');
+    return this.prisma.project.update({ where: { id }, data: data as never });
+  }
+
+  async removeProject(id: string, workspaceId: string) {
+    const found = await this.prisma.project.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!found) throw new NotFoundException('Project not found');
+    return this.prisma.project.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
   async employmentContracts(workspaceId: string) {
@@ -39,25 +71,53 @@ export class CatalogService {
     return this.prisma.paymentMethod.findMany({ orderBy: { name: 'asc' } });
   }
 
+  createPaymentMethod(data: { name: string }) {
+    return this.prisma.paymentMethod.create({ data });
+  }
+
+  async updatePaymentMethod(id: string, data: { name: string }) {
+    const found = await this.prisma.paymentMethod.findUnique({ where: { id } });
+    if (!found) throw new NotFoundException('Payment method not found');
+    return this.prisma.paymentMethod.update({ where: { id }, data });
+  }
+
+  async removePaymentMethod(id: string) {
+    const found = await this.prisma.paymentMethod.findUnique({ where: { id } });
+    if (!found) throw new NotFoundException('Payment method not found');
+    return this.prisma.paymentMethod.delete({ where: { id } });
+  }
+
   currencies() {
     return this.prisma.currency.findMany({ orderBy: { code: 'asc' } });
+  }
+
+  createCurrency(data: { code: string; symbol: string; name: string }) {
+    return this.prisma.currency.create({ data });
+  }
+
+  async removeCurrency(id: string) {
+    const found = await this.prisma.currency.findUnique({ where: { id } });
+    if (!found) throw new NotFoundException('Currency not found');
+    return this.prisma.currency.delete({ where: { id } });
   }
 
   banks() {
     return this.prisma.bank.findMany({ orderBy: { name: 'asc' } });
   }
 
-  async exchangeRate() {
-    const rate = await this.prisma.exchangeRate.findFirst({
-      orderBy: { date: 'desc' },
-      include: { fromCurrency: true, toCurrency: true },
-    });
-    if (!rate) return null;
-    return {
-      from: rate.fromCurrency.code,
-      to: rate.toCurrency.code,
-      rate: rate.rate.toString(),
-      date: rate.date,
-    };
+  createBank(data: { name: string; country?: string }) {
+    return this.prisma.bank.create({ data: { name: data.name, country: data.country ?? 'PE' } });
+  }
+
+  async updateBank(id: string, data: { name?: string; country?: string }) {
+    const found = await this.prisma.bank.findUnique({ where: { id } });
+    if (!found) throw new NotFoundException('Bank not found');
+    return this.prisma.bank.update({ where: { id }, data });
+  }
+
+  async removeBank(id: string) {
+    const found = await this.prisma.bank.findUnique({ where: { id } });
+    if (!found) throw new NotFoundException('Bank not found');
+    return this.prisma.bank.delete({ where: { id } });
   }
 }

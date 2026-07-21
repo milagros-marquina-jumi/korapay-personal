@@ -40,6 +40,22 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  await app.init();
+  const fastify = app.getHttpAdapter().getInstance();
+  fastify.removeContentTypeParser('application/json');
+  fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (body === '' || body == null) {
+      done(null, {});
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err) {
+      (err as { statusCode?: number }).statusCode = 400;
+      done(err as Error, undefined);
+    }
+  });
+
   const port = process.env.API_PORT ?? 3061;
   await app.listen(port, '0.0.0.0');
   logger.log(`API running on http://localhost:${port}`);

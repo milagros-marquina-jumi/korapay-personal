@@ -3,8 +3,12 @@
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Plus, Users, Wallet } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -13,7 +17,6 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Paginated, Person, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
@@ -29,18 +32,17 @@ function initials(name: string) {
 
 function EquipoContent() {
   const { activeWorkspaceId } = useWorkspace();
-  const [page, _setPage] = useState(1);
+  const [search, setSearch] = useState('');
 
-  const filters = { page, type: 'TEAM_PAYMENT' };
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.transactions(activeWorkspaceId ?? '', filters),
+    queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { type: 'TEAM_PAYMENT', all: true }),
     queryFn: () =>
       apiFetch<Paginated<Transaction>>(
         `/transactions${buildQuery({
           workspaceId: activeWorkspaceId ?? '',
           type: 'TEAM_PAYMENT',
-          page,
-          pageSize: 20,
+          page: 1,
+          pageSize: 500,
           sortBy: 'date',
           sortOrder: 'desc',
         })}`,
@@ -57,6 +59,38 @@ function EquipoContent() {
   const rows = data?.data ?? [];
   const team = peopleData ?? [];
   const totalPagado = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
+
+  const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'date',
+        header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
+        cell: ({ row }) => <span className="text-sm">{new Date(row.original.date).toLocaleDateString('es-PE')}</span>,
+      },
+      {
+        accessorKey: 'concept',
+        header: ({ column }) => <SortableHeader column={column} label="Persona" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.concept}</span>,
+      },
+      {
+        id: 'notes',
+        header: 'Notas',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.description ?? '-'}</span>,
+      },
+      {
+        id: 'amount',
+        accessorFn: (r) => Number(r.amountBase),
+        sortingFn: 'basic',
+        header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
+        cell: ({ row }) => (
+          <div className="text-right font-semibold tabular-nums text-destructive">
+            {formatMoney(row.original.amountOriginal, row.original.currency as 'PEN' | 'USD')}
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <div className="space-y-6">
@@ -88,51 +122,18 @@ function EquipoContent() {
         <KPICard label="Miembros del equipo" value={String(team.length)} icon={Users} color="text-info" />
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Persona</TableHead>
-                <TableHead>Notas</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={4}>
-                      <Skeleton className="h-6 w-full" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : rows.length ? (
-                rows.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="text-sm">{new Date(tx.date).toLocaleDateString('es-PE')}</TableCell>
-                    <TableCell className="font-medium">{tx.concept}</TableCell>
-                    <TableCell className="text-muted-foreground">{tx.description ?? '-'}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums text-destructive">
-                      {formatMoney(tx.amountOriginal, tx.currency as 'PEN' | 'USD')}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="py-0">
-                    <EmptyState
-                      title="Sin pagos"
-                      description="Registra tu primer pago al equipo con el boton de arriba."
-                    />
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar pagos..." />
+
+      <DataTable
+        columns={columns}
+        data={rows}
+        isLoading={isLoading}
+        globalFilter={search}
+        onGlobalFilterChange={setSearch}
+        emptyState={
+          <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el boton de arriba." />
+        }
+      />
 
       <Card>
         <CardHeader>

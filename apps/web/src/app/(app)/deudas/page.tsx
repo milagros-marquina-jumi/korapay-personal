@@ -4,10 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -250,12 +251,20 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
 
 export default function DeudasPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.debts(activeWorkspaceId ?? ''),
     queryFn: () => apiFetch<Debt[]>(`/debts?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
+
+  const debts = useMemo(() => {
+    const all = data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((d) => d.concept.toLowerCase().includes(q));
+  }, [data, search]);
 
   return (
     <div className="space-y-6">
@@ -265,15 +274,17 @@ export default function DeudasPage() {
         action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar deudas..." />
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-32 rounded-xl" />
           ))}
         </div>
-      ) : data?.length ? (
+      ) : debts.length ? (
         <div className="space-y-3">
-          {data.map((debt) => {
+          {debts.map((debt) => {
             const currency = debt.currency as 'PEN' | 'USD';
             return (
               <Card key={debt.id}>

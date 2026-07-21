@@ -21,12 +21,23 @@ export class WorkspaceService {
     if (!membership) throw new NotFoundException('Workspace not found');
     return { ...membership.workspace, role: membership.role };
   }
-  async create(data: { name: string; type: string; currency?: string; profileId: string }) {
+  async create(data: {
+    name: string;
+    type: string;
+    currency?: string;
+    description?: string;
+    emoji?: string;
+    color?: string;
+    profileId: string;
+  }) {
     const workspace = await this.prisma.workspace.create({
       data: {
         name: data.name,
         type: data.type,
         currency: data.currency ?? 'PEN',
+        description: data.description,
+        emoji: data.emoji ?? '💰',
+        color: data.color,
       },
     });
     await this.prisma.workspaceMember.create({
@@ -38,7 +49,10 @@ export class WorkspaceService {
     });
     return workspace;
   }
-  async update(id: string, data: { name?: string; description?: string; emoji?: string }) {
+  async update(
+    id: string,
+    data: { name?: string; type?: string; description?: string; emoji?: string; color?: string; currency?: string },
+  ) {
     return this.prisma.workspace.update({
       where: { id },
       data,

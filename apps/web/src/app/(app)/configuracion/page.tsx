@@ -1,45 +1,30 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { CatalogManager } from '@/components/catalog/catalog-manager';
+import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
+import { WorkspaceManager } from '@/components/catalog/workspace-manager';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { apiFetch } from '@/lib/api';
-import type { BankCatalog, CurrencyCatalog, ExchangeRateInfo, PaymentMethodCatalog } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 export default function ConfiguracionPage() {
-  const { workspaces } = useWorkspace();
-
-  const { data: currencies } = useQuery({
-    queryKey: queryKeys.currencies(),
-    queryFn: () => apiFetch<CurrencyCatalog[]>('/currencies'),
-  });
-  const { data: methods } = useQuery({
-    queryKey: queryKeys.paymentMethods(),
-    queryFn: () => apiFetch<PaymentMethodCatalog[]>('/payment-methods'),
-  });
-  const { data: banks } = useQuery({
-    queryKey: queryKeys.banks(),
-    queryFn: () => apiFetch<BankCatalog[]>('/banks'),
-  });
-  const { data: rate } = useQuery({
-    queryKey: queryKeys.exchangeRate(),
-    queryFn: () => apiFetch<ExchangeRateInfo | null>('/exchange-rate'),
-  });
+  const { activeWorkspace, activeWorkspaceId } = useWorkspace();
+  const ws = activeWorkspaceId ?? '';
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Configuracion" description="Perfil, workspaces y catalogos globales" />
+      <PageHeader title="Configuracion" description="Perfil, workspaces, tipo de cambio y catalogos" />
 
       <Tabs defaultValue="perfil">
         <TabsList>
           <TabsTrigger value="perfil">Perfil</TabsTrigger>
           <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
-          <TabsTrigger value="catalogos">Catalogos</TabsTrigger>
+          <TabsTrigger value="cambio">Tipo de cambio</TabsTrigger>
+          <TabsTrigger value="globales">Catalogos globales</TabsTrigger>
+          <TabsTrigger value="workspace">Catalogos del workspace</TabsTrigger>
         </TabsList>
 
         <TabsContent value="perfil" className="space-y-6">
@@ -57,16 +42,6 @@ export default function ConfiguracionPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Preferencias</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                El tema claro y oscuro se controla desde el interruptor de la barra superior.
-              </p>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="workspaces">
@@ -74,80 +49,150 @@ export default function ConfiguracionPage() {
             <CardHeader>
               <CardTitle>Workspaces</CardTitle>
             </CardHeader>
-            <CardContent className="divide-y">
-              {workspaces.length ? (
-                workspaces.map((ws) => (
-                  <div key={ws.id} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl" aria-hidden>
-                        {ws.emoji}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium">{ws.name}</p>
-                        {ws.description && <p className="text-xs text-muted-foreground">{ws.description}</p>}
-                      </div>
-                    </div>
-                    <Badge variant="secondary">{ws.type}</Badge>
-                  </div>
-                ))
-              ) : (
-                <p className="py-8 text-center text-sm text-muted-foreground">Sin workspaces</p>
-              )}
+            <CardContent>
+              <WorkspaceManager />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="catalogos" className="grid gap-4 md:grid-cols-2">
+        <TabsContent value="cambio">
+          <ExchangeRatePanel />
+        </TabsContent>
+
+        <TabsContent value="globales" className="grid gap-6 md:grid-cols-2">
           <Card>
-            <CardHeader>
-              <CardTitle>Tipo de cambio</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {rate ? (
-                <p className="text-2xl font-bold tabular-nums">
-                  1 {rate.from} = {rate.rate} {rate.to}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">Sin tipo de cambio</p>
-              )}
+            <CardContent className="pt-6">
+              <CatalogManager
+                title="Medios de pago"
+                endpoint="/payment-methods"
+                queryKey={queryKeys.paymentMethods()}
+                fields={[{ name: 'name', label: 'Nombre', required: true }]}
+                display={(m) => String(m.name)}
+              />
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle>Monedas</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {currencies?.map((c) => (
-                <Badge key={c.id} variant="outline">
-                  {c.symbol} {c.code}
-                </Badge>
-              ))}
+            <CardContent className="pt-6">
+              <CatalogManager
+                title="Bancos"
+                endpoint="/banks"
+                queryKey={queryKeys.banks()}
+                fields={[
+                  { name: 'name', label: 'Nombre', required: true },
+                  { name: 'country', label: 'Pais', placeholder: 'PE' },
+                ]}
+                display={(b) => String(b.name)}
+              />
             </CardContent>
           </Card>
           <Card>
-            <CardHeader>
-              <CardTitle>Medios de pago</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {methods?.map((m) => (
-                <Badge key={m.id} variant="secondary">
-                  {m.name}
-                </Badge>
-              ))}
+            <CardContent className="pt-6">
+              <CatalogManager
+                title="Monedas"
+                endpoint="/currencies"
+                queryKey={queryKeys.currencies()}
+                fields={[
+                  { name: 'code', label: 'Codigo', required: true, placeholder: 'PEN' },
+                  { name: 'symbol', label: 'Simbolo', required: true, placeholder: 'S/' },
+                  { name: 'name', label: 'Nombre', required: true },
+                ]}
+                display={(c) => `${c.symbol} ${c.code} — ${c.name}`}
+                editable={false}
+              />
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Bancos</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {banks?.map((b) => (
-                <Badge key={b.id} variant="secondary">
-                  {b.name}
-                </Badge>
-              ))}
-            </CardContent>
-          </Card>
+        </TabsContent>
+
+        <TabsContent value="workspace" className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Catalogos de <span className="font-medium text-foreground">{activeWorkspace?.name}</span>. Cambia de
+            workspace en el selector para gestionar los de otro.
+          </p>
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card>
+              <CardContent className="pt-6">
+                <CatalogManager
+                  title="Categorias"
+                  endpoint="/categories"
+                  queryKey={queryKeys.categories(ws)}
+                  extraBody={{ workspaceId: ws }}
+                  fields={[
+                    { name: 'name', label: 'Nombre', required: true },
+                    { name: 'emoji', label: 'Emoji', placeholder: '📁' },
+                  ]}
+                  display={(c) => `${c.emoji ?? ''} ${c.name}`}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <CatalogManager
+                  title="Empresas"
+                  endpoint="/companies"
+                  queryKey={queryKeys.companies(ws)}
+                  extraBody={{ workspaceId: ws }}
+                  fields={[
+                    { name: 'name', label: 'Nombre', required: true },
+                    { name: 'ruc', label: 'RUC' },
+                    { name: 'industry', label: 'Industria' },
+                  ]}
+                  display={(c) => String(c.name)}
+                />
+              </CardContent>
+            </Card>
+            {activeWorkspace?.type === 'BUSINESS' && (
+              <>
+                <Card>
+                  <CardContent className="pt-6">
+                    <CatalogManager
+                      title="Aplicaciones"
+                      endpoint="/applications"
+                      queryKey={queryKeys.applications(ws)}
+                      extraBody={{ workspaceId: ws }}
+                      fields={[
+                        { name: 'name', label: 'Nombre', required: true },
+                        { name: 'provider', label: 'Proveedor' },
+                        { name: 'category', label: 'Categoria' },
+                      ]}
+                      display={(a) => String(a.name)}
+                    />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <CatalogManager
+                      title="Proyectos"
+                      endpoint="/projects"
+                      queryKey={queryKeys.projects(ws)}
+                      extraBody={{ workspaceId: ws }}
+                      fields={[
+                        { name: 'name', label: 'Nombre', required: true },
+                        { name: 'description', label: 'Descripcion' },
+                        { name: 'emoji', label: 'Emoji', placeholder: '📦' },
+                      ]}
+                      display={(p) => `${p.emoji ?? ''} ${p.name}`}
+                    />
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <CatalogManager
+                      title="Personas (equipo)"
+                      endpoint="/people"
+                      queryKey={queryKeys.people(ws)}
+                      extraBody={{ workspaceId: ws, kind: 'TEAM' }}
+                      fields={[
+                        { name: 'name', label: 'Nombre', required: true },
+                        { name: 'email', label: 'Email' },
+                        { name: 'phone', label: 'Telefono' },
+                      ]}
+                      display={(p) => String(p.name)}
+                    />
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

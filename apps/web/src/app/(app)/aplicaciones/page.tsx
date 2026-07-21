@@ -2,18 +2,21 @@
 
 import { EmptyState } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
+import { useMemo, useState } from 'react';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { SortableHeader } from '@/components/data-table/sortable-header';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { Application } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 function AplicacionesContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.applications(activeWorkspaceId ?? ''),
@@ -23,31 +26,41 @@ function AplicacionesContent() {
 
   const applications = data ?? [];
 
+  const columns = useMemo<ColumnDef<Application, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <SortableHeader column={column} label="Nombre" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        id: 'provider',
+        header: 'Proveedor',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.provider ?? '-'}</span>,
+      },
+      {
+        id: 'category',
+        header: 'Categoria',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.category ?? '-'}</span>,
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader title="Aplicaciones" description="Aplicaciones y servicios de MIMOTECH" />
 
-      {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28 rounded-xl" />
-          ))}
-        </div>
-      ) : applications.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {applications.map((application) => (
-            <Card key={application.id}>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <CardTitle>{application.name}</CardTitle>
-                {application.category && <Badge variant="secondary">{application.category}</Badge>}
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">{application.provider ?? '-'}</CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="Sin aplicaciones" description="Aun no hay aplicaciones registradas." />
-      )}
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar aplicaciones..." />
+
+      <DataTable
+        columns={columns}
+        data={applications}
+        isLoading={isLoading}
+        globalFilter={search}
+        onGlobalFilterChange={setSearch}
+        emptyState={<EmptyState title="Sin aplicaciones" description="Aun no hay aplicaciones registradas." />}
+      />
     </div>
   );
 }

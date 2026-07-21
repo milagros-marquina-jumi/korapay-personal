@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { Logo } from '@/components/layout/logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,9 +40,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-xl font-bold text-primary-foreground">
-            K
-          </div>
+          <Logo size={48} withWordmark={false} className="mb-2" />
           <CardTitle className="font-display text-2xl">KoraPay</CardTitle>
           <CardDescription>Gestion financiera personal y empresarial</CardDescription>
         </CardHeader>

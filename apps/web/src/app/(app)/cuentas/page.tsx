@@ -4,11 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { PageHeader } from '@/components/layout/page-header';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,9 +52,24 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-function AccountFormDialog({ workspaceId }: { workspaceId: string }) {
-  const [open, setOpen] = useState(false);
+function AccountFormDialog({
+  workspaceId,
+  account,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  workspaceId: string;
+  account?: Account;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const queryClient = useQueryClient();
+  const isEdit = !!account;
 
   const {
     register,
@@ -62,21 +80,26 @@ function AccountFormDialog({ workspaceId }: { workspaceId: string }) {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      name: '',
-      bank: '',
-      kind: 'SAVINGS',
-      currency: 'PEN',
-      initialBalance: '',
+      name: account?.name ?? '',
+      bank: account?.bank ?? '',
+      kind: (account?.kind as FormValues['kind']) ?? 'SAVINGS',
+      currency: (account?.currency as 'PEN' | 'USD') ?? 'PEN',
+      initialBalance: account?.initialBalance ?? '',
     },
   });
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      apiFetch('/accounts', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
+      isEdit
+        ? apiFetch(`/accounts/${account.id}?workspaceId=${workspaceId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(values),
+          })
+        : apiFetch('/accounts', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts(workspaceId) });
-      toast.success('Cuenta creada');
-      reset();
+      toast.success(isEdit ? 'Cuenta actualizada' : 'Cuenta creada');
+      if (!isEdit) reset();
       setOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -84,12 +107,16 @@ function AccountFormDialog({ workspaceId }: { workspaceId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>Nueva cuenta</Button>
-      </DialogTrigger>
+      {trigger ? (
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button>Nueva cuenta</Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva cuenta</DialogTitle>
+          <DialogTitle>{isEdit ? 'Editar cuenta' : 'Nueva cuenta'}</DialogTitle>
           <DialogDescription>Registra una cuenta bancaria, tarjeta o billetera.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
@@ -108,7 +135,10 @@ function AccountFormDialog({ workspaceId }: { workspaceId: string }) {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select defaultValue="SAVINGS" onValueChange={(v) => setValue('kind', v as FormValues['kind'])}>
+              <Select
+                defaultValue={account?.kind ?? 'SAVINGS'}
+                onValueChange={(v) => setValue('kind', v as FormValues['kind'])}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -124,7 +154,10 @@ function AccountFormDialog({ workspaceId }: { workspaceId: string }) {
             </div>
             <div className="space-y-2">
               <Label>Moneda</Label>
-              <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
+              <Select
+                defaultValue={account?.currency ?? 'PEN'}
+                onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -155,12 +188,32 @@ function AccountFormDialog({ workspaceId }: { workspaceId: string }) {
 
 export default function CuentasPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<Account | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.accounts(activeWorkspaceId ?? ''),
     queryFn: () => apiFetch<Account[]>(`/accounts?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/accounts/${id}?workspaceId=${activeWorkspaceId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.accounts(activeWorkspaceId ?? '') });
+      toast.success('Cuenta eliminada');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const accounts = useMemo(() => {
+    const all = data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((a) => `${a.name} ${a.bank}`.toLowerCase().includes(q));
+  }, [data, search]);
 
   return (
     <div className="space-y-6">
@@ -170,15 +223,17 @@ export default function CuentasPage() {
         action={activeWorkspaceId ? <AccountFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar cuentas..." />
+
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-40 rounded-xl" />
           ))}
         </div>
-      ) : data?.length ? (
+      ) : accounts.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {data.map((account) => (
+          {accounts.map((account) => (
             <Card key={account.id}>
               <CardHeader className="flex flex-row items-start justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -190,11 +245,32 @@ export default function CuentasPage() {
                 </div>
                 <Badge variant="secondary">{kindLabels[account.kind] ?? account.kind}</Badge>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
                 <p className="text-2xl font-bold tabular-nums">
                   {formatMoney(account.initialBalance, account.currency as 'PEN' | 'USD')}
                 </p>
                 {account.lastFour && <p className="text-sm text-muted-foreground">····{account.lastFour}</p>}
+                <div className="flex justify-end gap-1">
+                  <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEditing(account)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Eliminar"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Eliminar cuenta',
+                        description: `Se archivara "${account.name}". Los movimientos asociados se conservan.`,
+                        confirmLabel: 'Eliminar',
+                        destructive: true,
+                      });
+                      if (ok) removeMutation.mutate(account.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -204,6 +280,18 @@ export default function CuentasPage() {
           title="Sin cuentas"
           description="Aun no tienes cuentas registradas. Crea la primera para empezar."
           action={activeWorkspaceId ? <AccountFormDialog workspaceId={activeWorkspaceId} /> : undefined}
+        />
+      )}
+
+      {editing && activeWorkspaceId && (
+        <AccountFormDialog
+          workspaceId={activeWorkspaceId}
+          account={editing}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditing(null);
+          }}
+          trigger={<span className="hidden" />}
         />
       )}
     </div>

@@ -3,16 +3,19 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EmptyState } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Plus } from 'lucide-react';
-import { useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import { Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { SortableHeader } from '@/components/data-table/sortable-header';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -24,7 +27,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { Company } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
@@ -99,6 +101,7 @@ function CompanyFormDialog({ workspaceId }: { workspaceId: string }) {
 
 function EmpresasContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.companies(activeWorkspaceId ?? ''),
@@ -108,6 +111,27 @@ function EmpresasContent() {
 
   const companies = data ?? [];
 
+  const columns = useMemo<ColumnDef<Company, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'name',
+        header: ({ column }) => <SortableHeader column={column} label="Nombre" />,
+        cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
+      },
+      {
+        id: 'ruc',
+        header: 'RUC',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.ruc ?? '-'}</span>,
+      },
+      {
+        id: 'industry',
+        header: 'Industria',
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.industry ?? '-'}</span>,
+      },
+    ],
+    [],
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -116,39 +140,25 @@ function EmpresasContent() {
         action={activeWorkspaceId && <CompanyFormDialog workspaceId={activeWorkspaceId} />}
       />
 
-      {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
-          ))}
-        </div>
-      ) : companies.length ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {companies.map((company) => (
-            <Card key={company.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5 text-muted-foreground" />
-                  {company.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 text-sm text-muted-foreground">
-                {company.ruc && <p>RUC: {company.ruc}</p>}
-                {company.industry && <p>{company.industry}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <EmptyState title="Sin empresas" description="Registra tu primera empresa con el boton de arriba." />
-      )}
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar empresas..." />
+
+      <DataTable
+        columns={columns}
+        data={companies}
+        isLoading={isLoading}
+        globalFilter={search}
+        onGlobalFilterChange={setSearch}
+        emptyState={
+          <EmptyState title="Sin empresas" description="Registra tu primera empresa con el boton de arriba." />
+        }
+      />
     </div>
   );
 }
 
 export default function EmpresasPage() {
   return (
-    <WorkspaceGate type="EMPLOYMENT">
+    <WorkspaceGate type={['EMPLOYMENT', 'SHARED']}>
       <EmpresasContent />
     </WorkspaceGate>
   );

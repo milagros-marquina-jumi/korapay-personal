@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Logo } from '@/components/layout/logo';
 import { WorkspaceSwitcher } from '@/components/layout/workspace-switcher';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { cn } from '@/lib/utils';
@@ -56,11 +57,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
-          K
-        </div>
-        <span className="font-display text-lg font-bold">KoraPay</span>
+      <div className="flex h-16 items-center border-b px-6">
+        <Logo size={32} />
       </div>
 
       <div className="border-b px-4 py-3">

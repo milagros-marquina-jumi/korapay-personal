@@ -2,9 +2,13 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { ExchangeRateService } from '@/modules/exchange-rate/exchange-rate.service';
 @Injectable()
 export class TransactionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly exchangeRateService: ExchangeRateService,
+  ) {}
   async findAll(params: {
     workspaceId: string;
     page?: number;
@@ -105,7 +109,10 @@ export class TransactionService {
     notes?: string;
   }) {
     const currency = data.currency ?? 'PEN';
-    const exchangeRate = data.exchangeRate ?? '1';
+    let exchangeRate = data.exchangeRate ?? '1';
+    if (currency !== 'PEN' && !data.exchangeRate) {
+      exchangeRate = await this.exchangeRateService.getRateForDate(data.date);
+    }
     const amountBase =
       currency === 'PEN' ? data.amount : new Decimal(data.amount).mul(new Decimal(exchangeRate)).toFixed(2);
     return this.prisma.transaction.create({

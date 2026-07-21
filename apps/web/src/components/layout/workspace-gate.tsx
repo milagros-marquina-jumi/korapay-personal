@@ -10,18 +10,21 @@ const TYPE_LABEL: Record<string, string> = {
   PERSONAL: 'Personal',
   EMPLOYMENT: 'Ingresos Laborales',
   BUSINESS: 'MIMOTECH',
+  SHARED: 'Compartido',
 };
 
-export function WorkspaceGate({ type, children }: { type: string; children: ReactNode }) {
+export function WorkspaceGate({ type, children }: { type: string | string[]; children: ReactNode }) {
   const { activeWorkspace, isLoading } = useWorkspace();
 
   if (isLoading || !activeWorkspace) return null;
 
-  if (activeWorkspace.type !== type) {
+  const allowed = Array.isArray(type) ? type : [type];
+  if (!allowed.includes(activeWorkspace.type)) {
+    const label = allowed.map((t) => TYPE_LABEL[t] ?? t).join(' o ');
     return (
       <EmptyState
-        title={`Esta seccion pertenece a ${TYPE_LABEL[type] ?? type}`}
-        description={`Cambia al workspace ${TYPE_LABEL[type] ?? type} desde el selector para verla.`}
+        title={`Esta seccion pertenece a ${label}`}
+        description={`Cambia a un workspace ${label} desde el selector para verla.`}
         action={
           <Button asChild variant="outline">
             <Link href="/dashboard">Ir al dashboard</Link>

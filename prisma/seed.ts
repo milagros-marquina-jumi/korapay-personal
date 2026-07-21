@@ -175,7 +175,16 @@ async function main() {
       currency: 'PEN',
     },
   });
-  for (const ws of [personal, empleos, mimotech]) {
+  const qoryx = await prisma.workspace.create({
+    data: {
+      name: 'Qoryx',
+      type: 'SHARED',
+      description: 'Empresa tecnologica 50/50 con socio. Finanzas compartidas.',
+      emoji: '🤝',
+      currency: 'PEN',
+    },
+  });
+  for (const ws of [personal, empleos, mimotech, qoryx]) {
     await prisma.workspaceMember.create({ data: { workspaceId: ws.id, profileId: profile.id, role: 'OWNER' } });
   }
 
@@ -622,6 +631,14 @@ async function main() {
     }
   }
 
+  // ============================================================
+  // Qoryx (SHARED): estructura inicial (sin datos financieros aun)
+  // ============================================================
+  for (const cat of ['Ingresos', 'Costos operativos', 'Infraestructura', 'Marketing', 'Legal']) {
+    await ensureCategory(qoryx.id, cat);
+  }
+  const qoryxCatCount = Object.keys(catByWorkspace[qoryx.id] ?? {}).length;
+
   console.log('Seed completado con datos reales.');
   console.table({
     profile: profile.email,
@@ -639,6 +656,7 @@ async function main() {
     'ws MIMOTECH (pendientes)': pendingCount,
     'ws MIMOTECH (apps)': Object.keys(appByName).length,
     'ws MIMOTECH (proyectos)': Object.keys(projectByName).length,
+    'ws Qoryx (categorias)': qoryxCatCount,
     banks: bankNames.length,
   });
 }

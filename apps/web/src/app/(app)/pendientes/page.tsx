@@ -4,10 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -174,12 +175,20 @@ function MarkPaidButton({ workspaceId, item }: { workspaceId: string; item: Pend
 
 export default function PendientesPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.pendingItems(activeWorkspaceId ?? ''),
     queryFn: () => apiFetch<PendingItem[]>(`/pending-items?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
+
+  const items = useMemo(() => {
+    const all = data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((i) => i.concept.toLowerCase().includes(q));
+  }, [data, search]);
 
   return (
     <div className="space-y-6">
@@ -189,15 +198,17 @@ export default function PendientesPage() {
         action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar pendientes..." />
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
-      ) : data?.length ? (
+      ) : items.length ? (
         <div className="space-y-3">
-          {data.map((item) => {
+          {items.map((item) => {
             const currency = item.currency as 'PEN' | 'USD';
             return (
               <Card key={item.id}>

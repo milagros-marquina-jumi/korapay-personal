@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@n
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
 import { CurrentUser } from '@/common/auth/current-user.decorator';
+import { CreateWorkspaceDto, UpdateWorkspaceDto } from './workspace.dto';
 import { WorkspaceService } from './workspace.service';
 @ApiTags('Workspaces')
 @ApiBearerAuth()
@@ -21,13 +22,13 @@ export class WorkspaceController {
   }
   @Post()
   @ApiOperation({ summary: 'Create workspace' })
-  create(@Body() body: { name: string; type: string; currency?: string }, @CurrentUser('sub') userId: string) {
+  create(@Body() body: CreateWorkspaceDto, @CurrentUser('sub') userId: string) {
     return this.workspaceService.create({ ...body, profileId: userId });
   }
   @Patch(':id')
   @ApiOperation({ summary: 'Update workspace' })
-  update(@Param('id') id: string, @Body() body: { name?: string; description?: string; emoji?: string }) {
-    return this.workspaceService.update(id, body);
+  update(@Param('id') id: string, @Body() body: UpdateWorkspaceDto) {
+    return this.workspaceService.update(id, { ...body });
   }
   @Delete(':id')
   @ApiOperation({ summary: 'Archive workspace' })

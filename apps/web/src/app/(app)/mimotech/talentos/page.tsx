@@ -5,10 +5,11 @@ import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -130,6 +131,7 @@ function TalentFormDialog({ workspaceId }: { workspaceId: string }) {
 
 function TalentosContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.talents(activeWorkspaceId ?? ''),
@@ -137,7 +139,12 @@ function TalentosContent() {
     enabled: !!activeWorkspaceId,
   });
 
-  const talents = data ?? [];
+  const talents = useMemo(() => {
+    const all = data ?? [];
+    const q = search.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((t) => t.name.toLowerCase().includes(q));
+  }, [data, search]);
 
   return (
     <div className="space-y-6">
@@ -146,6 +153,8 @@ function TalentosContent() {
         description="Talentos tercerizados de MIMOTECH"
         action={activeWorkspaceId && <TalentFormDialog workspaceId={activeWorkspaceId} />}
       />
+
+      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar talentos..." />
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -20,4 +20,5 @@ export const queryKeys = {
   paymentMethods: () => ['payment-methods'] as const,
   banks: () => ['banks'] as const,
   exchangeRate: () => ['exchange-rate'] as const,
+  exchangeRateHistory: () => ['exchange-rate', 'history'] as const,
 } as const;

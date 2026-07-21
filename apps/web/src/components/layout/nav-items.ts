@@ -56,10 +56,19 @@ const BUSINESS: NavItem[] = [
   { href: '/reportes', label: 'Reportes', icon: TrendingUp },
 ];
 
+const SHARED: NavItem[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/movimientos', label: 'Movimientos', icon: ArrowLeftRight },
+  { href: '/cuentas', label: 'Cuentas', icon: Wallet },
+  { href: '/empresas', label: 'Empresas', icon: Building2 },
+  { href: '/reportes', label: 'Reportes', icon: TrendingUp },
+];
+
 export const navByWorkspaceType: Record<string, NavItem[]> = {
   PERSONAL,
   EMPLOYMENT,
   BUSINESS,
+  SHARED,
 };
 
 export function navForType(type: string | undefined): NavItem[] {

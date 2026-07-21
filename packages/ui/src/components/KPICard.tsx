@@ -11,14 +11,19 @@ interface KPICardProps {
 }
 export function KPICard({ label, value, icon: Icon, color, trend, className }: KPICardProps) {
   return (
-    <div className={cn('rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border bg-card p-6 shadow-sm transition-shadow hover:shadow-md',
+        className,
+      )}
+    >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        {Icon && <Icon className={cn('h-5 w-5', color ?? 'text-muted-foreground')} />}
+        <span className="text-sm font-medium text-muted-foreground">{label}</span>
+        {Icon && <Icon className={cn('h-5 w-5 shrink-0', color ?? 'text-muted-foreground')} />}
       </div>
-      <p className="mt-2 font-display text-2xl font-bold">{value}</p>
+      <p className="font-display text-3xl font-bold leading-tight tracking-tight">{value}</p>
       {trend && (
-        <p className={cn('mt-1 text-xs', trend.direction === 'up' ? 'text-success' : 'text-destructive')}>
+        <p className={cn('text-xs font-medium', trend.direction === 'up' ? 'text-success' : 'text-destructive')}>
           {trend.direction === 'up' ? '↑' : '↓'} {trend.value}
         </p>
       )}

@@ -21,8 +21,7 @@ export function MoneyDisplay({ amount, currency, className, showSign }: MoneyDis
         className,
       )}
     >
-      {' '}
-      {showSign && isPositive ? '+' : ''} {formatMoney(amount, currency)}{' '}
+      {showSign && isPositive ? '+' : ''} {formatMoney(amount, currency)}
     </span>
   );
 }

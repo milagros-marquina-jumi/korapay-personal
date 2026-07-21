@@ -1,27 +1,30 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
-import type { CompanyService } from './company.service';
+import { WorkspaceGuard } from '@/common/auth/workspace.guard';
+import { WorkspaceQueryDto } from '@/common/dto/workspace-query.dto';
+import { CreateCompanyDto, UpdateCompanyDto } from './company.dto';
+import { CompanyService } from './company.service';
 @ApiTags('Companies')
 @ApiBearerAuth()
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, WorkspaceGuard)
 @Controller('companies')
 export class CompanyController {
   constructor(private readonly companyService: CompanyService) {}
   @Get()
-  findAll(@Query('workspaceId') workspaceId: string) {
+  findAll(@Query() { workspaceId }: WorkspaceQueryDto) {
     return this.companyService.findAll(workspaceId);
   }
   @Post()
-  create(@Body() body: Record<string, unknown>) {
-    return this.companyService.create(body as any);
+  create(@Body() body: CreateCompanyDto) {
+    return this.companyService.create(body);
   }
   @Patch(':id')
-  update(@Param('id') id: string, @Query('workspaceId') workspaceId: string, @Body() body: Record<string, unknown>) {
-    return this.companyService.update(id, workspaceId, body);
+  update(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto, @Body() body: UpdateCompanyDto) {
+    return this.companyService.update(id, workspaceId, { ...body });
   }
   @Delete(':id')
-  remove(@Param('id') id: string, @Query('workspaceId') workspaceId: string) {
+  remove(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
     return this.companyService.remove(id, workspaceId);
   }
 }

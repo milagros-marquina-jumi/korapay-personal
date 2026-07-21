@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
-import type { PrismaService } from '@/common/prisma/prisma.service';
+import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class TransactionService {
   constructor(private readonly prisma: PrismaService) {}

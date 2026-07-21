@@ -19,8 +19,8 @@ KoraPay es una aplicacion full-stack de gestion financiera personal y empresaria
 | Frontend | Next.js 15 + React 19 + Tailwind CSS 4 |
 | Backend | NestJS 11 + Fastify |
 | ORM | Prisma 6 |
-| Database | PostgreSQL 16 (Supabase) |
-| Auth | Supabase Auth (modo demo en desarrollo) |
+| Database | PostgreSQL 16 (Docker local) |
+| Auth | Local (modo demo, sin proveedor externo) |
 | Monorepo | Turborepo + pnpm workspaces |
 
 ## Diagrama de Arquitectura
@@ -41,8 +41,7 @@ graph TB
 
     subgraph "Data"
         Prisma["Prisma ORM"]
-        PostgreSQL["PostgreSQL (Supabase)"]
-        Storage["Supabase Storage"]
+        PostgreSQL["PostgreSQL (Docker local)"]
     end
 
     ClientComponents -->|REST| Controllers
@@ -50,7 +49,6 @@ graph TB
     Controllers --> Services
     Services --> Prisma
     Prisma --> PostgreSQL
-    Services --> Storage
     Guards --> Prisma
 ```
 
@@ -58,16 +56,32 @@ graph TB
 
 ```mermaid
 sequenceDiagram
-    FE->>Supabase: login(email, password)
-    Supabase-->>FE: JWT + session
-    FE->>API: GET /transactions (Authorization: Bearer JWT)
-    API->>Supabase: validate JWT (JWKS)
+    FE->>API: GET /transactions (?workspaceId=...)
+    API->>DB: SELECT profile demo
+    API->>DB: verificar membership del workspace
     API->>DB: SELECT ... WHERE workspace_id = ?
     DB-->>API: data
     API-->>FE: response
 ```
 
-En modo demo (`DEMO_MODE=true`), el API acepta todas las requests sin validar JWT.
+En modo demo (`DEMO_MODE=true`, activo por defecto), el `AuthGuard` resuelve el
+perfil demo (Milagros) desde la BD. No hay proveedor de autenticacion externo; si
+`DEMO_MODE=false` el guard responde `401` (no hay login implementado todavia).
+
+## Aislamiento multi-tenant
+
+Cada endpoint de negocio aplica `@UseGuards(AuthGuard, WorkspaceGuard)`. El
+`WorkspaceGuard` exige `workspaceId` (query o body) y verifica que el usuario
+autenticado sea miembro de ese workspace (`workspace_members`); si no lo es
+responde `403`, y si falta `workspaceId` responde `400`. El `workspaceId` ya no se
+confia ciegamente del query. Toda mutacion (POST/PATCH/DELETE) queda registrada por
+un `AuditInterceptor` global en `audit_logs`.
+
+## Validacion
+
+Cada modulo define DTOs con `class-validator` (`*.dto.ts`); el `ValidationPipe`
+global (`whitelist` + `forbidNonWhitelisted` + `transform`) rechaza payloads
+invalidos con `400` y alimenta el schema de Swagger (`/api/docs`).
 
 ## Estructura del Monorepo
 

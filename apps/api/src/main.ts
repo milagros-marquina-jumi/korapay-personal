@@ -1,3 +1,6 @@
+import compress from '@fastify/compress';
+import helmet from '@fastify/helmet';
+import multipart from '@fastify/multipart';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
@@ -9,6 +12,11 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ logger: false }), {
     bufferLogs: true,
   });
+
+  await app.register(helmet, { contentSecurityPolicy: false });
+  await app.register(compress);
+  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+
   app.setGlobalPrefix('api/v1');
   app.enableCors({
     origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3060'],
@@ -22,6 +30,7 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
   const config = new DocumentBuilder()
     .setTitle('KoraPay API')
     .setDescription('Gestion financiera personal y empresarial')
@@ -30,7 +39,8 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
-  const port = process.env.API_PORT ?? 3001;
+
+  const port = process.env.API_PORT ?? 3061;
   await app.listen(port, '0.0.0.0');
   logger.log(`API running on http://localhost:${port}`);
   logger.log(`Swagger at http://localhost:${port}/api/docs`);

@@ -1,6 +1,6 @@
 // ============================================================
 // KoraPay — Prisma Schema
-// PostgreSQL via Supabase
+// PostgreSQL (Docker local)
 // ============================================================
 
 generator client {

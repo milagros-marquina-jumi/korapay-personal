@@ -1,0 +1,32 @@
+[
+ {
+  "anio": 2022,
+  "monto": 0.0,
+  "estado": "Pagado",
+  "detalles": null
+ },
+ {
+  "anio": 2023,
+  "monto": 4156.0,
+  "estado": "Pagado",
+  "detalles": null
+ },
+ {
+  "anio": 2024,
+  "monto": 7399.0,
+  "estado": "Pagado",
+  "detalles": null
+ },
+ {
+  "anio": 2025,
+  "monto": 18726.0,
+  "estado": "Pendiente",
+  "detalles": "12 cuotas FIN: 30/06/2026"
+ },
+ {
+  "anio": 2026,
+  "monto": 38522.0,
+  "estado": "Pendiente",
+  "detalles": null
+ }
+]

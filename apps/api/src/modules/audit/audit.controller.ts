@@ -1,7 +1,7 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
-import type { AuditService } from './audit.service';
+import { AuditService } from './audit.service';
 @ApiTags('Audit')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)

@@ -1,40 +1,43 @@
-import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
-import type { PrismaService } from '../prisma/prisma.service';
+import { type CanActivate, type ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+
+export interface AuthUser {
+  sub: string;
+  email: string;
+  name: string;
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
-  private cachedDemoProfileId: string | null = null;
+  private cachedProfileId: string | null = null;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {}
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const demoMode = this.configService.get<string>('DEMO_MODE') === 'true';
-    if (demoMode) {
-      if (!this.cachedDemoProfileId) {
-        const demoEmail = this.configService.get<string>('DEMO_USER_EMAIL', 'demo@korapay.local');
-        const profile = await this.prisma.profile.findUnique({
-          where: { email: demoEmail },
-        });
-        this.cachedDemoProfileId = profile?.id ?? 'demo-user-id';
-      }
-      request.user = {
-        sub: this.cachedDemoProfileId,
-        email: this.configService.get<string>('DEMO_USER_EMAIL', 'demo@korapay.local'),
-        name: 'Demo User',
-      };
-      return true;
+    const demoDisabled = this.configService.get<string>('DEMO_MODE') === 'false';
+
+    if (demoDisabled) {
+      throw new UnauthorizedException('Autenticacion no configurada. Usa DEMO_MODE=true.');
     }
-    const authHeader = request.headers.authorization;
-    if (!authHeader) {
-      throw new Error('Missing authorization header');
-    }
-    const [type, token] = authHeader.split(' ');
-    if (type !== 'Bearer' || !token) {
-      throw new Error('Invalid authorization format');
-    }
-    request.user = { sub: 'authenticated-user', token };
+
+    request.user = await this.resolveUser();
     return true;
+  }
+
+  private async resolveUser(): Promise<AuthUser> {
+    const email = this.configService.get<string>('DEMO_USER_EMAIL', 'demo@korapay.local');
+    if (!this.cachedProfileId) {
+      const profile = await this.prisma.profile.findUnique({ where: { email } });
+      if (!profile) {
+        throw new UnauthorizedException('Perfil no encontrado. Corre el seed: pnpm db:seed');
+      }
+      this.cachedProfileId = profile.id;
+    }
+    return { sub: this.cachedProfileId, email, name: 'Milagros Marquina' };
   }
 }

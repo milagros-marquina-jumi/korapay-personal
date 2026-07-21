@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@n
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
 import { CurrentUser } from '@/common/auth/current-user.decorator';
-import type { WorkspaceService } from './workspace.service';
+import { WorkspaceService } from './workspace.service';
 @ApiTags('Workspaces')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)

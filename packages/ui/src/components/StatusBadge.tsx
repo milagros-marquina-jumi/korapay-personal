@@ -36,8 +36,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
         className,
       )}
     >
-      {' '}
-      {config.label}{' '}
+      {config.label}
     </span>
   );
 }

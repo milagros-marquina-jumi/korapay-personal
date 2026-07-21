@@ -17,8 +17,7 @@ export function KPIGrid({ children, className, columns = 4 }: KPIGridProps) {
         className,
       )}
     >
-      {' '}
-      {children}{' '}
+      {children}
     </div>
   );
 }

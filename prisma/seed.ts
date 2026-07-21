@@ -1,12 +1,55 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { mapExcelStatus, redactSensitiveData } from '@korapay/domain';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-async function main() {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('Seed blocked in production');
-    process.exit(1);
+
+const DATA_DIR = join(__dirname, 'data');
+const USD_TO_PEN = '3.42';
+
+function load<T>(name: string): T[] {
+  const path = join(DATA_DIR, `${name}.json`);
+  if (!existsSync(path)) {
+    throw new Error(`Falta ${name}.json. Corre: python prisma/data/build.py`);
   }
-  console.log('Seeding KoraPay database...');
+  return JSON.parse(readFileSync(path, 'utf-8')) as T[];
+}
+
+function loadObj<T>(name: string): T {
+  const path = join(DATA_DIR, `${name}.json`);
+  return JSON.parse(readFileSync(path, 'utf-8')) as T;
+}
+
+function money(v: number | null | undefined): string {
+  if (v === null || v === undefined) return '0.00';
+  return Number(v).toFixed(2);
+}
+
+function toBase(amount: number | null | undefined, currency: string): string {
+  const amt = Number(amount ?? 0);
+  if (currency === 'USD') return (amt * Number(USD_TO_PEN)).toFixed(2);
+  return amt.toFixed(2);
+}
+
+function date(v: string | null | undefined): Date {
+  return v ? new Date(v) : new Date();
+}
+
+type Catalogs = {
+  empresas: string[];
+  medios_pago: string[];
+  monedas: string[];
+  tipo_pagos: string[];
+  tipos_movimiento: string[];
+  categorias_ingreso: string[];
+  categorias_gasto: string[];
+  categorias_fijos: string[];
+  personas_mimotech: string[];
+  suscripciones: string[];
+};
+
+async function clean() {
   await prisma.auditLog.deleteMany();
   await prisma.calendarEvent.deleteMany();
   await prisma.notification.deleteMany();
@@ -31,26 +74,61 @@ async function main() {
   await prisma.client.deleteMany();
   await prisma.project.deleteMany();
   await prisma.application.deleteMany();
+  await prisma.paymentMethod.deleteMany();
+  await prisma.exchangeRate.deleteMany();
+  await prisma.currency.deleteMany();
   await prisma.importIssue.deleteMany();
   await prisma.importSheet.deleteMany();
   await prisma.importBatch.deleteMany();
   await prisma.workspaceMember.deleteMany();
   await prisma.workspace.deleteMany();
   await prisma.profile.deleteMany();
+}
+
+async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('Seed bloqueado en produccion');
+    process.exit(1);
+  }
+  console.log('Sembrando KoraPay con datos reales del Excel...');
+  await clean();
+
+  const catalogs = loadObj<Catalogs>('catalogs');
+
   const profile = await prisma.profile.create({
     data: {
       authId: 'demo-user-id',
-      name: 'Diego Garcia',
-      email: 'demo@korapay.local',
+      name: 'Milagros Marquina',
+      email: process.env.DEMO_USER_EMAIL ?? 'demo@korapay.local',
       currency: 'PEN',
       theme: 'system',
     },
   });
+
+  await prisma.currency.createMany({
+    data: [
+      { code: 'PEN', symbol: 'S/', name: 'Sol peruano' },
+      { code: 'USD', symbol: '$', name: 'Dolar estadounidense' },
+    ],
+  });
+  const usd = await prisma.currency.findUnique({ where: { code: 'USD' } });
+  const pen = await prisma.currency.findUnique({ where: { code: 'PEN' } });
+  if (usd && pen) {
+    await prisma.exchangeRate.create({
+      data: {
+        fromCurrencyId: usd.id,
+        toCurrencyId: pen.id,
+        rate: USD_TO_PEN,
+        date: new Date('2026-07-20'),
+      },
+    });
+  }
+
   const personal = await prisma.workspace.create({
     data: {
       name: 'Personal',
       type: 'PERSONAL',
-      description: 'Finanzas personales',
+      description: 'Finanzas personales de Milagros',
       emoji: '🏠',
       currency: 'PEN',
     },
@@ -68,486 +146,503 @@ async function main() {
     data: {
       name: 'Mimotalents',
       type: 'TALENT_MANAGEMENT',
-      description: 'Gestion de talentos y contratos',
+      description: 'Gestion de talentos, contratos e ingresos',
       emoji: '🎯',
       currency: 'PEN',
     },
   });
   for (const ws of [personal, mimotech, mimotalents]) {
-    await prisma.workspaceMember.create({
-      data: { workspaceId: ws.id, profileId: profile.id, role: 'OWNER' },
+    await prisma.workspaceMember.create({ data: { workspaceId: ws.id, profileId: profile.id, role: 'OWNER' } });
+  }
+
+  await prisma.paymentMethod.createMany({
+    data: [...new Set([...catalogs.tipo_pagos, ...catalogs.medios_pago])].map((name) => ({ name })),
+    skipDuplicates: true,
+  });
+
+  const categoryIcon: Record<string, { emoji: string; color: string }> = {
+    default: { emoji: '📁', color: 'bg-slate-100 text-slate-900' },
+  };
+  function catMeta(name: string) {
+    return categoryIcon[name] ?? categoryIcon.default;
+  }
+
+  const catByWorkspace: Record<string, Record<string, string>> = {
+    [personal.id]: {},
+    [mimotech.id]: {},
+    [mimotalents.id]: {},
+  };
+  async function ensureCategory(workspaceId: string, name: string): Promise<string> {
+    const key = name.trim();
+    const existing = catByWorkspace[workspaceId]?.[key];
+    if (existing) return existing;
+    const meta = catMeta(key);
+    const c = await prisma.category.create({
+      data: { workspaceId, name: key, emoji: meta.emoji, color: meta.color },
+    });
+    const map = catByWorkspace[workspaceId];
+    if (map) map[key] = c.id;
+    return c.id;
+  }
+  for (const name of [...catalogs.categorias_ingreso, ...catalogs.categorias_gasto, ...catalogs.categorias_fijos]) {
+    await ensureCategory(personal.id, name);
+  }
+
+  const companyByName: Record<string, string> = {};
+  async function ensureCompany(workspaceId: string, name: string | null | undefined): Promise<string | null> {
+    if (!name) return null;
+    const key = name.trim();
+    if (companyByName[key]) return companyByName[key];
+    const c = await prisma.company.create({ data: { workspaceId, name: key } });
+    companyByName[key] = c.id;
+    return c.id;
+  }
+  for (const name of catalogs.empresas) {
+    await ensureCompany(personal.id, name);
+  }
+
+  const personByName: Record<string, string> = {};
+  async function ensurePerson(workspaceId: string, name: string | null | undefined): Promise<string | null> {
+    if (!name) return null;
+    const key = name.trim();
+    if (personByName[key]) return personByName[key];
+    const initials = key
+      .split(/\s+/)
+      .map((p) => p[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+    const p = await prisma.person.create({ data: { workspaceId, name: key, initials } });
+    personByName[key] = p.id;
+    return p.id;
+  }
+  for (const name of catalogs.personas_mimotech) {
+    await ensurePerson(mimotech.id, name);
+  }
+
+  const appByName: Record<string, string> = {};
+  async function ensureApplication(name: string | null | undefined): Promise<string | null> {
+    if (!name) return null;
+    const key = name.trim();
+    if (appByName[key]) return appByName[key];
+    const a = await prisma.application.create({
+      data: { workspaceId: mimotech.id, name: key, category: 'Infraestructura' },
+    });
+    appByName[key] = a.id;
+    return a.id;
+  }
+  for (const name of catalogs.suscripciones) {
+    if (name !== 'Todos') await ensureApplication(name);
+  }
+
+  const projectByName: Record<string, string> = {};
+  async function ensureProject(name: string | null | undefined): Promise<string | null> {
+    if (!name) return null;
+    const key = name.trim();
+    if (projectByName[key]) return projectByName[key];
+    const p = await prisma.project.create({ data: { workspaceId: mimotech.id, name: key, emoji: '📦' } });
+    projectByName[key] = p.id;
+    return p.id;
+  }
+
+  // ---- Personal: ingresos por trabajos ----
+  const ingresosTrabajos = load<{
+    fecha: string;
+    anio: number | null;
+    mes: string | null;
+    tipo: string | null;
+    concepto: string | null;
+    empresa: string | null;
+    pago: string | null;
+    moneda: string;
+    totalSoles: number | null;
+    totalDolar: number | null;
+    totalNeto: number | null;
+    numeroCuenta: string | null;
+    estado: string | null;
+  }>('ingresos_trabajos');
+  let incomeCount = 0;
+  for (const r of ingresosTrabajos) {
+    const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
+    const original = currency === 'USD' ? (r.totalDolar ?? r.totalSoles ?? 0) : (r.totalSoles ?? 0);
+    const companyId = await ensureCompany(personal.id, r.empresa);
+    const categoryId = await ensureCategory(personal.id, r.concepto ?? 'Sueldo');
+    await prisma.transaction.create({
+      data: {
+        workspaceId: personal.id,
+        type: 'INCOME',
+        concept: r.concepto ?? 'Ingreso',
+        description: r.numeroCuenta ? redactSensitiveData(r.numeroCuenta) : null,
+        date: date(r.fecha),
+        amountOriginal: money(original),
+        currency,
+        exchangeRate: currency === 'USD' ? USD_TO_PEN : null,
+        amountBase: toBase(original, currency),
+        categoryId,
+        companyId,
+        status: mapExcelStatus(r.estado),
+        tags: [r.pago ?? '', r.mes ?? ''].filter(Boolean),
+      },
+    });
+    incomeCount++;
+  }
+
+  // ---- Personal: contratos (empresas por mes) ----
+  const empresas = load<{ empresaOficial: string | null; fechaInicio: string | null; fechaFin: string | null }>(
+    'ingresos_empresas',
+  );
+  let contractCount = 0;
+  const seenContracts = new Set<string>();
+  for (const r of empresas) {
+    if (!r.empresaOficial || !r.fechaInicio) continue;
+    const key = `${r.empresaOficial}-${r.fechaInicio}`;
+    if (seenContracts.has(key)) continue;
+    seenContracts.add(key);
+    const companyId = await ensureCompany(personal.id, r.empresaOficial);
+    await prisma.employmentContract.create({
+      data: {
+        workspaceId: personal.id,
+        companyId,
+        startDate: date(r.fechaInicio),
+        endDate: r.fechaFin ? date(r.fechaFin) : null,
+        status: r.fechaFin ? 'FINISHED' : 'ACTIVE',
+      },
+    });
+    contractCount++;
+  }
+
+  // ---- Personal: egresos ----
+  const egresos = load<{
+    fecha: string;
+    mes: string | null;
+    fijoNoFijo: string | null;
+    concepto: string | null;
+    descripcion: string | null;
+    monto: number | null;
+    banco: string | null;
+    estado: string | null;
+  }>('egresos_personal');
+  let expenseCount = 0;
+  for (const r of egresos) {
+    const categoryId = await ensureCategory(personal.id, r.concepto ?? 'Extras');
+    await prisma.transaction.create({
+      data: {
+        workspaceId: personal.id,
+        type: 'EXPENSE',
+        concept: r.concepto ?? 'Gasto',
+        description: r.descripcion ?? null,
+        date: date(r.fecha),
+        amountOriginal: money(r.monto),
+        currency: 'PEN',
+        amountBase: money(r.monto),
+        categoryId,
+        status: mapExcelStatus(r.estado),
+        tags: [r.fijoNoFijo ?? '', r.banco ?? '', r.mes ?? ''].filter(Boolean),
+      },
+    });
+    expenseCount++;
+  }
+
+  // ---- Personal: ahorros (cuentas + metas + entradas) ----
+  const ahorros = load<{
+    fecha: string;
+    descripcion: string | null;
+    banco: string | null;
+    moneda: string;
+    monto: number | null;
+  }>('ahorros');
+  const savingGoalByName: Record<string, string> = {};
+  const accountByName: Record<string, string> = {};
+  async function ensureSavingGoal(name: string): Promise<string> {
+    if (savingGoalByName[name]) return savingGoalByName[name];
+    const g = await prisma.savingGoal.create({
+      data: { workspaceId: personal.id, name, targetAmount: '0.00', currency: 'PEN', status: 'ACTIVE' },
+    });
+    savingGoalByName[name] = g.id;
+    return g.id;
+  }
+  async function ensureSavingsAccount(bank: string): Promise<string> {
+    if (accountByName[bank]) return accountByName[bank];
+    const a = await prisma.account.create({
+      data: { workspaceId: personal.id, name: `Ahorro ${bank}`, bank, kind: 'SAVINGS', currency: 'PEN', emoji: '🐷' },
+    });
+    accountByName[bank] = a.id;
+    return a.id;
+  }
+  let savingEntryCount = 0;
+  for (const r of ahorros) {
+    const bucket = r.descripcion ?? `Ahorro ${r.banco ?? 'General'}`;
+    const goalId = await ensureSavingGoal(bucket);
+    if (r.banco) await ensureSavingsAccount(r.banco);
+    await prisma.savingEntry.create({
+      data: {
+        goalId,
+        amount: money(r.monto),
+        type: (r.monto ?? 0) < 0 ? 'WITHDRAWAL' : 'CONTRIBUTION',
+        date: date(r.fecha),
+        notes: r.banco ?? null,
+      },
+    });
+    savingEntryCount++;
+  }
+
+  // ---- Personal: renta anual (obligaciones tributarias) ----
+  const renta = load<{ anio: number; monto: number | null; estado: string | null; detalles: string | null }>(
+    'renta_anual',
+  );
+  for (const r of renta) {
+    await prisma.taxObligation.create({
+      data: {
+        workspaceId: personal.id,
+        name: `Renta Anual ${r.anio}`,
+        dueDate: new Date(`${r.anio + 1}-06-30`),
+        amount: money(r.monto),
+        status: (r.estado ?? '').toLowerCase() === 'pagado' ? 'PAID' : 'PENDING',
+        notes: r.detalles ?? null,
+      },
     });
   }
-  const catData = [
-    { name: 'Alimentacion', emoji: '🍔', color: 'bg-red-100 text-red-900' },
-    { name: 'Transporte', emoji: '🚗', color: 'bg-yellow-100 text-yellow-900' },
-    { name: 'Servicios', emoji: '💡', color: 'bg-blue-100 text-blue-900' },
-    { name: 'Ingresos', emoji: '💰', color: 'bg-green-100 text-green-900' },
-    { name: 'Ocio', emoji: '🎮', color: 'bg-purple-100 text-purple-900' },
-    { name: 'Salud', emoji: '🏥', color: 'bg-pink-100 text-pink-900' },
-    { name: 'Vivienda', emoji: '🏠', color: 'bg-indigo-100 text-indigo-900' },
-    {
-      name: 'Costos Operativos',
-      emoji: '⚙️',
-      color: 'bg-orange-100 text-orange-900',
-    },
-    { name: 'Suscripciones', emoji: '🔄', color: 'bg-cyan-100 text-cyan-900' },
-    { name: 'Pagos Equipo', emoji: '👥', color: 'bg-teal-100 text-teal-900' },
-  ];
-  const categories: Record<string, string> = {};
-  for (const ws of [personal, mimotech, mimotalents]) {
-    for (const cat of catData) {
-      const c = await prisma.category.create({
-        data: { workspaceId: ws.id, ...cat },
+
+  // ---- MIMOTECH: costos ----
+  const costos = load<{
+    fecha: string;
+    aplicacion: string | null;
+    proyecto: string | null;
+    descripcion: string | null;
+    numeroTarjetaCuenta: string | null;
+    banco: string | null;
+    moneda: string;
+    monto: number | null;
+    importeTotal: number | null;
+    estado: string | null;
+  }>('mimotech_costos');
+  let costCount = 0;
+  for (const r of costos) {
+    const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
+    const applicationId = await ensureApplication(r.aplicacion);
+    const projectId = await ensureProject(r.proyecto);
+    await prisma.transaction.create({
+      data: {
+        workspaceId: mimotech.id,
+        type: 'BUSINESS_COST',
+        concept: r.aplicacion ?? 'Costo',
+        description: r.descripcion ?? null,
+        date: date(r.fecha),
+        amountOriginal: money(r.monto),
+        currency,
+        exchangeRate: currency === 'USD' ? USD_TO_PEN : null,
+        amountBase: r.importeTotal != null ? money(r.importeTotal) : toBase(r.monto, currency),
+        applicationId,
+        projectId,
+        status: mapExcelStatus(r.estado),
+        notes: r.numeroTarjetaCuenta ? redactSensitiveData(r.numeroTarjetaCuenta) : null,
+        tags: [r.banco ?? ''].filter(Boolean),
+      },
+    });
+    costCount++;
+  }
+
+  // ---- MIMOTECH: pagos de equipo ----
+  const pagos = load<{
+    persona: string | null;
+    fecha: string;
+    mes: string | null;
+    estado: string | null;
+    notas: string | null;
+    monto: number | null;
+  }>('mimotech_pagos');
+  let teamPayCount = 0;
+  for (const r of pagos) {
+    const personId = await ensurePerson(mimotech.id, r.persona);
+    await prisma.transaction.create({
+      data: {
+        workspaceId: mimotech.id,
+        type: 'TEAM_PAYMENT',
+        concept: `Pago ${r.persona ?? 'equipo'}`,
+        description: r.notas ?? null,
+        date: date(r.fecha),
+        amountOriginal: money(r.monto),
+        currency: 'PEN',
+        amountBase: money(r.monto),
+        personId,
+        status: mapExcelStatus(r.estado),
+        tags: [r.mes ?? ''].filter(Boolean),
+      },
+    });
+    teamPayCount++;
+  }
+
+  // ---- Mimotalents: perfiles ----
+  const talentsGeneral = load<{
+    nombre: string;
+    inicioConmigo: string | null;
+    finConmigo: string | null;
+    diapositiva: string | null;
+    lugarEstudio: string | null;
+    estado: string | null;
+  }>('talents_general');
+  const talentByName: Record<string, string> = {};
+  for (const r of talentsGeneral) {
+    const notes = [r.lugarEstudio ? `Estudios: ${r.lugarEstudio}` : '', r.diapositiva ? `Canva: ${r.diapositiva}` : '']
+      .filter(Boolean)
+      .join('\n');
+    const t = await prisma.talentProfile.create({
+      data: {
+        workspaceId: mimotalents.id,
+        name: r.nombre,
+        status: (r.estado ?? '').toLowerCase() === 'activo' ? 'ACTIVE' : 'INACTIVE',
+        notes: notes || null,
+      },
+    });
+    // clave por primer nombre para cruzar con ingresos (que usan "Kathy Marquina", "Jack Jimenez", etc.)
+    talentByName[r.nombre.split(/[\s(]/)[0]?.toLowerCase() ?? r.nombre.toLowerCase()] = t.id;
+  }
+  function matchTalent(name: string | null | undefined): string | null {
+    if (!name) return null;
+    const first = name.split(/\s+/)[0]?.toLowerCase() ?? '';
+    return talentByName[first] ?? null;
+  }
+
+  // ---- Mimotalents: ingresos (contratos + distribucion + transaccion) ----
+  const talentIngresos = load<{
+    nombre: string;
+    fecha: string;
+    empresa: string | null;
+    cliente: string | null;
+    cargo: string | null;
+    sueldo: number | null;
+    conDescuento: number | null;
+    recibi: number | null;
+    seQuedoCon: number | null;
+    estado: string | null;
+    inicio: string | null;
+    fin: string | null;
+  }>('talents_ingresos');
+  const contractByKey: Record<string, string> = {};
+  let distCount = 0;
+  let talentIncomeCount = 0;
+  for (const r of talentIngresos) {
+    const talentId = matchTalent(r.nombre);
+    if (!talentId) continue;
+    const contractKey = `${talentId}-${r.empresa ?? ''}-${r.cargo ?? ''}`;
+    let contractId = contractByKey[contractKey];
+    if (!contractId) {
+      const c = await prisma.talentContract.create({
+        data: {
+          talentProfileId: talentId,
+          position: r.cargo ?? null,
+          rate: r.sueldo != null ? money(r.sueldo) : null,
+          currency: 'PEN',
+          startDate: date(r.inicio ?? r.fecha),
+          endDate: r.fin ? date(r.fin) : null,
+          status: r.fin ? 'FINISHED' : 'ACTIVE',
+          notes: [r.empresa, r.cliente].filter(Boolean).join(' / ') || null,
+        },
       });
-      if (ws.id === personal.id) categories[cat.name] = c.id;
+      contractId = c.id;
+      contractByKey[contractKey] = contractId;
+    }
+    const tx = await prisma.transaction.create({
+      data: {
+        workspaceId: mimotalents.id,
+        type: 'INCOME',
+        concept: `${r.nombre} - ${r.empresa ?? r.cargo ?? 'Ingreso'}`,
+        date: date(r.fecha),
+        amountOriginal: money(r.sueldo),
+        currency: 'PEN',
+        amountBase: money(r.sueldo),
+        status: mapExcelStatus(r.estado),
+        tags: [r.cargo ?? ''].filter(Boolean),
+      },
+    });
+    talentIncomeCount++;
+    await prisma.talentIncomeDistribution.create({
+      data: {
+        contractId,
+        transactionId: tx.id,
+        amountWithDiscount: money(r.conDescuento ?? r.sueldo),
+        amountReceived: money(r.recibi),
+        amountRetained: money(r.seQuedoCon),
+        status: 'CONFIRMED',
+      },
+    });
+    distCount++;
+  }
+
+  // ---- Mimotalents: egresos (pagos hacia talentos / deudas) ----
+  const talentEgresos = load<{
+    nombre: string;
+    fecha: string;
+    tipoPago: string | null;
+    cantidadE: number | null;
+    cantidadD: number | null;
+    faltaPagar: number | null;
+    descripcion: string | null;
+    estado: string | null;
+  }>('talents_egresos');
+  let talentExpenseCount = 0;
+  let pendingCount = 0;
+  for (const r of talentEgresos) {
+    const amount = r.cantidadE ?? r.cantidadD ?? 0;
+    await prisma.transaction.create({
+      data: {
+        workspaceId: mimotalents.id,
+        type: 'EXPENSE',
+        concept: `Pago ${r.nombre}`,
+        description: r.descripcion ?? null,
+        date: date(r.fecha),
+        amountOriginal: money(amount),
+        currency: 'PEN',
+        amountBase: money(amount),
+        status: mapExcelStatus(r.estado),
+        tags: [r.tipoPago ?? ''].filter(Boolean),
+      },
+    });
+    talentExpenseCount++;
+
+    // "Falta Pagar" del Excel -> pendiente real por pagar hacia el talento
+    if (r.faltaPagar && r.faltaPagar > 0) {
+      const personId = await ensurePerson(mimotalents.id, r.nombre);
+      await prisma.pendingItem.create({
+        data: {
+          workspaceId: mimotalents.id,
+          kind: 'PAGAR',
+          concept: `Falta pagar a ${r.nombre}`,
+          amount: money(r.faltaPagar),
+          currency: 'PEN',
+          dueDate: date(r.fecha),
+          status: 'PENDING',
+          personId,
+          notes: r.descripcion ?? null,
+        },
+      });
+      pendingCount++;
     }
   }
-  const people = await Promise.all([
-    prisma.person.create({
-      data: {
-        workspaceId: personal.id,
-        name: 'Maria Lopez',
-        email: 'maria@example.com',
-        initials: 'ML',
-        color: 'bg-pink-100',
-      },
-    }),
-    prisma.person.create({
-      data: {
-        workspaceId: personal.id,
-        name: 'Carlos Ruiz',
-        email: 'carlos@example.com',
-        initials: 'CR',
-        color: 'bg-blue-100',
-      },
-    }),
-  ]);
-  const companies = await Promise.all([
-    prisma.company.create({
-      data: {
-        workspaceId: personal.id,
-        name: 'TechCorp SAC',
-        ruc: '20123456789',
-      },
-    }),
-    prisma.company.create({
-      data: {
-        workspaceId: personal.id,
-        name: 'DataServices EIRL',
-        ruc: '20987654321',
-      },
-    }),
-    prisma.company.create({
-      data: { workspaceId: mimotech.id, name: 'MIMOTECH', ruc: '20999888777' },
-    }),
-  ]);
-  const projects = await Promise.all([
-    prisma.project.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'KoraPay',
-        description: 'App financiera',
-        emoji: '💎',
-      },
-    }),
-    prisma.project.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'Helpmeet',
-        description: 'Plataforma de reuniones',
-        emoji: '🤝',
-      },
-    }),
-    prisma.project.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'Tracklink',
-        description: 'Seguimiento de enlaces',
-        emoji: '🔗',
-      },
-    }),
-  ]);
-  const apps = await Promise.all([
-    prisma.application.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'Vercel',
-        provider: 'Vercel Inc.',
-        category: 'Hosting',
-      },
-    }),
-    prisma.application.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'Supabase',
-        provider: 'Supabase Inc.',
-        category: 'Database',
-      },
-    }),
-    prisma.application.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'GitHub',
-        provider: 'GitHub Inc.',
-        category: 'Development',
-      },
-    }),
-    prisma.application.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'Figma',
-        provider: 'Figma Inc.',
-        category: 'Design',
-      },
-    }),
-    prisma.application.create({
-      data: {
-        workspaceId: mimotech.id,
-        name: 'Resend',
-        provider: 'Resend Inc.',
-        category: 'Email',
-      },
-    }),
-  ]);
-  for (const app of apps) {
-    await prisma.subscription.create({
-      data: {
-        workspaceId: mimotech.id,
-        applicationId: app.id,
-        plan: 'Pro',
-        amount: '20.00',
-        currency: 'USD',
-        billingCycle: 'MONTHLY',
-        status: 'ACTIVE',
-      },
-    });
-  }
-  const bcpAhorros = await prisma.account.create({
-    data: {
-      workspaceId: personal.id,
-      name: 'BCP Ahorros',
-      bank: 'BCP',
-      kind: 'SAVINGS',
-      currency: 'PEN',
-      lastFour: '4521',
-      initialBalance: '3500.00',
-      color: 'bg-blue-100 text-blue-900',
-      emoji: '🏦',
-    },
+
+  console.log('Seed completado con datos reales.');
+  console.table({
+    profile: profile.email,
+    companies: Object.keys(companyByName).length,
+    people: Object.keys(personByName).length,
+    applications: Object.keys(appByName).length,
+    projects: Object.keys(projectByName).length,
+    personalIncome: incomeCount,
+    employmentContracts: contractCount,
+    personalExpense: expenseCount,
+    savingEntries: savingEntryCount,
+    taxObligations: renta.length,
+    mimotechCosts: costCount,
+    teamPayments: teamPayCount,
+    talents: talentsGeneral.length,
+    talentContracts: Object.keys(contractByKey).length,
+    talentIncome: talentIncomeCount,
+    talentDistributions: distCount,
+    talentExpenses: talentExpenseCount,
+    pendingItems: pendingCount,
   });
-  const interbank = await prisma.account.create({
-    data: {
-      workspaceId: personal.id,
-      name: 'Interbank Corriente',
-      bank: 'Interbank',
-      kind: 'CHECKING',
-      currency: 'PEN',
-      lastFour: '7891',
-      initialBalance: '1200.00',
-      color: 'bg-orange-100 text-orange-900',
-      emoji: '💳',
-    },
-  });
-  const efectivo = await prisma.account.create({
-    data: {
-      workspaceId: personal.id,
-      name: 'Efectivo',
-      bank: 'Efectivo',
-      kind: 'CASH',
-      currency: 'PEN',
-      initialBalance: '500.00',
-      color: 'bg-green-100 text-green-900',
-      emoji: '💵',
-    },
-  });
-  const txData = [
-    {
-      type: 'INCOME',
-      concept: 'Sueldo TechCorp',
-      amount: '5000.00',
-      date: '2026-06-01',
-      accountId: bcpAhorros.id,
-      categoryName: 'Ingresos',
-      companyId: companies[0]?.id,
-    },
-    {
-      type: 'INCOME',
-      concept: 'Freelance DataServices',
-      amount: '1200.00',
-      date: '2026-06-15',
-      accountId: interbank.id,
-      categoryName: 'Ingresos',
-      companyId: companies[1]?.id,
-    },
-    {
-      type: 'INCOME',
-      concept: 'Sueldo TechCorp',
-      amount: '5000.00',
-      date: '2026-07-01',
-      accountId: bcpAhorros.id,
-      categoryName: 'Ingresos',
-      companyId: companies[0]?.id,
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Supermercado semanal',
-      amount: '250.00',
-      date: '2026-06-03',
-      accountId: bcpAhorros.id,
-      categoryName: 'Alimentacion',
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Gasolina',
-      amount: '180.00',
-      date: '2026-06-05',
-      accountId: bcpAhorros.id,
-      categoryName: 'Transporte',
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Luz del mes',
-      amount: '120.00',
-      date: '2026-06-10',
-      accountId: interbank.id,
-      categoryName: 'Servicios',
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Internet + Cable',
-      amount: '149.90',
-      date: '2026-06-10',
-      accountId: interbank.id,
-      categoryName: 'Servicios',
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Cine con amigos',
-      amount: '45.00',
-      date: '2026-06-12',
-      accountId: efectivo.id,
-      categoryName: 'Ocio',
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Farmacia',
-      amount: '85.00',
-      date: '2026-06-15',
-      accountId: efectivo.id,
-      categoryName: 'Salud',
-    },
-    {
-      type: 'EXPENSE',
-      concept: 'Alquiler julio',
-      amount: '850.00',
-      date: '2026-07-01',
-      accountId: bcpAhorros.id,
-      categoryName: 'Vivienda',
-    },
-    {
-      type: 'SAVING',
-      concept: 'Ahorro mensual',
-      amount: '500.00',
-      date: '2026-06-01',
-      accountId: bcpAhorros.id,
-      categoryName: 'Ingresos',
-    },
-    {
-      type: 'SAVING',
-      concept: 'Ahorro mensual',
-      amount: '500.00',
-      date: '2026-07-01',
-      accountId: bcpAhorros.id,
-      categoryName: 'Ingresos',
-    },
-  ];
-  for (const t of txData) {
-    await prisma.transaction.create({
-      data: {
-        workspaceId: personal.id,
-        type: t.type as any,
-        concept: t.concept,
-        date: new Date(t.date),
-        amountOriginal: t.amount,
-        currency: 'PEN',
-        amountBase: t.amount,
-        categoryId: categories[t.categoryName] ?? null,
-        accountId: t.accountId ?? null,
-        companyId: t.companyId ?? null,
-        status: 'PAID',
-      },
-    });
-  }
-  const mimotechBcp = await prisma.account.create({
-    data: {
-      workspaceId: mimotech.id,
-      name: 'BCP Negocio',
-      bank: 'BCP',
-      kind: 'CHECKING',
-      currency: 'PEN',
-      lastFour: '9102',
-      initialBalance: '15000.00',
-      color: 'bg-purple-100 text-purple-900',
-      emoji: '🏢',
-    },
-  });
-  const mimotechTx = [
-    {
-      type: 'INCOME',
-      concept: 'Proyecto KoraPay',
-      amount: '8000.00',
-      date: '2026-06-15',
-      projectId: projects[0]?.id,
-    },
-    {
-      type: 'INCOME',
-      concept: 'Proyecto Helpmeet',
-      amount: '5000.00',
-      date: '2026-06-20',
-      projectId: projects[1]?.id,
-    },
-    {
-      type: 'INCOME',
-      concept: 'Tracklink mantenimiento',
-      amount: '3000.00',
-      date: '2026-07-01',
-      projectId: projects[2]?.id,
-    },
-    {
-      type: 'BUSINESS_COST',
-      concept: 'Vercel Pro',
-      amount: '20.00',
-      date: '2026-06-01',
-      applicationId: apps[0]?.id,
-    },
-    {
-      type: 'BUSINESS_COST',
-      concept: 'Supabase Pro',
-      amount: '25.00',
-      date: '2026-06-01',
-      applicationId: apps[1]?.id,
-    },
-    {
-      type: 'BUSINESS_COST',
-      concept: 'GitHub Team',
-      amount: '4.00',
-      date: '2026-06-01',
-      applicationId: apps[2]?.id,
-    },
-    {
-      type: 'BUSINESS_COST',
-      concept: 'Figma Professional',
-      amount: '15.00',
-      date: '2026-06-01',
-      applicationId: apps[3]?.id,
-    },
-    {
-      type: 'TEAM_PAYMENT',
-      concept: 'Pago equipo junio',
-      amount: '3000.00',
-      date: '2026-06-30',
-    },
-  ];
-  for (const t of mimotechTx) {
-    await prisma.transaction.create({
-      data: {
-        workspaceId: mimotech.id,
-        type: t.type as any,
-        concept: t.concept,
-        date: new Date(t.date),
-        amountOriginal: t.amount,
-        currency: 'PEN',
-        amountBase: t.amount,
-        accountId: mimotechBcp.id,
-        projectId: t.projectId ?? null,
-        applicationId: t.applicationId ?? null,
-        status: 'PAID',
-      },
-    });
-  }
-  await prisma.pendingItem.create({
-    data: {
-      workspaceId: personal.id,
-      kind: 'COBRAR',
-      concept: 'Freelance pendiente julio',
-      amount: '800.00',
-      currency: 'PEN',
-      dueDate: new Date('2026-07-25'),
-      status: 'PENDING',
-      personId: people[0]?.id,
-    },
-  });
-  const debt = await prisma.debt.create({
-    data: {
-      workspaceId: personal.id,
-      direction: 'DEBO',
-      concept: 'Prestamo personal',
-      originalAmount: '3000.00',
-      currency: 'PEN',
-      dueDate: new Date('2026-12-31'),
-      status: 'PARTIAL',
-      personId: people[1]?.id,
-    },
-  });
-  await prisma.debtPayment.create({
-    data: {
-      debtId: debt.id,
-      amount: '1000.00',
-      date: new Date('2026-07-01'),
-      method: 'Transferencia',
-    },
-  });
-  const goal = await prisma.savingGoal.create({
-    data: {
-      workspaceId: personal.id,
-      name: 'Viaje a Cusco',
-      targetAmount: '5000.00',
-      currency: 'PEN',
-      targetDate: new Date('2026-12-31'),
-      monthlyRecommend: '833.33',
-    },
-  });
-  await prisma.savingEntry.create({
-    data: {
-      goalId: goal.id,
-      amount: '1000.00',
-      type: 'CONTRIBUTION',
-      date: new Date('2026-06-15'),
-    },
-  });
-  await prisma.savingEntry.create({
-    data: {
-      goalId: goal.id,
-      amount: '1000.00',
-      type: 'CONTRIBUTION',
-      date: new Date('2026-07-15'),
-    },
-  });
-  const talent = await prisma.talentProfile.create({
-    data: {
-      workspaceId: mimotalents.id,
-      name: 'Ana Torres',
-      email: 'ana@example.com',
-      status: 'ACTIVE',
-    },
-  });
-  await prisma.talentContract.create({
-    data: {
-      talentProfileId: talent.id,
-      companyId: companies[0]?.id,
-      position: 'Frontend Developer',
-      rate: '3500.00',
-      currency: 'PEN',
-      startDate: new Date('2026-01-01'),
-      status: 'ACTIVE',
-    },
-  });
-  console.log('Seed completed successfully!');
-  console.log(`Profile: ${profile.email}`);
-  console.log(`Workspaces: ${personal.name}, ${mimotech.name}, ${mimotalents.name}`);
-  console.log(`Accounts: ${bcpAhorros.name}, ${interbank.name}, ${efectivo.name}, ${mimotechBcp.name}`);
 }
+
 main()
   .catch((e) => {
     console.error(e);

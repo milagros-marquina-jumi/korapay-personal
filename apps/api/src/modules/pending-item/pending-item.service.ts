@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { PrismaService } from '@/common/prisma/prisma.service';
+import Decimal from 'decimal.js';
+import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class PendingItemService {
   constructor(private readonly prisma: PrismaService) {}
@@ -29,14 +30,16 @@ export class PendingItemService {
     if (!item) throw new NotFoundException('Pending item not found');
     return this.prisma.pendingItem.update({ where: { id }, data: data as any });
   }
-  async pay(id: string, workspaceId: string) {
+  async pay(id: string, workspaceId: string, data?: { amount?: string }) {
     const item = await this.prisma.pendingItem.findFirst({
       where: { id, workspaceId, deletedAt: null },
     });
     if (!item) throw new NotFoundException('Pending item not found');
+    const paid = data?.amount ? new Decimal(data.amount) : new Decimal(item.amount);
+    const status = paid.gte(new Decimal(item.amount)) ? 'PAID' : 'PARTIAL';
     return this.prisma.pendingItem.update({
       where: { id },
-      data: { status: 'PAID' },
+      data: { status },
     });
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
-import type { PrismaService } from '@/common/prisma/prisma.service';
+import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class SavingGoalService {
   constructor(private readonly prisma: PrismaService) {}
@@ -53,7 +53,7 @@ export class SavingGoalService {
   async addEntry(
     id: string,
     workspaceId: string,
-    data: { amount: string; type: string; date: string; notes?: string },
+    data: { amount: string; type?: string; date: string; notes?: string },
   ) {
     const goal = await this.prisma.savingGoal.findFirst({
       where: { id, workspaceId, deletedAt: null },
@@ -67,6 +67,16 @@ export class SavingGoalService {
         date: new Date(data.date),
         notes: data.notes,
       },
+    });
+  }
+  async remove(id: string, workspaceId: string) {
+    const goal = await this.prisma.savingGoal.findFirst({
+      where: { id, workspaceId, deletedAt: null },
+    });
+    if (!goal) throw new NotFoundException('Saving goal not found');
+    return this.prisma.savingGoal.update({
+      where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 }

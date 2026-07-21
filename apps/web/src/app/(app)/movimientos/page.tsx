@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
@@ -17,8 +18,9 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
-import type { Paginated, Transaction } from '@/lib/api.types';
+import type { Category, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 const TYPE_LABELS: Record<string, string> = {
   INCOME: 'Ingreso',
@@ -29,12 +31,25 @@ const TYPE_LABELS: Record<string, string> = {
   TRANSFER: 'Transferencia',
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  PAID: 'Pagado',
+  PENDING: 'Pendiente',
+  OVERDUE: 'Vencido',
+  PARTIAL: 'Parcial',
+  CANCELLED: 'Cancelado',
+  PENDING_REVIEW: 'Revision',
+  ACTIVE: 'Activo',
+  INACTIVE: 'Inactivo',
+};
+
 export default function MovimientosPage() {
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [search, setSearch] = useState('');
-  const [type, setType] = useState<string>('ALL');
+  const [type, setType] = useState<string>(FILTER_ALL);
+  const [status, setStatus] = useState<string>(FILTER_ALL);
+  const [categoryId, setCategoryId] = useState<string>(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { all: true }),
@@ -48,6 +63,12 @@ export default function MovimientosPage() {
           sortOrder: 'desc',
         })}`,
       ),
+    enabled: !!activeWorkspaceId,
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: queryKeys.categories(activeWorkspaceId ?? ''),
+    queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
 
@@ -75,17 +96,28 @@ export default function MovimientosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const statusOptions = useMemo(() => {
+    const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
+    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+  }, [data?.data]);
+
+  const categoryOptions = useMemo(() => (categories ?? []).map((c) => ({ value: c.id, label: c.name })), [categories]);
+
   const rows = useMemo(() => {
-    const all = data?.data ?? [];
-    return type === 'ALL' ? all : all.filter((tx) => tx.type === type);
-  }, [data?.data, type]);
+    return (data?.data ?? []).filter((tx) => {
+      if (type !== FILTER_ALL && tx.type !== type) return false;
+      if (status !== FILTER_ALL && tx.status !== status) return false;
+      if (categoryId !== FILTER_ALL && tx.categoryId !== categoryId) return false;
+      return true;
+    });
+  }, [data?.data, type, status, categoryId]);
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
         accessorKey: 'date',
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
-        cell: ({ row }) => <span className="text-sm">{new Date(row.original.date).toLocaleDateString('es-PE')}</span>,
+        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
       },
       {
         accessorKey: 'concept',
@@ -186,20 +218,43 @@ export default function MovimientosPage() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar movimientos..."
+        showClear={search !== '' || type !== FILTER_ALL || status !== FILTER_ALL || categoryId !== FILTER_ALL}
+        onClear={() => {
+          setSearch('');
+          setType(FILTER_ALL);
+          setStatus(FILTER_ALL);
+          setCategoryId(FILTER_ALL);
+        }}
         filters={
-          <Select value={type} onValueChange={setType}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos los tipos</SelectItem>
-              <SelectItem value="INCOME">Ingresos</SelectItem>
-              <SelectItem value="EXPENSE">Egresos</SelectItem>
-              <SelectItem value="SAVING">Ahorros</SelectItem>
-              <SelectItem value="BUSINESS_COST">Costos</SelectItem>
-              <SelectItem value="TEAM_PAYMENT">Pagos equipo</SelectItem>
-            </SelectContent>
-          </Select>
+          <>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={FILTER_ALL}>Todos los tipos</SelectItem>
+                <SelectItem value="INCOME">Ingresos</SelectItem>
+                <SelectItem value="EXPENSE">Egresos</SelectItem>
+                <SelectItem value="SAVING">Ahorros</SelectItem>
+                <SelectItem value="BUSINESS_COST">Costos</SelectItem>
+                <SelectItem value="TEAM_PAYMENT">Pagos equipo</SelectItem>
+              </SelectContent>
+            </Select>
+            <FilterSelect
+              value={status}
+              onValueChange={setStatus}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+            <FilterSelect
+              value={categoryId}
+              onValueChange={setCategoryId}
+              options={categoryOptions}
+              placeholder="Categoria"
+              allLabel="Toda categoria"
+            />
+          </>
         }
       />
 

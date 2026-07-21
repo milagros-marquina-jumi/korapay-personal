@@ -8,6 +8,7 @@ import { Plus, Users, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
@@ -20,6 +21,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Paginated, Person, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
+
+const STATUS_LABELS: Record<string, string> = {
+  PAID: 'Pagado',
+  PENDING: 'Pendiente',
+  OVERDUE: 'Vencido',
+  PARTIAL: 'Parcial',
+  CANCELLED: 'Cancelado',
+  PENDING_REVIEW: 'Revision',
+  ACTIVE: 'Activo',
+  INACTIVE: 'Inactivo',
+};
 
 function initials(name: string) {
   return name
@@ -33,6 +46,8 @@ function initials(name: string) {
 function EquipoContent() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<string>(FILTER_ALL);
+  const [personId, setPersonId] = useState<string>(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { type: 'TEAM_PAYMENT', all: true }),
@@ -56,8 +71,23 @@ function EquipoContent() {
     enabled: !!activeWorkspaceId,
   });
 
-  const rows = data?.data ?? [];
   const team = peopleData ?? [];
+
+  const statusOptions = useMemo(() => {
+    const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
+    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+  }, [data?.data]);
+
+  const personOptions = useMemo(() => (peopleData ?? []).map((p) => ({ value: p.id, label: p.name })), [peopleData]);
+
+  const rows = useMemo(() => {
+    return (data?.data ?? []).filter((tx) => {
+      if (status !== FILTER_ALL && tx.status !== status) return false;
+      if (personId !== FILTER_ALL && tx.personId !== personId) return false;
+      return true;
+    });
+  }, [data?.data, status, personId]);
+
   const totalPagado = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
@@ -65,7 +95,7 @@ function EquipoContent() {
       {
         accessorKey: 'date',
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
-        cell: ({ row }) => <span className="text-sm">{new Date(row.original.date).toLocaleDateString('es-PE')}</span>,
+        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
       },
       {
         accessorKey: 'concept',
@@ -122,7 +152,35 @@ function EquipoContent() {
         <KPICard label="Miembros del equipo" value={String(team.length)} icon={Users} color="text-info" />
       </div>
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar pagos..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar pagos..."
+        showClear={search !== '' || status !== FILTER_ALL || personId !== FILTER_ALL}
+        onClear={() => {
+          setSearch('');
+          setStatus(FILTER_ALL);
+          setPersonId(FILTER_ALL);
+        }}
+        filters={
+          <>
+            <FilterSelect
+              value={status}
+              onValueChange={setStatus}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+            <FilterSelect
+              value={personId}
+              onValueChange={setPersonId}
+              options={personOptions}
+              placeholder="Persona"
+              allLabel="Toda persona"
+            />
+          </>
+        }
+      />
 
       <DataTable
         columns={columns}

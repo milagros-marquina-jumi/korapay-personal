@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { Debt } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 const debtSchema = z.object({
   direction: z.enum(['DEBO', 'ME_DEBEN']),
@@ -252,6 +254,9 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
 export default function DeudasPage() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [directionFilter, setDirectionFilter] = useState(FILTER_ALL);
+  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
+  const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.debts(activeWorkspaceId ?? ''),
@@ -259,12 +264,32 @@ export default function DeudasPage() {
     enabled: !!activeWorkspaceId,
   });
 
+  const statusOptions = useMemo(() => {
+    const values = Array.from(new Set((data ?? []).map((d) => d.status)));
+    return values.map((v) => ({ value: v, label: v }));
+  }, [data]);
+
   const debts = useMemo(() => {
     const all = data ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((d) => d.concept.toLowerCase().includes(q));
-  }, [data, search]);
+    return all.filter(
+      (d) =>
+        (!q || d.concept.toLowerCase().includes(q)) &&
+        (directionFilter === FILTER_ALL || d.direction === directionFilter) &&
+        (statusFilter === FILTER_ALL || d.status === statusFilter) &&
+        (currencyFilter === FILTER_ALL || d.currency === currencyFilter),
+    );
+  }, [data, search, directionFilter, statusFilter, currencyFilter]);
+
+  const hasFilters =
+    search !== '' || directionFilter !== FILTER_ALL || statusFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
+
+  const clearFilters = () => {
+    setSearch('');
+    setDirectionFilter(FILTER_ALL);
+    setStatusFilter(FILTER_ALL);
+    setCurrencyFilter(FILTER_ALL);
+  };
 
   return (
     <div className="space-y-6">
@@ -274,7 +299,44 @@ export default function DeudasPage() {
         action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar deudas..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar deudas..."
+        showClear={hasFilters}
+        onClear={clearFilters}
+        filters={
+          <>
+            <FilterSelect
+              value={directionFilter}
+              onValueChange={setDirectionFilter}
+              options={[
+                { value: 'DEBO', label: 'Debo' },
+                { value: 'ME_DEBEN', label: 'Me deben' },
+              ]}
+              placeholder="Direccion"
+              allLabel="Toda direccion"
+            />
+            <FilterSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+            <FilterSelect
+              value={currencyFilter}
+              onValueChange={setCurrencyFilter}
+              options={[
+                { value: 'PEN', label: 'Soles' },
+                { value: 'USD', label: 'Dolares' },
+              ]}
+              placeholder="Moneda"
+              allLabel="Toda moneda"
+            />
+          </>
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -304,7 +366,7 @@ export default function DeudasPage() {
                   <p className="text-sm text-muted-foreground">
                     Saldo: {formatMoney(debt.balance ?? '0.00', currency)} · Pagado:{' '}
                     {formatMoney(debt.totalPaid ?? '0.00', currency)}
-                    {debt.dueDate ? ` · Vence: ${new Date(debt.dueDate).toLocaleDateString('es-PE')}` : ''}
+                    {debt.dueDate ? ` · Vence: ${formatDate(debt.dueDate)}` : ''}
                   </p>
                 </CardContent>
                 {activeWorkspaceId && (

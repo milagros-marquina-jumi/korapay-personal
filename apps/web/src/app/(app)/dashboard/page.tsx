@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { DashboardSummary, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -71,7 +72,7 @@ export default function DashboardPage() {
         description={activeWorkspace ? `Resumen de ${activeWorkspace.name}` : 'Resumen financiero'}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading || !summary ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
         ) : (
@@ -99,7 +100,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Ingresos vs Egresos</CardTitle>
@@ -137,7 +138,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm font-medium">{t.concept}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(t.date).toLocaleDateString('es-PE')} · {t.category?.name ?? 'Sin categoria'}
+                    {formatDate(t.date)} · {t.category?.name ?? 'Sin categoria'}
                   </p>
                 </div>
                 <span

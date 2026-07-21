@@ -24,11 +24,16 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         href={item.href}
         onClick={onNavigate}
         className={cn(
-          'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
+          'relative flex items-center gap-3 rounded-xl py-2.5 text-sm font-medium transition-all',
           indented ? 'pl-10 pr-3' : 'px-3',
-          active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+          active
+            ? 'bg-brand-soft font-semibold text-brand shadow-soft'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         )}
       >
+        {active && !indented && (
+          <span aria-hidden className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand" />
+        )}
         <Icon className="h-[18px] w-[18px]" />
         {item.label}
       </Link>

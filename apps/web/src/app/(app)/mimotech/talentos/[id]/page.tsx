@@ -16,9 +16,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { apiFetch } from '@/lib/api';
 import type { Talent } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleDateString('es-PE') : 'Actual';
+function formatDateOrActive(value?: string | null) {
+  return value ? formatDate(value) : 'Actual';
 }
 
 function TalentDetailContent() {
@@ -73,10 +74,10 @@ function TalentDetailContent() {
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-muted-foreground">
                   <span>
-                    {formatDate(contract.startDate)} – {formatDate(contract.endDate)}
+                    {formatDate(contract.startDate)} – {formatDateOrActive(contract.endDate)}
                   </span>
                   {contract.rate && (
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium tabular-nums text-foreground">
                       {formatMoney(contract.rate, contract.currency as 'PEN' | 'USD')}
                     </span>
                   )}

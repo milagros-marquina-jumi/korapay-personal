@@ -10,6 +10,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -129,9 +130,15 @@ function TalentFormDialog({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Activo',
+  INACTIVE: 'Inactivo',
+};
+
 function TalentosContent() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.talents(activeWorkspaceId ?? ''),
@@ -139,12 +146,22 @@ function TalentosContent() {
     enabled: !!activeWorkspaceId,
   });
 
+  const statusOptions = useMemo(() => {
+    const distinct = [...new Set((data ?? []).map((t) => t.status).filter(Boolean))];
+    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+  }, [data]);
+
   const talents = useMemo(() => {
     const all = data ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((t) => t.name.toLowerCase().includes(q));
-  }, [data, search]);
+    return all.filter((t) => {
+      const matchesSearch = !q || t.name.toLowerCase().includes(q);
+      const matchesStatus = status === FILTER_ALL || t.status === status;
+      return matchesSearch && matchesStatus;
+    });
+  }, [data, search, status]);
+
+  const hasFilters = search.trim().length > 0 || status !== FILTER_ALL;
 
   return (
     <div className="space-y-6">
@@ -154,7 +171,27 @@ function TalentosContent() {
         action={activeWorkspaceId && <TalentFormDialog workspaceId={activeWorkspaceId} />}
       />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar talentos..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar talentos..."
+        showClear={hasFilters}
+        onClear={() => {
+          setSearch('');
+          setStatus(FILTER_ALL);
+        }}
+        filters={
+          statusOptions.length > 0 && (
+            <FilterSelect
+              value={status}
+              onValueChange={setStatus}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todos los estados"
+            />
+          )
+        }
+      />
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -166,8 +203,8 @@ function TalentosContent() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {talents.map((talent) => (
             <Link key={talent.id} href={`/mimotech/talentos/${talent.id}`}>
-              <Card className="transition-shadow hover:shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between gap-4">
+              <Card className="h-full transition-shadow hover:shadow-lift">
+                <CardHeader className="flex flex-row items-center justify-between gap-4 p-6">
                   <CardTitle className="flex items-center gap-3">
                     <Avatar>
                       <AvatarFallback>{initials(talent.name)}</AvatarFallback>
@@ -176,8 +213,8 @@ function TalentosContent() {
                   </CardTitle>
                   <StatusBadge status={talent.status} />
                 </CardHeader>
-                <CardContent className="text-sm text-muted-foreground">
-                  {talent.contracts?.length ?? 0} contrato(s)
+                <CardContent className="px-6 pb-6 text-sm text-muted-foreground">
+                  <span className="tabular-nums">{talent.contracts?.length ?? 0}</span> contrato(s)
                 </CardContent>
               </Card>
             </Link>

@@ -4,18 +4,29 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Trash2 } from 'lucide-react';
+import {
+  Banknote,
+  CreditCard,
+  Landmark,
+  type LucideIcon,
+  Pencil,
+  PiggyBank,
+  Smartphone,
+  Trash2,
+  Wallet,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -40,6 +51,15 @@ const kindLabels: Record<string, string> = {
   CASH: 'Efectivo',
   DIGITAL_WALLET: 'Billetera digital',
   PAYPAL: 'PayPal',
+};
+
+const kindIcons: Record<string, LucideIcon> = {
+  SAVINGS: PiggyBank,
+  CHECKING: Landmark,
+  CREDIT_CARD: CreditCard,
+  CASH: Banknote,
+  DIGITAL_WALLET: Smartphone,
+  PAYPAL: Wallet,
 };
 
 const schema = z.object({
@@ -191,6 +211,8 @@ export default function CuentasPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [search, setSearch] = useState('');
+  const [kindFilter, setKindFilter] = useState(FILTER_ALL);
+  const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<Account | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -208,12 +230,26 @@ export default function CuentasPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const kindOptions = Object.entries(kindLabels).map(([value, label]) => ({ value, label }));
+
   const accounts = useMemo(() => {
     const all = data ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((a) => `${a.name} ${a.bank}`.toLowerCase().includes(q));
-  }, [data, search]);
+    return all.filter(
+      (a) =>
+        (!q || `${a.name} ${a.bank}`.toLowerCase().includes(q)) &&
+        (kindFilter === FILTER_ALL || a.kind === kindFilter) &&
+        (currencyFilter === FILTER_ALL || a.currency === currencyFilter),
+    );
+  }, [data, search, kindFilter, currencyFilter]);
+
+  const hasFilters = search !== '' || kindFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
+
+  const clearFilters = () => {
+    setSearch('');
+    setKindFilter(FILTER_ALL);
+    setCurrencyFilter(FILTER_ALL);
+  };
 
   return (
     <div className="space-y-6">
@@ -223,7 +259,34 @@ export default function CuentasPage() {
         action={activeWorkspaceId ? <AccountFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar cuentas..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar cuentas..."
+        showClear={hasFilters}
+        onClear={clearFilters}
+        filters={
+          <>
+            <FilterSelect
+              value={kindFilter}
+              onValueChange={setKindFilter}
+              options={kindOptions}
+              placeholder="Tipo"
+              allLabel="Todo tipo"
+            />
+            <FilterSelect
+              value={currencyFilter}
+              onValueChange={setCurrencyFilter}
+              options={[
+                { value: 'PEN', label: 'Soles' },
+                { value: 'USD', label: 'Dolares' },
+              ]}
+              placeholder="Moneda"
+              allLabel="Toda moneda"
+            />
+          </>
+        }
+      />
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -233,47 +296,62 @@ export default function CuentasPage() {
         </div>
       ) : accounts.length ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
-            <Card key={account.id}>
-              <CardHeader className="flex flex-row items-start justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {account.emoji && <span className="text-2xl">{account.emoji}</span>}
-                  <div>
-                    <CardTitle className="text-base">{account.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground">{account.bank}</p>
+          {accounts.map((account) => {
+            const KindIcon = kindIcons[account.kind] ?? Wallet;
+            return (
+              <Card key={account.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-11 items-center justify-center rounded-xl bg-brand-soft text-brand">
+                      <KindIcon className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-display text-base font-semibold">{account.name}</p>
+                      <p className="truncate text-sm text-muted-foreground">{account.bank}</p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-0.5">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      aria-label="Editar"
+                      onClick={() => setEditing(account)}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="size-8"
+                      aria-label="Eliminar"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Eliminar cuenta',
+                          description: `Se archivara "${account.name}". Los movimientos asociados se conservan.`,
+                          confirmLabel: 'Eliminar',
+                          destructive: true,
+                        });
+                        if (ok) removeMutation.mutate(account.id);
+                      }}
+                    >
+                      <Trash2 className="size-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
-                <Badge variant="secondary">{kindLabels[account.kind] ?? account.kind}</Badge>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-2xl font-bold tabular-nums">
+                <p className="mt-4 font-display text-2xl font-bold tabular-nums">
                   {formatMoney(account.initialBalance, account.currency as 'PEN' | 'USD')}
                 </p>
-                {account.lastFour && <p className="text-sm text-muted-foreground">····{account.lastFour}</p>}
-                <div className="flex justify-end gap-1">
-                  <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => setEditing(account)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Eliminar"
-                    onClick={async () => {
-                      const ok = await confirm({
-                        title: 'Eliminar cuenta',
-                        description: `Se archivara "${account.name}". Los movimientos asociados se conservan.`,
-                        confirmLabel: 'Eliminar',
-                        destructive: true,
-                      });
-                      if (ok) removeMutation.mutate(account.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                <div className="mt-3 flex items-center gap-2">
+                  <Badge variant="secondary">{kindLabels[account.kind] ?? account.kind}</Badge>
+                  <Badge variant="outline">{account.currency}</Badge>
+                  {account.lastFour && (
+                    <span className="ml-auto text-sm text-muted-foreground tabular-nums">····{account.lastFour}</span>
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <EmptyState

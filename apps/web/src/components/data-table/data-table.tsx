@@ -53,9 +53,21 @@ export function DataTable<T>({
 
   const rows = table.getRowModel().rows;
 
+  if (!isLoading && rows.length === 0) {
+    return (
+      <div className="space-y-3">
+        {emptyState ?? (
+          <div className="rounded-2xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground shadow-soft">
+            Sin resultados
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -69,29 +81,21 @@ export function DataTable<T>({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={columns.length}>
-                    <Skeleton className="h-6 w-full" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : rows.length ? (
-              rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="py-0">
-                  {emptyState ?? <div className="py-10 text-center text-sm text-muted-foreground">Sin resultados</div>}
-                </TableCell>
-              </TableRow>
-            )}
+            {isLoading
+              ? Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={columns.length}>
+                      <Skeleton className="h-6 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              : rows.map((row) => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                    ))}
+                  </TableRow>
+                ))}
           </TableBody>
         </Table>
       </div>

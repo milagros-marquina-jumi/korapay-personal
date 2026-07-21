@@ -6,6 +6,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -17,6 +18,7 @@ import { queryKeys } from '@/lib/query-keys';
 function ProyectosContent() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [status, setStatus] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.projects(activeWorkspaceId ?? ''),
@@ -24,7 +26,26 @@ function ProyectosContent() {
     enabled: !!activeWorkspaceId,
   });
 
-  const projects = data ?? [];
+  const allProjects = data ?? [];
+
+  const statusOptions = useMemo(
+    () =>
+      [...new Set(allProjects.map((p) => p.status).filter(Boolean) as string[])].map((v) => ({
+        value: v,
+        label: v,
+      })),
+    [allProjects],
+  );
+
+  const projects = useMemo(
+    () => allProjects.filter((p) => status === FILTER_ALL || p.status === status),
+    [allProjects, status],
+  );
+
+  const handleClear = () => {
+    setSearch('');
+    setStatus(FILTER_ALL);
+  };
 
   const columns = useMemo<ColumnDef<Project, unknown>[]>(
     () => [
@@ -56,7 +77,22 @@ function ProyectosContent() {
     <div className="space-y-6">
       <PageHeader title="Proyectos" description="Proyectos de MIMOTECH" />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar proyectos..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar proyectos..."
+        showClear={search !== '' || status !== FILTER_ALL}
+        onClear={handleClear}
+        filters={
+          <FilterSelect
+            value={status}
+            onValueChange={setStatus}
+            options={statusOptions}
+            placeholder="Estado"
+            allLabel="Todo estado"
+          />
+        }
+      />
 
       <DataTable
         columns={columns}

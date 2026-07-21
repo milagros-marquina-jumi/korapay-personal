@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { SavingGoal } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 const goalSchema = z.object({
   name: z.string().min(1, 'Requerido'),
@@ -242,6 +244,8 @@ function EntryFormDialog({ workspaceId, goalId }: { workspaceId: string; goalId:
 export default function AhorrosPage() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
+  const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.savingGoals(activeWorkspaceId ?? ''),
@@ -249,12 +253,29 @@ export default function AhorrosPage() {
     enabled: !!activeWorkspaceId,
   });
 
+  const statusOptions = useMemo(() => {
+    const values = Array.from(new Set((data ?? []).map((g) => g.status)));
+    return values.map((v) => ({ value: v, label: v }));
+  }, [data]);
+
   const goals = useMemo(() => {
     const all = data ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((g) => g.name.toLowerCase().includes(q));
-  }, [data, search]);
+    return all.filter(
+      (g) =>
+        (!q || g.name.toLowerCase().includes(q)) &&
+        (statusFilter === FILTER_ALL || g.status === statusFilter) &&
+        (currencyFilter === FILTER_ALL || g.currency === currencyFilter),
+    );
+  }, [data, search, statusFilter, currencyFilter]);
+
+  const hasFilters = search !== '' || statusFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
+
+  const clearFilters = () => {
+    setSearch('');
+    setStatusFilter(FILTER_ALL);
+    setCurrencyFilter(FILTER_ALL);
+  };
 
   return (
     <div className="space-y-6">
@@ -264,7 +285,34 @@ export default function AhorrosPage() {
         action={activeWorkspaceId ? <GoalFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar metas..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar metas..."
+        showClear={hasFilters}
+        onClear={clearFilters}
+        filters={
+          <>
+            <FilterSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+            <FilterSelect
+              value={currencyFilter}
+              onValueChange={setCurrencyFilter}
+              options={[
+                { value: 'PEN', label: 'Soles' },
+                { value: 'USD', label: 'Dolares' },
+              ]}
+              placeholder="Moneda"
+              allLabel="Toda moneda"
+            />
+          </>
+        }
+      />
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -294,9 +342,7 @@ export default function AhorrosPage() {
                   <Progress value={goal.progress ?? 0} />
                   <p className="text-xs text-muted-foreground">{Math.round(goal.progress ?? 0)}% completado</p>
                   {goal.targetDate && (
-                    <p className="text-xs text-muted-foreground">
-                      Fecha objetivo: {new Date(goal.targetDate).toLocaleDateString('es-PE')}
-                    </p>
+                    <p className="text-xs text-muted-foreground">Fecha objetivo: {formatDate(goal.targetDate)}</p>
                   )}
                 </CardContent>
                 {activeWorkspaceId && (

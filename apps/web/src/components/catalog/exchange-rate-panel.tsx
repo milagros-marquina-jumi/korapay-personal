@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { apiFetch } from '@/lib/api';
 import type { ExchangeRateInfo } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 export function ExchangeRatePanel() {
   const queryClient = useQueryClient();
@@ -62,11 +63,7 @@ export function ExchangeRatePanel() {
       <CardContent className="space-y-5">
         <p className="text-2xl font-bold tabular-nums">
           {latest ? `1 ${latest.from} = ${latest.rate} ${latest.to}` : 'Sin tipo de cambio'}
-          {latest && (
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {new Date(latest.date).toLocaleDateString('es-PE')}
-            </span>
-          )}
+          {latest && <span className="ml-2 text-sm font-normal text-muted-foreground">{formatDate(latest.date)}</span>}
         </p>
 
         <form
@@ -108,7 +105,7 @@ export function ExchangeRatePanel() {
               <TableBody>
                 {history.map((h) => (
                   <TableRow key={h.date}>
-                    <TableCell>{new Date(h.date).toLocaleDateString('es-PE')}</TableCell>
+                    <TableCell>{formatDate(h.date)}</TableCell>
                     <TableCell className="tabular-nums">{h.rate}</TableCell>
                   </TableRow>
                 ))}

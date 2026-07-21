@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +32,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { PendingItem } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 const schema = z.object({
   kind: z.enum(['COBRAR', 'PAGAR']),
@@ -176,6 +178,9 @@ function MarkPaidButton({ workspaceId, item }: { workspaceId: string; item: Pend
 export default function PendientesPage() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [kindFilter, setKindFilter] = useState(FILTER_ALL);
+  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
+  const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.pendingItems(activeWorkspaceId ?? ''),
@@ -183,12 +188,37 @@ export default function PendientesPage() {
     enabled: !!activeWorkspaceId,
   });
 
+  const kindOptions = useMemo(() => {
+    const values = Array.from(new Set((data ?? []).map((i) => i.kind)));
+    return values.map((v) => ({ value: v, label: v }));
+  }, [data]);
+
+  const statusOptions = useMemo(() => {
+    const values = Array.from(new Set((data ?? []).map((i) => i.status)));
+    return values.map((v) => ({ value: v, label: v }));
+  }, [data]);
+
   const items = useMemo(() => {
     const all = data ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return all;
-    return all.filter((i) => i.concept.toLowerCase().includes(q));
-  }, [data, search]);
+    return all.filter(
+      (i) =>
+        (!q || i.concept.toLowerCase().includes(q)) &&
+        (kindFilter === FILTER_ALL || i.kind === kindFilter) &&
+        (statusFilter === FILTER_ALL || i.status === statusFilter) &&
+        (currencyFilter === FILTER_ALL || i.currency === currencyFilter),
+    );
+  }, [data, search, kindFilter, statusFilter, currencyFilter]);
+
+  const hasFilters =
+    search !== '' || kindFilter !== FILTER_ALL || statusFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
+
+  const clearFilters = () => {
+    setSearch('');
+    setKindFilter(FILTER_ALL);
+    setStatusFilter(FILTER_ALL);
+    setCurrencyFilter(FILTER_ALL);
+  };
 
   return (
     <div className="space-y-6">
@@ -198,7 +228,41 @@ export default function PendientesPage() {
         action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} /> : null}
       />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar pendientes..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar pendientes..."
+        showClear={hasFilters}
+        onClear={clearFilters}
+        filters={
+          <>
+            <FilterSelect
+              value={kindFilter}
+              onValueChange={setKindFilter}
+              options={kindOptions}
+              placeholder="Tipo"
+              allLabel="Todo tipo"
+            />
+            <FilterSelect
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+            <FilterSelect
+              value={currencyFilter}
+              onValueChange={setCurrencyFilter}
+              options={[
+                { value: 'PEN', label: 'Soles' },
+                { value: 'USD', label: 'Dolares' },
+              ]}
+              placeholder="Moneda"
+              allLabel="Toda moneda"
+            />
+          </>
+        }
+      />
 
       {isLoading ? (
         <div className="space-y-3">
@@ -225,9 +289,7 @@ export default function PendientesPage() {
                   <p className="text-xl font-bold tabular-nums">{formatMoney(item.amount, currency)}</p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Vence: {new Date(item.dueDate).toLocaleDateString('es-PE')}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Vence: {formatDate(item.dueDate)}</p>
                 </CardContent>
                 {activeWorkspaceId && item.status !== 'PAID' && (
                   <CardFooter>

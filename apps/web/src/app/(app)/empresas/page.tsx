@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -102,6 +103,7 @@ function CompanyFormDialog({ workspaceId }: { workspaceId: string }) {
 function EmpresasContent() {
   const { activeWorkspaceId } = useWorkspace();
   const [search, setSearch] = useState('');
+  const [industry, setIndustry] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.companies(activeWorkspaceId ?? ''),
@@ -109,7 +111,26 @@ function EmpresasContent() {
     enabled: !!activeWorkspaceId,
   });
 
-  const companies = data ?? [];
+  const allCompanies = data ?? [];
+
+  const industryOptions = useMemo(
+    () =>
+      [...new Set(allCompanies.map((c) => c.industry).filter(Boolean) as string[])].map((v) => ({
+        value: v,
+        label: v,
+      })),
+    [allCompanies],
+  );
+
+  const companies = useMemo(
+    () => allCompanies.filter((c) => industry === FILTER_ALL || c.industry === industry),
+    [allCompanies, industry],
+  );
+
+  const handleClear = () => {
+    setSearch('');
+    setIndustry(FILTER_ALL);
+  };
 
   const columns = useMemo<ColumnDef<Company, unknown>[]>(
     () => [
@@ -140,7 +161,22 @@ function EmpresasContent() {
         action={activeWorkspaceId && <CompanyFormDialog workspaceId={activeWorkspaceId} />}
       />
 
-      <DataTableToolbar search={search} onSearchChange={setSearch} placeholder="Buscar empresas..." />
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar empresas..."
+        showClear={search !== '' || industry !== FILTER_ALL}
+        onClear={handleClear}
+        filters={
+          <FilterSelect
+            value={industry}
+            onValueChange={setIndustry}
+            options={industryOptions}
+            placeholder="Industria"
+            allLabel="Toda industria"
+          />
+        }
+      />
 
       <DataTable
         columns={columns}

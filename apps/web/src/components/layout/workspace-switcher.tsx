@@ -1,18 +1,26 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function WorkspaceSwitcher() {
   const { workspaces, activeWorkspaceId, setActiveWorkspaceId, isLoading } = useWorkspace();
+  const router = useRouter();
 
   if (isLoading || !activeWorkspaceId) {
     return <Skeleton className="h-10 w-full" />;
   }
 
+  const handleChange = (id: string) => {
+    if (id === activeWorkspaceId) return;
+    setActiveWorkspaceId(id);
+    router.push('/dashboard');
+  };
+
   return (
-    <Select value={activeWorkspaceId} onValueChange={setActiveWorkspaceId}>
+    <Select value={activeWorkspaceId} onValueChange={handleChange}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Selecciona workspace" />
       </SelectTrigger>

@@ -8,7 +8,7 @@ import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PeriodFilter, yearsFrom } from '@/components/data-table/period-filter';
+import { PeriodFilter } from '@/components/data-table/period-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { Button } from '@/components/ui/button';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
@@ -54,7 +54,6 @@ export function LedgerSection({
   const [month, setMonth] = useState(FILTER_ALL);
 
   const cur = currency as 'PEN' | 'USD';
-  const years = useMemo(() => yearsFrom(entries.map((e) => e.year)), [entries]);
   const statusOptions = useMemo(
     () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: STATUS_LABELS[v] ?? v })),
     [entries],
@@ -214,7 +213,7 @@ export function LedgerSection({
               placeholder="Estado"
               allLabel="Todo estado"
             />
-            <PeriodFilter year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} years={years} />
+            <PeriodFilter year={year} month={month} onYearChange={setYear} onMonthChange={setMonth} />
           </>
         }
       />

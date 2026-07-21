@@ -26,7 +26,8 @@ import { queryKeys } from '@/lib/query-keys';
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 export default function ReportesPage() {
-  const { activeWorkspaceId } = useWorkspace();
+  const { activeWorkspaceId, activeWorkspace } = useWorkspace();
+  const isBusiness = activeWorkspace?.type === 'BUSINESS';
 
   const { data: summary, isLoading } = useQuery({
     queryKey: queryKeys.dashboard(activeWorkspaceId ?? ''),
@@ -72,6 +73,16 @@ export default function ReportesPage() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
 
+  const byCost = new Map<string, number>();
+  for (const t of transactions) {
+    if (t.type !== 'BUSINESS_COST') continue;
+    byCost.set(t.concept, (byCost.get(t.concept) ?? 0) + Number(t.amountBase));
+  }
+  const costData = [...byCost.entries()]
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+
   return (
     <div className="space-y-6">
       <PageHeader title="Reportes" description="Resumen y análisis financiero" />
@@ -81,6 +92,7 @@ export default function ReportesPage() {
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="mes">Por mes</TabsTrigger>
           <TabsTrigger value="categoria">Por categoría</TabsTrigger>
+          {isBusiness && <TabsTrigger value="costos">Costos por app</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="resumen" className="mt-4">
@@ -166,6 +178,23 @@ export default function ReportesPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {isBusiness && (
+          <TabsContent value="costos" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Costos por aplicación</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {costData.length ? (
+                  <CategoryDonut data={costData} />
+                ) : (
+                  <p className="py-12 text-center text-sm text-muted-foreground">Sin costos registrados</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

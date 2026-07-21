@@ -1,51 +1,53 @@
 'use client';
 
-import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-
-const MONTHS = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
+import { X } from 'lucide-react';
+import { FILTER_ALL } from '@/components/data-table/filter-select';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface PeriodFilterProps {
   year: string;
   month: string;
   onYearChange: (value: string) => void;
   onMonthChange: (value: string) => void;
-  years: number[];
+  years?: number[];
 }
 
-export function PeriodFilter({ year, month, onYearChange, onMonthChange, years }: PeriodFilterProps) {
-  const yearOptions = years.map((y) => ({ value: String(y), label: String(y) }));
-  const monthOptions = MONTHS.map((label, i) => ({ value: String(i + 1), label }));
+export function PeriodFilter({ year, month, onYearChange, onMonthChange }: PeriodFilterProps) {
+  const value = year !== FILTER_ALL && month !== FILTER_ALL ? `${year}-${String(month).padStart(2, '0')}` : '';
+
+  const handleChange = (raw: string) => {
+    if (!raw) {
+      onYearChange(FILTER_ALL);
+      onMonthChange(FILTER_ALL);
+      return;
+    }
+    const [y, m] = raw.split('-');
+    onYearChange(y ?? FILTER_ALL);
+    onMonthChange(m ? String(Number(m)) : FILTER_ALL);
+  };
 
   return (
-    <>
-      <FilterSelect
-        value={year}
-        onValueChange={onYearChange}
-        options={yearOptions}
-        placeholder="Año"
-        allLabel="Todo año"
+    <div className="flex items-center gap-1">
+      <Input
+        type="month"
+        aria-label="Periodo (año y mes)"
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        className="h-10 w-[11rem]"
       />
-      <FilterSelect
-        value={month}
-        onValueChange={onMonthChange}
-        options={monthOptions}
-        placeholder="Mes"
-        allLabel="Todo mes"
-      />
-    </>
+      {value && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-9 shrink-0"
+          aria-label="Limpiar periodo"
+          onClick={() => handleChange('')}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </div>
   );
 }
 

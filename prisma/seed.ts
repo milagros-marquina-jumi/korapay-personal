@@ -102,6 +102,7 @@ async function clean() {
   await prisma.talentIncomeDistribution.deleteMany();
   await prisma.talentContract.deleteMany();
   await prisma.talentProfile.deleteMany();
+  await prisma.savingBalance.deleteMany();
   await prisma.savingEntry.deleteMany();
   await prisma.savingGoal.deleteMany();
   await prisma.debtPayment.deleteMany();
@@ -458,44 +459,35 @@ async function main() {
 
   const ahorros = load<{
     fecha: string;
+    anio: number | null;
+    nMes: number | null;
     descripcion: string | null;
     banco: string | null;
     moneda: string;
     monto: number | null;
+    importeTotal: number | null;
   }>('ahorros');
-  const savingGoalByName: Record<string, string> = {};
-  const accountByName: Record<string, string> = {};
-  async function ensureSavingGoal(name: string): Promise<string> {
-    if (savingGoalByName[name]) return savingGoalByName[name];
-    const g = await prisma.savingGoal.create({
-      data: { workspaceId: personal.id, name, targetAmount: '0.00', currency: 'PEN', status: 'ACTIVE' },
-    });
-    savingGoalByName[name] = g.id;
-    return g.id;
-  }
-  async function ensureSavingsAccount(bank: string): Promise<string> {
-    if (accountByName[bank]) return accountByName[bank];
-    const a = await prisma.account.create({
-      data: { workspaceId: personal.id, name: `Ahorro ${bank}`, bank, kind: 'SAVINGS', currency: 'PEN', emoji: '🐷' },
-    });
-    accountByName[bank] = a.id;
-    return a.id;
-  }
-  let savingEntryCount = 0;
+  let savingBalanceCount = 0;
   for (const r of ahorros) {
+    if (r.monto == null && r.importeTotal == null) continue;
     const bucket = r.descripcion ?? `Ahorro ${r.banco ?? 'General'}`;
-    const goalId = await ensureSavingGoal(bucket);
-    if (r.banco) await ensureSavingsAccount(r.banco);
-    await prisma.savingEntry.create({
+    const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
+    const amount = r.monto ?? 0;
+    const d = date(r.fecha);
+    const amountBase = r.importeTotal != null ? money(r.importeTotal) : toBase(amount, currency);
+    await prisma.savingBalance.create({
       data: {
-        goalId,
-        amount: money(r.monto),
-        type: (r.monto ?? 0) < 0 ? 'WITHDRAWAL' : 'CONTRIBUTION',
-        date: date(r.fecha),
-        notes: r.banco ?? null,
+        workspaceId: personal.id,
+        bucket,
+        bank: r.banco ?? null,
+        currency,
+        year: r.anio != null ? Math.trunc(r.anio) : d.getUTCFullYear(),
+        month: r.nMes != null ? Math.trunc(r.nMes) : d.getUTCMonth() + 1,
+        amount: money(amount),
+        amountBase,
       },
     });
-    savingEntryCount++;
+    savingBalanceCount++;
   }
 
   // ============================================================
@@ -727,7 +719,7 @@ async function main() {
   console.table({
     profile: profile.email,
     'ws Personal (egresos)': expenseCount,
-    'ws Personal (savingEntries)': savingEntryCount,
+    'ws Personal (savingBalances)': savingBalanceCount,
     'ws Empleos (ingresos)': incomeCount,
     'ws Empleos (empresas)': Object.keys(companyByWs[empleos.id] ?? {}).length,
     'ws Empleos (clientes)': clientCount,

@@ -65,6 +65,7 @@ model Workspace {
   pendingItems     PendingItem[]
   debts            Debt[]
   savingGoals      SavingGoal[]
+  savingBalances   SavingBalance[]
   contracts        EmploymentContract[]
   subscriptions    Subscription[]
   talentProfiles   TalentProfile[]
@@ -480,6 +481,26 @@ model SavingEntry {
   goal SavingGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@map("saving_entries")
+}
+
+model SavingBalance {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  bucket      String
+  bank        String?
+  currency    String    @default("PEN")
+  year        Int
+  month       Int
+  amount      Decimal   @db.Decimal(18, 2)
+  amountBase  Decimal   @map("amount_base") @db.Decimal(18, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, year, month])
+  @@map("saving_balances")
 }
 
 // ============================================================

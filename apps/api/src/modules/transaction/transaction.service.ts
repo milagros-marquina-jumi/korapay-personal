@@ -192,6 +192,20 @@ export class TransactionService {
     return { data, years: [...years].sort((a, b) => b - a) };
   }
 
+  async recurrenceOccurrences(recurrenceRuleId: string, workspaceId: string) {
+    const rows = await this.prisma.transaction.findMany({
+      where: { recurrenceRuleId, workspaceId, deletedAt: null },
+      orderBy: { date: 'asc' },
+      include: { recurrenceRule: true },
+    });
+    return rows.map((t) => ({
+      ...t,
+      amountOriginal: t.amountOriginal.toString(),
+      amountBase: t.amountBase.toString(),
+      exchangeRate: t.exchangeRate?.toString() ?? null,
+    }));
+  }
+
   async findOne(id: string, workspaceId: string) {
     const tx = await this.prisma.transaction.findFirst({
       where: { id, workspaceId, deletedAt: null },
@@ -223,6 +237,7 @@ export class TransactionService {
     projectId?: string;
     applicationId?: string;
     notes?: string;
+    tags?: string[];
     dueDate?: string;
     isRecurring?: boolean;
     recurrenceFrequency?: string;
@@ -255,6 +270,7 @@ export class TransactionService {
       projectId: data.projectId,
       applicationId: data.applicationId,
       notes: data.notes,
+      tags: data.tags ?? [],
     };
 
     const isRecurring = !!(data.isRecurring && data.recurrenceFrequency);
@@ -310,24 +326,32 @@ export class TransactionService {
     });
   }
   async update(id: string, workspaceId: string, data: Record<string, unknown>) {
-    await this.findOne(id, workspaceId);
+    const existing = await this.findOne(id, workspaceId);
     const updateData: Prisma.TransactionUncheckedUpdateInput = {};
     if (data.concept) updateData.concept = data.concept as string;
     if (data.description !== undefined) updateData.description = data.description as string;
     if (data.date) updateData.date = new Date(data.date as string);
+    if (data.type) updateData.type = data.type as string;
+    if (data.currency) updateData.currency = data.currency as string;
     if (data.amount) {
       updateData.amountOriginal = data.amount as string;
-      const currency = (data.currency as string) ?? 'PEN';
-      const rate = (data.exchangeRate as string) ?? '1';
+      const currency = (data.currency as string) ?? existing.currency ?? 'PEN';
+      const dateForRate = (data.date as string) ?? existing.date.toISOString().slice(0, 10);
+      let rate = (data.exchangeRate as string) ?? existing.exchangeRate ?? undefined;
+      if (currency !== 'PEN' && !rate) {
+        rate = await this.exchangeRateService.getRateForDate(dateForRate);
+      }
+      updateData.exchangeRate = currency !== 'PEN' ? (rate ?? null) : null;
       updateData.amountBase =
         currency === 'PEN'
           ? (data.amount as string)
-          : new Decimal(data.amount as string).mul(new Decimal(rate)).toFixed(2);
+          : new Decimal(data.amount as string).mul(new Decimal(rate ?? '1')).toFixed(2);
     }
     if (data.status) updateData.status = data.status as string;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId as string;
     if (data.accountId !== undefined) updateData.accountId = data.accountId as string;
     if (data.notes !== undefined) updateData.notes = data.notes as string;
+    if (Array.isArray(data.tags)) updateData.tags = data.tags as string[];
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
     if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring as boolean;
     return this.prisma.transaction.update({ where: { id }, data: updateData });

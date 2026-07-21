@@ -1,364 +1,111 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { EmptyState } from '@korapay/ui';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { toast } from 'sonner';
-import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import { apiFetch } from '@/lib/api';
-import type { SavingGoal } from '@/lib/api.types';
+import type { SavingBalancesMonthly } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { useHighlightNew } from '@/lib/use-highlight-new';
-import { cn, formatDate } from '@/lib/utils';
-
-const goalSchema = z.object({
-  name: z.string().min(1, 'Requerido'),
-  targetAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
-  currency: z.enum(['PEN', 'USD']),
-  targetDate: z.string().optional(),
-  monthlyRecommend: z
-    .string()
-    .regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido')
-    .optional()
-    .or(z.literal('')),
-});
-
-type GoalFormValues = z.infer<typeof goalSchema>;
-
-const entrySchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
-  type: z.enum(['CONTRIBUTION', 'WITHDRAWAL']),
-  date: z.string().min(1, 'Requerido'),
-});
-
-type EntryFormValues = z.infer<typeof entrySchema>;
-
-function GoalFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<GoalFormValues>({
-    resolver: zodResolver(goalSchema),
-    defaultValues: {
-      name: '',
-      targetAmount: '',
-      currency: 'PEN',
-      targetDate: '',
-      monthlyRecommend: '',
-    },
-  });
-
-  const mutation = useMutation({
-    mutationFn: (values: GoalFormValues) => {
-      const payload: Record<string, unknown> = {
-        name: values.name,
-        targetAmount: values.targetAmount,
-        currency: values.currency,
-        workspaceId,
-      };
-      if (values.targetDate) payload.targetDate = values.targetDate;
-      if (values.monthlyRecommend) payload.monthlyRecommend = values.monthlyRecommend;
-      return apiFetch<SavingGoal>('/saving-goals', { method: 'POST', body: JSON.stringify(payload) });
-    },
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals(workspaceId) });
-      toast.success('Meta creada');
-      reset();
-      setOpen(false);
-      if (created?.id) onCreated?.(created.id);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>Nueva meta</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nueva meta</DialogTitle>
-          <DialogDescription>Define una meta de ahorro y su objetivo.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Nombre</Label>
-            <Input id="name" placeholder="Ej. Fondo de emergencia, Viaje" {...register('name')} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="targetAmount">Monto objetivo</Label>
-              <Input id="targetAmount" inputMode="decimal" placeholder="0.00" {...register('targetAmount')} />
-              {errors.targetAmount && <p className="text-xs text-destructive">{errors.targetAmount.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Moneda</Label>
-              <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dólares ($)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="targetDate">Fecha objetivo</Label>
-              <Input id="targetDate" type="date" {...register('targetDate')} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="monthlyRecommend">Aporte mensual</Label>
-              <Input id="monthlyRecommend" inputMode="decimal" placeholder="0.00" {...register('monthlyRecommend')} />
-              {errors.monthlyRecommend && <p className="text-xs text-destructive">{errors.monthlyRecommend.message}</p>}
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Guardando...' : 'Guardar'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EntryFormDialog({ workspaceId, goalId }: { workspaceId: string; goalId: string }) {
-  const [open, setOpen] = useState(false);
-  const queryClient = useQueryClient();
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<EntryFormValues>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: {
-      amount: '',
-      type: 'CONTRIBUTION',
-      date: new Date().toISOString().slice(0, 10),
-    },
-  });
-
-  const mutation = useMutation({
-    mutationFn: (values: EntryFormValues) =>
-      apiFetch(`/saving-goals/${goalId}/entries?workspaceId=${workspaceId}`, {
-        method: 'POST',
-        body: JSON.stringify(values),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals(workspaceId) });
-      toast.success('Aporte registrado');
-      reset();
-      setOpen(false);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Registrar aporte
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Registrar aporte</DialogTitle>
-          <DialogDescription>Agrega un aporte o retiro a esta meta.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Monto</Label>
-              <Input id="amount" inputMode="decimal" placeholder="0.00" {...register('amount')} />
-              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select defaultValue="CONTRIBUTION" onValueChange={(v) => setValue('type', v as EntryFormValues['type'])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CONTRIBUTION">Aporte</SelectItem>
-                  <SelectItem value="WITHDRAWAL">Retiro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date">Fecha</Label>
-            <Input id="date" type="date" {...register('date')} />
-            {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
-          </div>
-
-          <DialogFooter>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? 'Guardando...' : 'Guardar'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function AhorrosPage() {
   const { activeWorkspaceId } = useWorkspace();
-  const { markNew, highlightClass } = useHighlightNew();
+  const [year, setYear] = useState(FILTER_ALL);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
-  const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.savingGoals(activeWorkspaceId ?? ''),
-    queryFn: () => apiFetch<SavingGoal[]>(`/saving-goals?workspaceId=${activeWorkspaceId}`),
+    queryKey: queryKeys.savingBalances(activeWorkspaceId ?? '', { year }),
+    queryFn: () =>
+      apiFetch<SavingBalancesMonthly>(
+        `/reports/saving-balances?workspaceId=${activeWorkspaceId}${year !== FILTER_ALL ? `&year=${year}` : ''}`,
+      ),
     enabled: !!activeWorkspaceId,
   });
 
-  const statusOptions = useMemo(() => {
-    const values = Array.from(new Set((data ?? []).map((g) => g.status)));
-    return values.map((v) => ({ value: v, label: v }));
-  }, [data]);
+  const yearOptions = useMemo(
+    () => (data?.years ?? []).map((y) => ({ value: String(y), label: String(y) })),
+    [data?.years],
+  );
 
-  const goals = useMemo(() => {
-    const all = data ?? [];
-    const q = search.trim().toLowerCase();
-    return all.filter(
-      (g) =>
-        (!q || g.name.toLowerCase().includes(q)) &&
-        (statusFilter === FILTER_ALL || g.status === statusFilter) &&
-        (currencyFilter === FILTER_ALL || g.currency === currencyFilter),
-    );
-  }, [data, search, statusFilter, currencyFilter]);
-
-  const hasFilters = search !== '' || statusFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
-
-  const clearFilters = () => {
-    setSearch('');
-    setStatusFilter(FILTER_ALL);
-    setCurrencyFilter(FILTER_ALL);
-  };
+  const periods = useMemo(() => {
+    const rows = data?.data ?? [];
+    if (!search.trim()) return rows;
+    const q = search.toLowerCase();
+    return rows
+      .map((p) => ({ ...p, accounts: p.accounts.filter((a) => a.bucket.toLowerCase().includes(q)) }))
+      .filter((p) => p.accounts.length > 0);
+  }, [data?.data, search]);
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Ahorros"
-        description="Metas de ahorro y su progreso"
-        action={activeWorkspaceId ? <GoalFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
-      />
+      <PageHeader title="Ahorros" description="Saldo de tus cuentas de ahorro por mes" />
 
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Buscar metas..."
-        showClear={hasFilters}
-        onClear={clearFilters}
+        placeholder="Buscar cuenta..."
+        showClear={search !== '' || year !== FILTER_ALL}
+        onClear={() => {
+          setSearch('');
+          setYear(FILTER_ALL);
+        }}
         filters={
-          <>
-            <FilterSelect
-              value={statusFilter}
-              onValueChange={setStatusFilter}
-              options={statusOptions}
-              placeholder="Estado"
-              allLabel="Todo estado"
-            />
-            <FilterSelect
-              value={currencyFilter}
-              onValueChange={setCurrencyFilter}
-              options={[
-                { value: 'PEN', label: 'Soles' },
-                { value: 'USD', label: 'Dólares' },
-              ]}
-              placeholder="Moneda"
-              allLabel="Toda moneda"
-            />
-          </>
+          <FilterSelect
+            value={year}
+            onValueChange={setYear}
+            options={yearOptions}
+            placeholder="Año"
+            allLabel="Todos los años"
+          />
         }
       />
 
       {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-xl" />
+        <p className="text-sm text-muted-foreground">Cargando...</p>
+      ) : periods.length ? (
+        <div className="space-y-4">
+          {periods.map((period) => (
+            <Card key={`${period.year}-${period.month}`} className="overflow-hidden">
+              <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-3">
+                <p className="text-sm font-semibold capitalize">{period.label}</p>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Total ahorrado</p>
+                  <p className="font-semibold tabular-nums text-brand">{formatMoney(period.total, 'PEN')}</p>
+                </div>
+              </div>
+              <div className="divide-y">
+                {period.accounts.map((account) => (
+                  <div
+                    key={`${account.bucket}-${account.currency}`}
+                    className="flex items-center justify-between px-4 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate text-sm font-medium">{account.bucket}</span>
+                      {account.bank && <span className="shrink-0 text-xs text-muted-foreground">{account.bank}</span>}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {account.currency === 'USD' && (
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {formatMoney(account.amount, 'USD')}
+                        </span>
+                      )}
+                      <span className="w-28 text-right text-sm font-semibold tabular-nums">
+                        {formatMoney(account.amountBase, 'PEN')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           ))}
         </div>
-      ) : goals.length ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {goals.map((goal) => {
-            const currency = goal.currency as 'PEN' | 'USD';
-            return (
-              <Card key={goal.id} className={cn(highlightClass(goal.id))}>
-                <CardHeader className="flex flex-row items-start justify-between gap-2">
-                  <CardTitle className="text-base">{goal.name}</CardTitle>
-                  <StatusBadge status={goal.status} />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-baseline justify-between text-sm">
-                    <span className="font-semibold tabular-nums">
-                      {formatMoney(goal.currentAmount ?? '0.00', currency)}
-                    </span>
-                    <span className="text-muted-foreground tabular-nums">
-                      {formatMoney(goal.targetAmount, currency)}
-                    </span>
-                  </div>
-                  <Progress value={goal.progress ?? 0} />
-                  <p className="text-xs text-muted-foreground">{Math.round(goal.progress ?? 0)}% completado</p>
-                  {goal.targetDate && (
-                    <p className="text-xs text-muted-foreground">Fecha objetivo: {formatDate(goal.targetDate)}</p>
-                  )}
-                </CardContent>
-                {activeWorkspaceId && (
-                  <CardFooter>
-                    <EntryFormDialog workspaceId={activeWorkspaceId} goalId={goal.id} />
-                  </CardFooter>
-                )}
-              </Card>
-            );
-          })}
-        </div>
       ) : (
-        <EmptyState title="Sin metas de ahorro" description="Crea tu primera meta para empezar a ahorrar." />
+        <EmptyState title="Sin ahorros" description="No hay saldos de ahorro registrados para el periodo." />
       )}
     </div>
   );

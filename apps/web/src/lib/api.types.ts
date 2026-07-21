@@ -181,6 +181,7 @@ export interface Transaction {
   amountOriginal: string;
   currency: string;
   amountBase: string;
+  exchangeRate?: string | null;
   status: string;
   categoryId?: string | null;
   accountId?: string | null;
@@ -241,6 +242,35 @@ export interface SavingEntry {
   type: string;
   date: string;
   notes?: string | null;
+}
+
+export interface SavingBalanceAccount {
+  bucket: string;
+  bank?: string | null;
+  currency: string;
+  amount: string;
+  amountBase: string;
+}
+
+export interface SavingBalancePeriod {
+  year: number;
+  month: number;
+  label: string;
+  total: string;
+  accounts: SavingBalanceAccount[];
+}
+
+export interface SavingBalancesMonthly {
+  data: SavingBalancePeriod[];
+  years: number[];
+}
+
+export interface PersonalReports {
+  years: number[];
+  expenseByCategory: { name: string; total: string }[];
+  incomeVsExpense: { year: number; month: number; label: string; income: string; expense: string; net: string }[];
+  savingsEvolution: { year: number; month: number; label: string; total: string }[];
+  fixedVsVariable: { fixed: string; variable: string };
 }
 
 export interface Debt {

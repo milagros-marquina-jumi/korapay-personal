@@ -32,6 +32,12 @@ export class TransactionController {
     return this.transactionService.monthlySummary(query);
   }
 
+  @Get('recurrence/:ruleId')
+  @ApiOperation({ summary: 'List all occurrences of a recurring payment' })
+  recurrenceOccurrences(@Param('ruleId') ruleId: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.transactionService.recurrenceOccurrences(ruleId, workspaceId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get transaction by ID' })
   findOne(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {

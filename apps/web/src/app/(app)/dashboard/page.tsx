@@ -134,20 +134,22 @@ export default function DashboardPage() {
         <CardContent className="divide-y">
           {recent.length ? (
             recent.map((t) => (
-              <div key={t.id} className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-sm font-medium">{t.concept}</p>
-                  <p className="text-xs text-muted-foreground">
+              <div key={t.id} className="flex items-center justify-between gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium" title={t.concept}>
+                    {t.concept}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
                     {formatDate(t.date)} · {t.category?.name ?? 'Sin categoría'}
                   </p>
                 </div>
                 <span
-                  className={`text-sm font-semibold tabular-nums ${
+                  className={`shrink-0 text-sm font-semibold tabular-nums ${
                     t.type === 'INCOME' ? 'text-success' : 'text-destructive'
                   }`}
                 >
                   {t.type === 'INCOME' ? '+' : '-'}
-                  {formatMoney(t.amountOriginal, t.currency as 'PEN' | 'USD')}
+                  {formatMoney(t.amountBase, 'PEN')}
                 </span>
               </div>
             ))

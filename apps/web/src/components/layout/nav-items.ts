@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
   ArrowLeftRight,
   Banknote,
+  BarChart3,
   Boxes,
   Building2,
   CalendarRange,
@@ -39,6 +40,7 @@ const PERSONAL: NavItem[] = [
   { href: '/ahorros', label: 'Ahorros', icon: PiggyBank },
   { href: '/deudas', label: 'Deudas', icon: TrendingUp },
   { href: '/pendientes', label: 'Pendientes', icon: Receipt },
+  { href: '/reportes', label: 'Reportes', icon: BarChart3 },
 ];
 
 const EMPLOYMENT: NavItem[] = [

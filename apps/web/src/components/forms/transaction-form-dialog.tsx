@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -18,22 +18,38 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyInput } from '@/components/ui/money-input';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
-import type { Account, Category } from '@/lib/api.types';
+import type { BankCatalog, Category, PaymentMethodCatalog, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+
+const TYPE_OPTIONS = [
+  { value: 'INCOME', label: 'Ingreso' },
+  { value: 'EXPENSE', label: 'Egreso' },
+  { value: 'SAVING', label: 'Ahorro' },
+  { value: 'BUSINESS_COST', label: 'Costo Mimotech' },
+  { value: 'TEAM_PAYMENT', label: 'Pago equipo' },
+] as const;
+
+const TYPES_BY_WORKSPACE: Record<string, string[]> = {
+  PERSONAL: ['INCOME', 'EXPENSE'],
+  SHARED: ['INCOME', 'EXPENSE'],
+};
 
 const schema = z.object({
   type: z.enum(['INCOME', 'EXPENSE', 'SAVING', 'BUSINESS_COST', 'TEAM_PAYMENT']),
   concept: z.string().min(1, 'Requerido'),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
+  amount: z.string().regex(/^\d{1,10}(\.\d{1,3})?$/, 'Máx. 10 enteros y 3 decimales'),
   currency: z.enum(['PEN', 'USD']),
   date: z.string().min(1, 'Requerido'),
   status: z.enum(['PAID', 'PENDING', 'OVERDUE', 'PARTIAL']),
   categoryId: z.string().optional(),
-  accountId: z.string().optional(),
+  paymentTags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
   isRecurring: z.boolean().optional(),
@@ -46,23 +62,46 @@ type FormValues = z.infer<typeof schema>;
 
 interface Props {
   workspaceId: string;
+  workspaceType?: string;
   defaultType?: FormValues['type'];
-  trigger: ReactNode;
+  trigger?: ReactNode;
   onCreated?: (id: string) => void;
+  transaction?: Transaction | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', trigger, onCreated }: Props) {
-  const [open, setOpen] = useState(false);
+export function TransactionFormDialog({
+  workspaceId,
+  workspaceType,
+  defaultType = 'EXPENSE',
+  trigger,
+  onCreated,
+  transaction,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
+  const editing = !!transaction;
   const queryClient = useQueryClient();
+  const allowedTypes = TYPES_BY_WORKSPACE[workspaceType ?? ''];
+  const typeOptions = allowedTypes ? TYPE_OPTIONS.filter((t) => allowedTypes.includes(t.value)) : TYPE_OPTIONS;
 
   const { data: categories } = useQuery({
     queryKey: queryKeys.categories(workspaceId),
     queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${workspaceId}`),
     enabled: open,
   });
-  const { data: accounts } = useQuery({
-    queryKey: queryKeys.accounts(workspaceId),
-    queryFn: () => apiFetch<Account[]>(`/accounts?workspaceId=${workspaceId}`),
+  const { data: banks } = useQuery({
+    queryKey: queryKeys.banks(),
+    queryFn: () => apiFetch<BankCatalog[]>('/banks'),
+    enabled: open,
+  });
+  const { data: paymentMethods } = useQuery({
+    queryKey: queryKeys.paymentMethods(),
+    queryFn: () => apiFetch<PaymentMethodCatalog[]>('/payment-methods'),
     enabled: open,
   });
 
@@ -81,19 +120,56 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
       amount: '',
       currency: 'PEN',
       date: new Date().toISOString().slice(0, 10),
-      status: 'PAID',
+      status: 'PENDING',
       isRecurring: false,
     },
   });
 
   const isRecurring = watch('isRecurring');
 
+  useEffect(() => {
+    if (open && transaction) {
+      reset({
+        type: (transaction.type as FormValues['type']) ?? defaultType,
+        concept: transaction.concept,
+        amount: Number(transaction.amountOriginal).toString(),
+        currency: (transaction.currency as 'PEN' | 'USD') ?? 'PEN',
+        date: transaction.date.slice(0, 10),
+        status: (transaction.status as FormValues['status']) ?? 'PENDING',
+        categoryId: transaction.categoryId ?? undefined,
+        paymentTags: transaction.tags ?? [],
+        notes: transaction.notes ?? '',
+        dueDate: transaction.dueDate ? transaction.dueDate.slice(0, 10) : '',
+        isRecurring: false,
+      });
+    }
+  }, [open, transaction, reset, defaultType]);
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const { recurrenceCount, ...rest } = values;
+      const { recurrenceCount, paymentTags, ...rest } = values;
+      if (editing && transaction) {
+        const editPayload = {
+          type: rest.type,
+          concept: rest.concept,
+          amount: rest.amount,
+          currency: rest.currency,
+          date: rest.date,
+          status: rest.status,
+          categoryId: rest.categoryId,
+          notes: rest.notes,
+          dueDate: values.dueDate || undefined,
+          tags: paymentTags?.length ? paymentTags : undefined,
+        };
+        return apiFetch<{ id: string }>(`/transactions/${transaction.id}?workspaceId=${workspaceId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(editPayload),
+        });
+      }
       const payload = {
         ...rest,
         workspaceId,
+        tags: paymentTags?.length ? paymentTags : undefined,
         recurrenceInterval: values.isRecurring ? 1 : undefined,
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
         recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate || undefined : undefined,
@@ -105,8 +181,8 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['transactions', workspaceId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(workspaceId) });
-      toast.success('Movimiento creado');
-      if (created?.id) onCreated?.(created.id);
+      toast.success(editing ? 'Movimiento actualizado' : 'Movimiento creado');
+      if (!editing && created?.id) onCreated?.(created.id);
       reset();
       setOpen(false);
     },
@@ -115,10 +191,10 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nuevo movimiento</DialogTitle>
+          <DialogTitle>{editing ? 'Editar movimiento' : 'Nuevo movimiento'}</DialogTitle>
           <DialogDescription>Registra un ingreso, egreso u otro movimiento.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
@@ -130,11 +206,11 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INCOME">Ingreso</SelectItem>
-                  <SelectItem value="EXPENSE">Egreso</SelectItem>
-                  <SelectItem value="SAVING">Ahorro</SelectItem>
-                  <SelectItem value="BUSINESS_COST">Costo Mimotech</SelectItem>
-                  <SelectItem value="TEAM_PAYMENT">Pago equipo</SelectItem>
+                  {typeOptions.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -153,7 +229,11 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="amount">Monto</Label>
-              <Input id="amount" inputMode="decimal" placeholder="0.00" {...register('amount')} />
+              <MoneyInput
+                id="amount"
+                value={watch('amount') ?? ''}
+                onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
+              />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
             <div className="space-y-2">
@@ -170,37 +250,29 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Categoría</Label>
-              <Select onValueChange={(v) => setValue('categoryId', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Opcional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories?.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Cuenta</Label>
-              <Select onValueChange={(v) => setValue('accountId', v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Opcional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts?.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Categoría</Label>
+            <SearchSelect
+              placeholder="Opcional"
+              searchPlaceholder="Buscar categoría..."
+              value={watch('categoryId') ?? ''}
+              onValueChange={(v) => setValue('categoryId', v)}
+              options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Medios de pago / Banco</Label>
+            <MultiSelect
+              placeholder="Selecciona uno o varios"
+              searchPlaceholder="Buscar medio o banco..."
+              selected={watch('paymentTags') ?? []}
+              onChange={(vals) => setValue('paymentTags', vals)}
+              groups={[
+                { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
+                { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
+              ]}
+            />
           </div>
 
           <div className="space-y-2">
@@ -208,64 +280,74 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
             <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
           </div>
 
-          <div className="space-y-3 rounded-lg border border-border/60 p-3">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="isRecurring">Pago recurrente</Label>
-                <p className="text-xs text-muted-foreground">
-                  {isRecurring
-                    ? 'La fecha de arriba es el inicio. Se generará un movimiento por cada periodo.'
-                    : 'Se repite periódicamente y genera un movimiento por periodo.'}
-                </p>
-              </div>
-              <Switch id="isRecurring" checked={!!isRecurring} onCheckedChange={(v) => setValue('isRecurring', v)} />
+          {editing && (
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
+              <Input id="dueDate" type="date" {...register('dueDate')} />
             </div>
+          )}
 
-            {!isRecurring && (
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
-                <Input id="dueDate" type="date" {...register('dueDate')} />
+          {!editing && (
+            <div className="space-y-3 rounded-lg border border-border/60 p-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isRecurring">Pago recurrente</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {isRecurring
+                      ? 'La fecha de arriba es el inicio. Se generará un movimiento por cada periodo.'
+                      : 'Se repite periódicamente y genera un movimiento por periodo.'}
+                  </p>
+                </div>
+                <Switch id="isRecurring" checked={!!isRecurring} onCheckedChange={(v) => setValue('isRecurring', v)} />
               </div>
-            )}
 
-            {isRecurring && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label>Frecuencia</Label>
-                    <Select
-                      defaultValue="MONTHLY"
-                      onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="WEEKLY">Semanal</SelectItem>
-                        <SelectItem value="MONTHLY">Mensual</SelectItem>
-                        <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                        <SelectItem value="YEARLY">Anual</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="recurrenceCount">Nº de repeticiones</Label>
-                    <Input
-                      id="recurrenceCount"
-                      inputMode="numeric"
-                      placeholder="Ej. 12"
-                      {...register('recurrenceCount')}
-                    />
-                  </div>
-                </div>
+              {!isRecurring && (
                 <div className="space-y-2">
-                  <Label htmlFor="recurrenceEndDate">O fecha de fin (opcional)</Label>
-                  <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+                  <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
+                  <Input id="dueDate" type="date" {...register('dueDate')} />
                 </div>
-              </>
-            )}
-          </div>
+              )}
 
+              {isRecurring && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Frecuencia</Label>
+                      <Select
+                        defaultValue="MONTHLY"
+                        onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecciona" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="WEEKLY">Semanal</SelectItem>
+                          <SelectItem value="MONTHLY">Mensual</SelectItem>
+                          <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                          <SelectItem value="YEARLY">Anual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recurrenceCount">Nº de repeticiones</Label>
+                      <Input
+                        id="recurrenceCount"
+                        inputMode="numeric"
+                        placeholder="Ej. 12"
+                        {...register('recurrenceCount')}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrenceEndDate">O fecha de fin (opcional)</Label>
+                    <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          <input type="hidden" {...register('amount')} />
           <input type="hidden" {...register('status')} value={watch('status')} />
 
           <DialogFooter>

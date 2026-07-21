@@ -8,6 +8,8 @@ export const queryKeys = {
   dashboard: (workspaceId: string) => ['dashboard', workspaceId] as const,
   transactions: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['transactions', workspaceId, filters ?? {}] as const,
+  recurrenceOccurrences: (workspaceId: string, ruleId: string) =>
+    ['recurrence-occurrences', workspaceId, ruleId] as const,
   accounts: (workspaceId: string) => ['accounts', workspaceId] as const,
   categories: (workspaceId: string) => ['categories', workspaceId] as const,
   companies: (workspaceId: string) => ['companies', workspaceId] as const,
@@ -16,6 +18,10 @@ export const queryKeys = {
     ['monthly-summary', workspaceId, filters ?? {}] as const,
   people: (workspaceId: string) => ['people', workspaceId] as const,
   savingGoals: (workspaceId: string) => ['saving-goals', workspaceId] as const,
+  savingBalances: (workspaceId: string, filters?: Record<string, unknown>) =>
+    ['saving-balances', workspaceId, filters ?? {}] as const,
+  personalReports: (workspaceId: string, filters?: Record<string, unknown>) =>
+    ['personal-reports', workspaceId, filters ?? {}] as const,
   debts: (workspaceId: string) => ['debts', workspaceId] as const,
   pendingItems: (workspaceId: string) => ['pending-items', workspaceId] as const,
   talents: (workspaceId: string) => ['talents', workspaceId] as const,

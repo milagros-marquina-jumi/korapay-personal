@@ -3,15 +3,18 @@
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  type ExpandedState,
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  type Row,
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { type ReactNode, useState } from 'react';
+import { Fragment, type ReactNode, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -24,6 +27,8 @@ interface DataTableProps<T> {
   emptyState?: ReactNode;
   pageSize?: number;
   rowClassName?: (row: T) => string;
+  getRowCanExpand?: (row: Row<T>) => boolean;
+  renderExpanded?: (row: T) => ReactNode;
 }
 
 export function DataTable<T>({
@@ -35,20 +40,26 @@ export function DataTable<T>({
   emptyState,
   pageSize = 15,
   rowClassName,
+  getRowCanExpand,
+  renderExpanded,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, columnFilters, globalFilter },
+    state: { sorting, columnFilters, globalFilter, expanded },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange,
+    onExpandedChange: setExpanded,
+    getRowCanExpand,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: { pagination: { pageSize } },
   });
@@ -92,11 +103,20 @@ export function DataTable<T>({
                   </TableRow>
                 ))
               : rows.map((row) => (
-                  <TableRow key={row.id} className={rowClassName?.(row.original)}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                    ))}
-                  </TableRow>
+                  <Fragment key={row.id}>
+                    <TableRow className={rowClassName?.(row.original)}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      ))}
+                    </TableRow>
+                    {row.getIsExpanded() && renderExpanded && (
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableCell colSpan={row.getVisibleCells().length} className="p-0">
+                          {renderExpanded(row.original)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </Fragment>
                 ))}
           </TableBody>
         </Table>

@@ -22,6 +22,7 @@ import { PendingItemModule } from './modules/pending-item/pending-item.module';
 import { PersonModule } from './modules/person/person.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { ReconciliationRulesModule } from './modules/reconciliation-rules/reconciliation-rules.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { SavingGoalModule } from './modules/saving-goal/saving-goal.module';
 import { TalentModule } from './modules/talent/talent.module';
 import { TalentLedgerModule } from './modules/talent-ledger/talent-ledger.module';
@@ -62,6 +63,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     EmailIngestionModule,
     DetectedTransactionsModule,
     ReconciliationRulesModule,
+    ReportsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -259,43 +259,61 @@ export function TransactionFormDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Categoría</Label>
-            <SearchSelect
-              placeholder="Opcional"
-              searchPlaceholder="Buscar categoría..."
-              value={watch('categoryId') ?? ''}
-              onValueChange={(v) => setValue('categoryId', v)}
-              options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Categoría</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar categoría..."
+                value={watch('categoryId') ?? ''}
+                onValueChange={(v) => setValue('categoryId', v)}
+                options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </div>
+
+            {showCompany ? (
+              <div className="space-y-2">
+                <Label>Empresa</Label>
+                <SearchSelect
+                  placeholder="Opcional"
+                  searchPlaceholder="Buscar empresa..."
+                  value={watch('companyId') ?? ''}
+                  onValueChange={(v) => setValue('companyId', v)}
+                  options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Medios de pago / Banco</Label>
+                <MultiSelect
+                  placeholder="Selecciona uno o varios"
+                  searchPlaceholder="Buscar medio o banco..."
+                  selected={watch('paymentTags') ?? []}
+                  onChange={(vals) => setValue('paymentTags', vals)}
+                  groups={[
+                    { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
+                    { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
+                  ]}
+                />
+              </div>
+            )}
           </div>
 
           {showCompany && (
             <div className="space-y-2">
-              <Label>Empresa</Label>
-              <SearchSelect
-                placeholder="Opcional"
-                searchPlaceholder="Buscar empresa..."
-                value={watch('companyId') ?? ''}
-                onValueChange={(v) => setValue('companyId', v)}
-                options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+              <Label>Medios de pago / Banco</Label>
+              <MultiSelect
+                placeholder="Selecciona uno o varios"
+                searchPlaceholder="Buscar medio o banco..."
+                selected={watch('paymentTags') ?? []}
+                onChange={(vals) => setValue('paymentTags', vals)}
+                groups={[
+                  { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
+                  { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
+                ]}
               />
             </div>
           )}
-
-          <div className="space-y-2">
-            <Label>Medios de pago / Banco</Label>
-            <MultiSelect
-              placeholder="Selecciona uno o varios"
-              searchPlaceholder="Buscar medio o banco..."
-              selected={watch('paymentTags') ?? []}
-              onChange={(vals) => setValue('paymentTags', vals)}
-              groups={[
-                { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
-                { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
-              ]}
-            />
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notas</Label>

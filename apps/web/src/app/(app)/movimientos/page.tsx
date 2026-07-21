@@ -243,7 +243,7 @@ export default function MovimientosPage() {
         accessorKey: 'status',
         header: 'Estado',
         cell: ({ row }) =>
-          activeWorkspaceId ? (
+          activeWorkspaceId && !row.original.isRecurring ? (
             <StatusToggle
               transactionId={row.original.id}
               workspaceId={activeWorkspaceId}

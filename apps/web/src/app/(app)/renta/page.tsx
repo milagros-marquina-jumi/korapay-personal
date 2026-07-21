@@ -11,6 +11,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { TaxStatusToggle } from '@/components/data-table/tax-status-toggle';
 import { RentaInstallments } from '@/components/forms/renta-installments';
 import { TaxObligationFormDialog } from '@/components/forms/tax-obligation-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
@@ -135,7 +136,16 @@ function RentaContent() {
       {
         accessorKey: 'status',
         header: 'Estado',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) =>
+          activeWorkspaceId && !row.original.installments ? (
+            <TaxStatusToggle
+              obligationId={row.original.id}
+              workspaceId={activeWorkspaceId}
+              status={row.original.status}
+            />
+          ) : (
+            <StatusBadge status={row.original.status} />
+          ),
       },
       {
         id: 'actions',
@@ -161,7 +171,7 @@ function RentaContent() {
         ),
       },
     ],
-    [confirm, removeMutation],
+    [activeWorkspaceId, confirm, removeMutation],
   );
 
   return (

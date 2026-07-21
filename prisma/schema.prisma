@@ -565,10 +565,29 @@ model TaxObligation {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  installmentRows TaxObligationInstallment[]
 
   @@index([workspaceId])
   @@map("tax_obligations")
+}
+
+model TaxObligationInstallment {
+  id              String    @id @default(uuid())
+  taxObligationId String    @map("tax_obligation_id")
+  number          Int
+  amount          Decimal   @db.Decimal(18, 2)
+  dueDate         DateTime? @map("due_date") @db.Date
+  status          String    @default("PENDING")
+  paidDate        DateTime? @map("paid_date") @db.Date
+  transactionId   String?   @map("transaction_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  taxObligation TaxObligation @relation(fields: [taxObligationId], references: [id], onDelete: Cascade)
+
+  @@unique([taxObligationId, number])
+  @@map("tax_obligation_installments")
 }
 
 // ============================================================

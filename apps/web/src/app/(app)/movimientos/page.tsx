@@ -12,6 +12,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { StatusToggle } from '@/components/data-table/status-toggle';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
@@ -148,6 +149,16 @@ export default function MovimientosPage() {
     });
   }, [data?.data, type, status, categoryId, year, month]);
 
+  const totals = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const tx of rows) {
+      if (tx.type === 'INCOME') income += Number(tx.amountBase);
+      else expense += Number(tx.amountBase);
+    }
+    return { income, expense, net: income - expense };
+  }, [rows]);
+
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
@@ -231,7 +242,16 @@ export default function MovimientosPage() {
       {
         accessorKey: 'status',
         header: 'Estado',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) =>
+          activeWorkspaceId ? (
+            <StatusToggle
+              transactionId={row.original.id}
+              workspaceId={activeWorkspaceId}
+              status={row.original.status}
+            />
+          ) : (
+            <StatusBadge status={row.original.status} />
+          ),
       },
       {
         id: 'actions',
@@ -367,6 +387,28 @@ export default function MovimientosPage() {
             </div>
           ) : null
         }
+        footer={
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">{rows.length} movimientos filtrados</span>
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
+              <span className="text-muted-foreground">
+                Ingresos:{' '}
+                <span className="font-semibold tabular-nums text-success">
+                  {formatMoney(String(totals.income), 'PEN')}
+                </span>
+              </span>
+              <span className="text-muted-foreground">
+                Egresos:{' '}
+                <span className="font-semibold tabular-nums text-destructive">
+                  {formatMoney(String(totals.expense), 'PEN')}
+                </span>
+              </span>
+              <span className="text-muted-foreground">
+                Neto: <span className="font-semibold tabular-nums">{formatMoney(String(totals.net), 'PEN')}</span>
+              </span>
+            </div>
+          </div>
+        }
         emptyState={
           <EmptyState title="Sin movimientos" description="Crea tu primer movimiento con el botón de arriba." />
         }
@@ -392,7 +434,7 @@ export default function MovimientosPage() {
               />
               <DetailRow label="Estado" value={STATUS_LABELS[detail.status] ?? detail.status} />
               <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
-              <DetailRow label="Cuenta" value={detail.account?.name ?? '—'} />
+              <DetailRow label="Medios de pago" value={detail.tags?.length ? detail.tags.join(', ') : '—'} />
               <DetailRow label="Vencimiento" value={detail.dueDate ? formatDateLong(detail.dueDate) : '—'} />
               <DetailRow
                 label="Recurrencia"

@@ -36,4 +36,24 @@ export class TaxObligationController {
   remove(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
     return this.taxObligationService.remove(id, workspaceId);
   }
+
+  @Post(':id/installments/:installmentId/pay')
+  @ApiOperation({ summary: 'Mark installment as paid (creates personal expense)' })
+  payInstallment(
+    @Param('id') id: string,
+    @Param('installmentId') installmentId: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+  ) {
+    return this.taxObligationService.payInstallment(id, workspaceId, installmentId);
+  }
+
+  @Post(':id/installments/:installmentId/unpay')
+  @ApiOperation({ summary: 'Revert installment payment (removes personal expense)' })
+  unpayInstallment(
+    @Param('id') id: string,
+    @Param('installmentId') installmentId: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+  ) {
+    return this.taxObligationService.unpayInstallment(id, workspaceId, installmentId);
+  }
 }

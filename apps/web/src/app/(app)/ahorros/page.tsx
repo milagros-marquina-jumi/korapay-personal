@@ -5,7 +5,8 @@ import { EmptyState } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
-import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { FILTER_ALL } from '@/components/data-table/filter-select';
+import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { queryKeys } from '@/lib/query-keys';
 export default function AhorrosPage() {
   const { activeWorkspaceId } = useWorkspace();
   const [year, setYear] = useState(FILTER_ALL);
+  const [month, setMonth] = useState(FILTER_ALL);
   const [search, setSearch] = useState('');
 
   const { data, isLoading } = useQuery({
@@ -27,19 +29,17 @@ export default function AhorrosPage() {
     enabled: !!activeWorkspaceId,
   });
 
-  const yearOptions = useMemo(
-    () => (data?.years ?? []).map((y) => ({ value: String(y), label: String(y) })),
-    [data?.years],
-  );
-
   const periods = useMemo(() => {
-    const rows = data?.data ?? [];
-    if (!search.trim()) return rows;
-    const q = search.toLowerCase();
-    return rows
-      .map((p) => ({ ...p, accounts: p.accounts.filter((a) => a.bucket.toLowerCase().includes(q)) }))
-      .filter((p) => p.accounts.length > 0);
-  }, [data?.data, search]);
+    let rows = data?.data ?? [];
+    if (month !== FILTER_ALL) rows = rows.filter((p) => p.month === Number(month));
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows
+        .map((p) => ({ ...p, accounts: p.accounts.filter((a) => a.bucket.toLowerCase().includes(q)) }))
+        .filter((p) => p.accounts.length > 0);
+    }
+    return rows;
+  }, [data?.data, search, month]);
 
   return (
     <div className="space-y-6">
@@ -49,18 +49,19 @@ export default function AhorrosPage() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar cuenta..."
-        showClear={search !== '' || year !== FILTER_ALL}
+        showClear={search !== '' || year !== FILTER_ALL || month !== FILTER_ALL}
         onClear={() => {
           setSearch('');
           setYear(FILTER_ALL);
+          setMonth(FILTER_ALL);
         }}
         filters={
-          <FilterSelect
-            value={year}
-            onValueChange={setYear}
-            options={yearOptions}
-            placeholder="Año"
-            allLabel="Todos los años"
+          <MonthYearFilter
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+            years={data?.years ?? []}
           />
         }
       />

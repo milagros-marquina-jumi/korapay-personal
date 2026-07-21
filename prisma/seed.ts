@@ -409,7 +409,7 @@ async function main() {
     const dueDate = finMatch
       ? new Date(Date.UTC(Number(finMatch[3]), Number(finMatch[2]) - 1, Number(finMatch[1])))
       : new Date(`${r.anio + 1}-06-30`);
-    await prisma.taxObligation.create({
+    const obligation = await prisma.taxObligation.create({
       data: {
         workspaceId: empleos.id,
         name: `Renta Anual ${r.anio}`,
@@ -421,6 +421,22 @@ async function main() {
         notes: r.detalles ?? null,
       },
     });
+    if (installments && installments > 0) {
+      const per = Number(money(r.monto)) / installments;
+      await prisma.taxObligationInstallment.createMany({
+        data: Array.from({ length: installments }, (_, i) => {
+          const due = new Date(dueDate);
+          due.setUTCMonth(due.getUTCMonth() - (installments - (i + 1)));
+          return {
+            taxObligationId: obligation.id,
+            number: i + 1,
+            amount: per.toFixed(2),
+            dueDate: due,
+            status: 'PENDING',
+          };
+        }),
+      });
+    }
   }
 
   // ============================================================

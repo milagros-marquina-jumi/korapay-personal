@@ -16,7 +16,6 @@ import {
   TrendingUp,
   UserCircle,
   Users,
-  Wallet,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -36,7 +35,6 @@ const PERSONAL: NavItem[] = [
     linkable: true,
     children: [{ href: '/movimientos/detectados', label: 'Detectados', icon: MailCheck }],
   },
-  { href: '/cuentas', label: 'Cuentas', icon: Wallet },
   { href: '/ahorros', label: 'Ahorros', icon: PiggyBank },
   { href: '/deudas', label: 'Deudas', icon: TrendingUp },
   { href: '/pendientes', label: 'Pendientes', icon: Receipt },
@@ -77,7 +75,6 @@ const BUSINESS: NavItem[] = [
 const SHARED: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/movimientos', label: 'Movimientos', icon: ArrowLeftRight },
-  { href: '/cuentas', label: 'Cuentas', icon: Wallet },
   { href: '/empresas', label: 'Empresas', icon: Building2 },
   { href: '/reportes', label: 'Reportes', icon: TrendingUp },
 ];

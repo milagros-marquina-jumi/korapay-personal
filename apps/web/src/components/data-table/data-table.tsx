@@ -29,6 +29,7 @@ interface DataTableProps<T> {
   rowClassName?: (row: T) => string;
   getRowCanExpand?: (row: Row<T>) => boolean;
   renderExpanded?: (row: T) => ReactNode;
+  footer?: ReactNode;
 }
 
 export function DataTable<T>({
@@ -42,6 +43,7 @@ export function DataTable<T>({
   rowClassName,
   getRowCanExpand,
   renderExpanded,
+  footer,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -120,6 +122,7 @@ export function DataTable<T>({
                 ))}
           </TableBody>
         </Table>
+        {footer && <div className="border-t bg-muted/30 px-4 py-3">{footer}</div>}
       </div>
 
       {table.getPageCount() > 1 && (

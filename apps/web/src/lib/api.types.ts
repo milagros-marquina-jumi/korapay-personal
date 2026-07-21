@@ -427,6 +427,16 @@ export interface EmploymentContract {
   status: string;
 }
 
+export interface TaxObligationInstallment {
+  id: string;
+  number: number;
+  amount: string;
+  dueDate?: string | null;
+  status: string;
+  paidDate?: string | null;
+  transactionId?: string | null;
+}
+
 export interface TaxObligation {
   id: string;
   name: string;
@@ -437,6 +447,7 @@ export interface TaxObligation {
   installments?: number | null;
   paidInstallments?: number;
   notes?: string | null;
+  installmentRows?: TaxObligationInstallment[];
 }
 
 export interface Project {

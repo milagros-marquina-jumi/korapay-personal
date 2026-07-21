@@ -349,6 +349,7 @@ export class TransactionService {
     }
     if (data.status) updateData.status = data.status as string;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId as string;
+    if (data.companyId !== undefined) updateData.companyId = data.companyId as string;
     if (data.accountId !== undefined) updateData.accountId = data.accountId as string;
     if (data.notes !== undefined) updateData.notes = data.notes as string;
     if (Array.isArray(data.tags)) updateData.tags = data.tags as string[];

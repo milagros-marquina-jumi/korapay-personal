@@ -4,13 +4,14 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { CheckCircle2, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { RentaInstallments } from '@/components/forms/renta-installments';
 import { TaxObligationFormDialog } from '@/components/forms/tax-obligation-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -83,6 +84,22 @@ function RentaContent() {
 
   const columns = useMemo<ColumnDef<TaxObligation, unknown>[]>(
     () => [
+      {
+        id: 'expander',
+        header: '',
+        size: 36,
+        cell: ({ row }) =>
+          row.getCanExpand() ? (
+            <button
+              type="button"
+              onClick={row.getToggleExpandedHandler()}
+              className="flex size-6 items-center justify-center rounded hover:bg-muted"
+              aria-label={row.getIsExpanded() ? 'Colapsar' : 'Expandir'}
+            >
+              {row.getIsExpanded() ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+            </button>
+          ) : null,
+      },
       {
         accessorKey: 'name',
         header: ({ column }) => <SortableHeader column={column} label="Concepto" />,
@@ -206,6 +223,10 @@ function RentaContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         rowClassName={(o) => highlightClass(o.id)}
+        getRowCanExpand={(row) => !!row.original.installments && row.original.installments > 0}
+        renderExpanded={(o) =>
+          activeWorkspaceId ? <RentaInstallments workspaceId={activeWorkspaceId} obligation={o} /> : null
+        }
         emptyState={
           <EmptyState title="Sin obligaciones" description="Crea tu primera obligación con el botón de arriba." />
         }

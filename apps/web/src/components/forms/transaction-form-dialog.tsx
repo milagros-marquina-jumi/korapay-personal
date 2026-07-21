@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
-import type { BankCatalog, Category, PaymentMethodCatalog, Transaction } from '@/lib/api.types';
+import type { BankCatalog, Category, Company, PaymentMethodCatalog, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const TYPE_OPTIONS = [
@@ -49,6 +49,7 @@ const schema = z.object({
   date: z.string().min(1, 'Requerido'),
   status: z.enum(['PAID', 'PENDING', 'OVERDUE', 'PARTIAL']),
   categoryId: z.string().optional(),
+  companyId: z.string().optional(),
   paymentTags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
@@ -104,6 +105,12 @@ export function TransactionFormDialog({
     queryFn: () => apiFetch<PaymentMethodCatalog[]>('/payment-methods'),
     enabled: open,
   });
+  const showCompany = workspaceType === 'EMPLOYMENT';
+  const { data: companies } = useQuery({
+    queryKey: queryKeys.companies(workspaceId),
+    queryFn: () => apiFetch<Company[]>(`/companies?workspaceId=${workspaceId}`),
+    enabled: open && showCompany,
+  });
 
   const {
     register,
@@ -137,6 +144,7 @@ export function TransactionFormDialog({
         date: transaction.date.slice(0, 10),
         status: (transaction.status as FormValues['status']) ?? 'PENDING',
         categoryId: transaction.categoryId ?? undefined,
+        companyId: transaction.companyId ?? undefined,
         paymentTags: transaction.tags ?? [],
         notes: transaction.notes ?? '',
         dueDate: transaction.dueDate ? transaction.dueDate.slice(0, 10) : '',
@@ -157,6 +165,7 @@ export function TransactionFormDialog({
           date: rest.date,
           status: rest.status,
           categoryId: rest.categoryId,
+          companyId: rest.companyId,
           notes: rest.notes,
           dueDate: values.dueDate || undefined,
           tags: paymentTags?.length ? paymentTags : undefined,
@@ -260,6 +269,19 @@ export function TransactionFormDialog({
               options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
             />
           </div>
+
+          {showCompany && (
+            <div className="space-y-2">
+              <Label>Empresa</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar empresa..."
+                value={watch('companyId') ?? ''}
+                onValueChange={(v) => setValue('companyId', v)}
+                options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Medios de pago / Banco</Label>

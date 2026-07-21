@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import {
   Dialog,
   DialogContent,
@@ -141,62 +142,63 @@ export function TaxObligationFormDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="year">Año</Label>
-              <Input id="year" inputMode="numeric" placeholder="2026" {...register('year')} />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="dueDate">Vencimiento</Label>
               <Input id="dueDate" type="date" {...register('dueDate')} />
               {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="amount">Monto</Label>
               <Input id="amount" inputMode="decimal" placeholder="0.00" {...register('amount')} />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
-            <div className="space-y-2">
-              <Label>Estado</Label>
-              <Select
-                defaultValue={obligation?.status ?? 'PENDING'}
-                onValueChange={(v) => setValue('status', v as FormValues['status'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDING">Pendiente</SelectItem>
-                  <SelectItem value="PARTIAL">Parcial</SelectItem>
-                  <SelectItem value="PAID">Pagado</SelectItem>
-                  <SelectItem value="OVERDUE">Vencido</SelectItem>
-                  <SelectItem value="CANCELLED">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="installments">Cuotas</Label>
-              <Input id="installments" inputMode="numeric" placeholder="Ej. 12" {...register('installments')} />
+          <div className="space-y-2">
+            <Label>Estado</Label>
+            <Select
+              defaultValue={obligation?.status ?? 'PENDING'}
+              onValueChange={(v) => setValue('status', v as FormValues['status'])}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENDING">Pendiente</SelectItem>
+                <SelectItem value="PARTIAL">Parcial</SelectItem>
+                <SelectItem value="PAID">Pagado</SelectItem>
+                <SelectItem value="OVERDUE">Vencido</SelectItem>
+                <SelectItem value="CANCELLED">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <CollapsibleSection label="Ver más opciones">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="year">Año</Label>
+                <Input id="year" inputMode="numeric" placeholder="2026" {...register('year')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="installments">Cuotas</Label>
+                <Input id="installments" inputMode="numeric" placeholder="Ej. 12" {...register('installments')} />
+              </div>
             </div>
+
             <div className="space-y-2">
               <Label htmlFor="paidInstallments">Cuotas pagadas</Label>
               <Input id="paidInstallments" inputMode="numeric" placeholder="Ej. 3" {...register('paidInstallments')} />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
-            <Textarea
-              id="notes"
-              rows={2}
-              placeholder="Detalle opcional (ej. 12 cuotas FIN: 30/06/2026)"
-              {...register('notes')}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notas</Label>
+              <Textarea
+                id="notes"
+                rows={2}
+                placeholder="Detalle opcional (ej. 12 cuotas FIN: 30/06/2026)"
+                {...register('notes')}
+              />
+            </div>
+          </CollapsibleSection>
 
           <input type="hidden" {...register('status')} value={watch('status')} />
 

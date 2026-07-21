@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
 import { WorkspaceGuard } from '@/common/auth/workspace.guard';
@@ -26,5 +26,9 @@ export class PendingItemController {
   @Post(':id/payments')
   pay(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto, @Body() body: PayPendingItemDto) {
     return this.pendingItemService.pay(id, workspaceId, { ...body });
+  }
+  @Delete(':id')
+  remove(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.pendingItemService.remove(id, workspaceId);
   }
 }

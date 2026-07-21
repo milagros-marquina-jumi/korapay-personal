@@ -7,10 +7,12 @@ import {
   CreateApplicationDto,
   CreateBankDto,
   CreateCurrencyDto,
+  CreateEmploymentContractDto,
   CreateProjectDto,
   NamedCatalogDto,
   UpdateApplicationDto,
   UpdateBankDto,
+  UpdateEmploymentContractDto,
   UpdateProjectDto,
 } from './catalog.dto';
 import { CatalogService } from './catalog.service';
@@ -84,6 +86,28 @@ export class CatalogController {
   @ApiOperation({ summary: 'List employment contracts' })
   employmentContracts(@Query() { workspaceId }: WorkspaceQueryDto) {
     return this.catalogService.employmentContracts(workspaceId);
+  }
+
+  @Post('employment-contracts')
+  @UseGuards(WorkspaceGuard)
+  createEmploymentContract(@Body() body: CreateEmploymentContractDto) {
+    return this.catalogService.createEmploymentContract(body);
+  }
+
+  @Patch('employment-contracts/:id')
+  @UseGuards(WorkspaceGuard)
+  updateEmploymentContract(
+    @Param('id') id: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+    @Body() body: UpdateEmploymentContractDto,
+  ) {
+    return this.catalogService.updateEmploymentContract(id, workspaceId, { ...body });
+  }
+
+  @Delete('employment-contracts/:id')
+  @UseGuards(WorkspaceGuard)
+  removeEmploymentContract(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.catalogService.removeEmploymentContract(id, workspaceId);
   }
 
   // ---- Payment methods (global) ----

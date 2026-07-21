@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -11,6 +12,7 @@ import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageHeader } from '@/components/layout/page-header';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -179,6 +182,8 @@ function MarkPaidButton({ workspaceId, item }: { workspaceId: string; item: Pend
 
 export default function PendientesPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState(FILTER_ALL);
@@ -189,6 +194,15 @@ export default function PendientesPage() {
     queryKey: queryKeys.pendingItems(activeWorkspaceId ?? ''),
     queryFn: () => apiFetch<PendingItem[]>(`/pending-items?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/pending-items/${id}?workspaceId=${activeWorkspaceId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pendingItems(activeWorkspaceId ?? '') });
+      toast.success('Pendiente eliminado');
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const kindOptions = useMemo(() => {
@@ -294,9 +308,23 @@ export default function PendientesPage() {
                 <CardContent>
                   <p className="text-sm text-muted-foreground">Vence: {formatDate(item.dueDate)}</p>
                 </CardContent>
-                {activeWorkspaceId && item.status !== 'PAID' && (
-                  <CardFooter>
-                    <MarkPaidButton workspaceId={activeWorkspaceId} item={item} />
+                {activeWorkspaceId && (
+                  <CardFooter className="justify-between">
+                    {item.status !== 'PAID' ? <MarkPaidButton workspaceId={activeWorkspaceId} item={item} /> : <span />}
+                    <IconAction
+                      icon={Trash2}
+                      label="Eliminar"
+                      destructive
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Eliminar pendiente',
+                          description: `Se eliminará "${item.concept}". Esta acción no se puede deshacer.`,
+                          confirmLabel: 'Eliminar',
+                          destructive: true,
+                        });
+                        if (ok) removeMutation.mutate(item.id);
+                      }}
+                    />
                   </CardFooter>
                 )}
               </Card>

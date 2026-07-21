@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import {
   Dialog,
   DialogContent,
@@ -259,30 +260,48 @@ export function TransactionFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Categoría</Label>
-              <SearchSelect
-                placeholder="Opcional"
-                searchPlaceholder="Buscar categoría..."
-                value={watch('categoryId') ?? ''}
-                onValueChange={(v) => setValue('categoryId', v)}
-                options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
-              />
-            </div>
-
-            {showCompany ? (
+          <CollapsibleSection label="Ver más opciones">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Empresa</Label>
+                <Label>Categoría</Label>
                 <SearchSelect
                   placeholder="Opcional"
-                  searchPlaceholder="Buscar empresa..."
-                  value={watch('companyId') ?? ''}
-                  onValueChange={(v) => setValue('companyId', v)}
-                  options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                  searchPlaceholder="Buscar categoría..."
+                  value={watch('categoryId') ?? ''}
+                  onValueChange={(v) => setValue('categoryId', v)}
+                  options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
                 />
               </div>
-            ) : (
+
+              {showCompany ? (
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <SearchSelect
+                    placeholder="Opcional"
+                    searchPlaceholder="Buscar empresa..."
+                    value={watch('companyId') ?? ''}
+                    onValueChange={(v) => setValue('companyId', v)}
+                    options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Medios de pago / Banco</Label>
+                  <MultiSelect
+                    placeholder="Selecciona uno o varios"
+                    searchPlaceholder="Buscar medio o banco..."
+                    selected={watch('paymentTags') ?? []}
+                    onChange={(vals) => setValue('paymentTags', vals)}
+                    groups={[
+                      { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
+                      { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
+                    ]}
+                  />
+                </div>
+              )}
+            </div>
+
+            {showCompany && (
               <div className="space-y-2">
                 <Label>Medios de pago / Banco</Label>
                 <MultiSelect
@@ -297,95 +316,83 @@ export function TransactionFormDialog({
                 />
               </div>
             )}
-          </div>
 
-          {showCompany && (
             <div className="space-y-2">
-              <Label>Medios de pago / Banco</Label>
-              <MultiSelect
-                placeholder="Selecciona uno o varios"
-                searchPlaceholder="Buscar medio o banco..."
-                selected={watch('paymentTags') ?? []}
-                onChange={(vals) => setValue('paymentTags', vals)}
-                groups={[
-                  { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
-                  { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
-                ]}
-              />
+              <Label htmlFor="notes">Notas</Label>
+              <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
-            <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
-          </div>
-
-          {editing && (
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
-              <Input id="dueDate" type="date" {...register('dueDate')} />
-            </div>
-          )}
-
-          {!editing && (
-            <div className="space-y-3 rounded-lg border border-border/60 p-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="isRecurring">Pago recurrente</Label>
-                  <p className="text-xs text-muted-foreground">
-                    {isRecurring
-                      ? 'La fecha de arriba es el inicio. Se generará un movimiento por cada periodo.'
-                      : 'Se repite periódicamente y genera un movimiento por periodo.'}
-                  </p>
-                </div>
-                <Switch id="isRecurring" checked={!!isRecurring} onCheckedChange={(v) => setValue('isRecurring', v)} />
+            {editing && (
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
+                <Input id="dueDate" type="date" {...register('dueDate')} />
               </div>
+            )}
 
-              {!isRecurring && (
-                <div className="space-y-2">
-                  <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
-                  <Input id="dueDate" type="date" {...register('dueDate')} />
+            {!editing && (
+              <div className="space-y-3 rounded-lg border border-border/60 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="isRecurring">Pago recurrente</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {isRecurring
+                        ? 'La fecha de arriba es el inicio. Se generará un movimiento por cada periodo.'
+                        : 'Se repite periódicamente y genera un movimiento por periodo.'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="isRecurring"
+                    checked={!!isRecurring}
+                    onCheckedChange={(v) => setValue('isRecurring', v)}
+                  />
                 </div>
-              )}
 
-              {isRecurring && (
-                <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Frecuencia</Label>
-                      <Select
-                        defaultValue="MONTHLY"
-                        onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="WEEKLY">Semanal</SelectItem>
-                          <SelectItem value="MONTHLY">Mensual</SelectItem>
-                          <SelectItem value="QUARTERLY">Trimestral</SelectItem>
-                          <SelectItem value="YEARLY">Anual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="recurrenceCount">Nº de repeticiones</Label>
-                      <Input
-                        id="recurrenceCount"
-                        inputMode="numeric"
-                        placeholder="Ej. 12"
-                        {...register('recurrenceCount')}
-                      />
-                    </div>
-                  </div>
+                {!isRecurring && (
                   <div className="space-y-2">
-                    <Label htmlFor="recurrenceEndDate">O fecha de fin (opcional)</Label>
-                    <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+                    <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
+                    <Input id="dueDate" type="date" {...register('dueDate')} />
                   </div>
-                </>
-              )}
-            </div>
-          )}
+                )}
+
+                {isRecurring && (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Frecuencia</Label>
+                        <Select
+                          defaultValue="MONTHLY"
+                          onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="WEEKLY">Semanal</SelectItem>
+                            <SelectItem value="MONTHLY">Mensual</SelectItem>
+                            <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                            <SelectItem value="YEARLY">Anual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="recurrenceCount">Nº de repeticiones</Label>
+                        <Input
+                          id="recurrenceCount"
+                          inputMode="numeric"
+                          placeholder="Ej. 12"
+                          {...register('recurrenceCount')}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recurrenceEndDate">O fecha de fin (opcional)</Label>
+                      <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </CollapsibleSection>
 
           <input type="hidden" {...register('amount')} />
           <input type="hidden" {...register('status')} value={watch('status')} />

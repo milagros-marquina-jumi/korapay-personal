@@ -106,6 +106,72 @@ export class ReportsService {
     return { years, expenseByCategory, incomeVsExpense, savingsEvolution, fixedVsVariable };
   }
 
+  async business(workspaceId: string, year?: number) {
+    const [transactions, applications, people, ledger] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where: { workspaceId, deletedAt: null, ...this.yearFilter(year) },
+      }),
+      this.prisma.application.findMany({ where: { workspaceId, deletedAt: null } }),
+      this.prisma.person.findMany({ where: { workspaceId, deletedAt: null } }),
+      this.prisma.talentLedgerEntry.findMany({ where: { workspaceId, deletedAt: null } }),
+    ]);
+
+    const years = [...new Set(transactions.map((t) => t.date.getUTCFullYear()))].sort((a, b) => b - a);
+    const appName = new Map(applications.map((a) => [a.id, a.name]));
+    const personName = new Map(people.map((p) => [p.id, p.name]));
+
+    let income = new Decimal(0);
+    let cost = new Decimal(0);
+    let teamPayment = new Decimal(0);
+    const byApp = new Map<string, Decimal>();
+    const byPerson = new Map<string, Decimal>();
+    for (const t of transactions) {
+      const amount = new Decimal(t.amountBase);
+      if (t.type === 'INCOME') income = income.add(amount);
+      else if (t.type === 'BUSINESS_COST') {
+        cost = cost.add(amount);
+        const name = appName.get(t.applicationId ?? '') ?? t.concept;
+        byApp.set(name, (byApp.get(name) ?? new Decimal(0)).add(amount));
+      } else if (t.type === 'TEAM_PAYMENT') {
+        teamPayment = teamPayment.add(amount);
+        const name = personName.get(t.personId ?? '') ?? t.concept;
+        byPerson.set(name, (byPerson.get(name) ?? new Decimal(0)).add(amount));
+      }
+    }
+
+    const costByApp = [...byApp.entries()]
+      .map(([name, total]) => ({ name, total: total.toFixed(2) }))
+      .sort((a, b) => Number(b.total) - Number(a.total));
+    const teamByPerson = [...byPerson.entries()]
+      .map(([name, total]) => ({ name, total: total.toFixed(2) }))
+      .sort((a, b) => Number(b.total) - Number(a.total));
+
+    let talentPaid = new Decimal(0);
+    let talentDebt = new Decimal(0);
+    let talentPending = new Decimal(0);
+    for (const e of ledger) {
+      talentPaid = talentPaid.add(new Decimal(e.paidAmount));
+      talentDebt = talentDebt.add(new Decimal(e.debtAmount));
+      talentPending = talentPending.add(new Decimal(e.pendingAmount));
+    }
+
+    return {
+      years,
+      income: income.toFixed(2),
+      cost: cost.toFixed(2),
+      teamPayment: teamPayment.toFixed(2),
+      utility: income.minus(cost).minus(teamPayment).toFixed(2),
+      costByApp,
+      teamByPerson,
+      talent: {
+        paid: talentPaid.toFixed(2),
+        debt: talentDebt.toFixed(2),
+        pending: talentPending.toFixed(2),
+        balance: talentPaid.minus(talentPending).toFixed(2),
+      },
+    };
+  }
+
   async savingBalancesMonthly(workspaceId: string, year?: number) {
     const balances = await this.prisma.savingBalance.findMany({
       where: { workspaceId, deletedAt: null, ...(year ? { year } : {}) },

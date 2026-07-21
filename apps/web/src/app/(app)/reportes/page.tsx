@@ -9,11 +9,9 @@ import {
   ArrowUpRight,
   Landmark,
   Lock,
-  PiggyBank,
   ReceiptText,
   TrendingUp,
-  Wallet,
-  WalletCards,
+  Users,
 } from 'lucide-react';
 import { CategoryDonut, MonthlyBar, type MonthlyPoint } from '@/components/charts';
 import { PageHeader } from '@/components/layout/page-header';
@@ -23,7 +21,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
-import type { DashboardSummary, Paginated, PersonalReports, Transaction } from '@/lib/api.types';
+import type { BusinessReports, PersonalReports } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -172,159 +170,136 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+function BusinessReportsView({ workspaceId }: { workspaceId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.businessReports(workspaceId),
+    queryFn: () => apiFetch<BusinessReports>(`/reports/business?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+  });
+
+  if (isLoading || !data) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const costDonut = data.costByApp.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <KPICard label="Ingresos" value={formatMoney(data.income, 'PEN')} icon={ArrowUpRight} color="text-success" />
+        <KPICard label="Costos" value={formatMoney(data.cost, 'PEN')} icon={ArrowDownRight} color="text-coral" />
+        <KPICard label="Pagos equipo" value={formatMoney(data.teamPayment, 'PEN')} icon={Users} color="text-info" />
+        <KPICard label="Utilidad" value={formatMoney(data.utility, 'PEN')} icon={Landmark} color="text-brand" />
+      </div>
+
+      <Tabs defaultValue="costos">
+        <TabsList>
+          <TabsTrigger value="costos">Costos por aplicación</TabsTrigger>
+          <TabsTrigger value="equipo">Pagos por persona</TabsTrigger>
+          <TabsTrigger value="talentos">Talentos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="costos" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Costos por aplicación</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {costDonut.length ? (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <CategoryDonut data={costDonut} />
+                  <div className="divide-y">
+                    {data.costByApp.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                        <span className="truncate">{c.name}</span>
+                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin costos registrados</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="equipo" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pagos de equipo por persona</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.teamByPerson.length ? (
+                <div className="divide-y">
+                  {data.teamByPerson.map((p) => (
+                    <div key={p.name} className="flex items-center justify-between py-2 text-sm">
+                      <span className="truncate">{p.name}</span>
+                      <span className="font-medium tabular-nums">{formatMoney(p.total, 'PEN')}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin pagos de equipo</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="talentos" className="mt-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KPICard
+              label="Pagado a talentos"
+              value={formatMoney(data.talent.paid, 'PEN')}
+              icon={ArrowDownRight}
+              color="text-coral"
+            />
+            <KPICard
+              label="Deuda"
+              value={formatMoney(data.talent.debt, 'PEN')}
+              icon={ReceiptText}
+              color="text-warning"
+            />
+            <KPICard
+              label="Falta pagar"
+              value={formatMoney(data.talent.pending, 'PEN')}
+              icon={AlertTriangle}
+              color="text-destructive"
+            />
+            <KPICard
+              label="Saldo talentos"
+              value={formatMoney(data.talent.balance, 'PEN')}
+              icon={Landmark}
+              color="text-brand"
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
 export default function ReportesPage() {
   const { activeWorkspaceId, activeWorkspace } = useWorkspace();
   const isBusiness = activeWorkspace?.type === 'BUSINESS';
   const isPersonal = activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED';
 
-  const { data: summary, isLoading } = useQuery({
-    queryKey: queryKeys.dashboard(activeWorkspaceId ?? ''),
-    queryFn: () => apiFetch<DashboardSummary>(`/dashboard?workspaceId=${activeWorkspaceId}`),
-    enabled: !!activeWorkspaceId,
-  });
-
-  const { data: txPage } = useQuery({
-    queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { reports: true }),
-    queryFn: () =>
-      apiFetch<Paginated<Transaction>>(
-        `/transactions?workspaceId=${activeWorkspaceId}&pageSize=500&sortBy=date&sortOrder=desc`,
-      ),
-    enabled: !!activeWorkspaceId && isBusiness,
-  });
-
-  const transactions = txPage?.data ?? [];
-
-  const monthly = new Map<string, MonthlyPoint>();
-  for (const t of transactions) {
-    const d = new Date(t.date);
-    const key = `${d.getFullYear()}-${d.getMonth()}`;
-    const label = `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
-    const point = monthly.get(key) ?? { label, ingresos: 0, egresos: 0 };
-    const amount = Number(t.amountBase);
-    if (t.type === 'INCOME') point.ingresos += amount;
-    else if (t.type === 'EXPENSE' || t.type === 'BUSINESS_COST' || t.type === 'TEAM_PAYMENT') point.egresos += amount;
-    monthly.set(key, point);
-  }
-  const barData = [...monthly.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-12)
-    .map(([, v]) => v);
-
-  const byCost = new Map<string, number>();
-  for (const t of transactions) {
-    if (t.type !== 'BUSINESS_COST') continue;
-    byCost.set(t.concept, (byCost.get(t.concept) ?? 0) + Number(t.amountBase));
-  }
-  const costData = [...byCost.entries()]
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-
   return (
     <div className="space-y-6">
       <PageHeader title="Reportes" description="Resumen y análisis financiero" />
 
-      {isPersonal && activeWorkspaceId ? (
+      {activeWorkspaceId && isBusiness ? (
+        <BusinessReportsView workspaceId={activeWorkspaceId} />
+      ) : activeWorkspaceId && isPersonal ? (
         <PersonalReportsView workspaceId={activeWorkspaceId} />
       ) : (
-        <Tabs defaultValue="resumen">
-          <TabsList>
-            <TabsTrigger value="resumen">Resumen</TabsTrigger>
-            <TabsTrigger value="mes">Por mes</TabsTrigger>
-            {isBusiness && <TabsTrigger value="costos">Costos por app</TabsTrigger>}
-          </TabsList>
-
-          <TabsContent value="resumen" className="mt-4">
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {isLoading || !summary ? (
-                Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
-              ) : (
-                <>
-                  <KPICard
-                    label="Patrimonio"
-                    value={formatMoney(summary.patrimonio, 'PEN')}
-                    icon={Landmark}
-                    color="text-brand"
-                  />
-                  <KPICard
-                    label="Ingresos"
-                    value={formatMoney(summary.ingresos, 'PEN')}
-                    icon={ArrowUpRight}
-                    color="text-success"
-                  />
-                  <KPICard
-                    label="Egresos"
-                    value={formatMoney(summary.egresos, 'PEN')}
-                    icon={ArrowDownRight}
-                    color="text-destructive"
-                  />
-                  <KPICard
-                    label="Disponible"
-                    value={formatMoney(summary.disponible, 'PEN')}
-                    icon={Wallet}
-                    color="text-info"
-                  />
-                  <KPICard
-                    label="Ahorro"
-                    value={formatMoney(summary.ahorro, 'PEN')}
-                    icon={PiggyBank}
-                    color="text-teal"
-                  />
-                  <KPICard
-                    label="Por cobrar"
-                    value={formatMoney(summary.porCobrar, 'PEN')}
-                    icon={WalletCards}
-                    color="text-info"
-                  />
-                  <KPICard
-                    label="Por pagar"
-                    value={formatMoney(summary.porPagar, 'PEN')}
-                    icon={ReceiptText}
-                    color="text-warning"
-                  />
-                  <KPICard
-                    label="Vencido"
-                    value={formatMoney(summary.vencido, 'PEN')}
-                    icon={AlertTriangle}
-                    color="text-destructive"
-                  />
-                </>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="mes" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Ingresos vs Egresos por mes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {barData.length ? (
-                  <MonthlyBar data={barData} />
-                ) : (
-                  <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {isBusiness && (
-            <TabsContent value="costos" className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Costos por aplicación</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {costData.length ? (
-                    <CategoryDonut data={costData} />
-                  ) : (
-                    <p className="py-12 text-center text-sm text-muted-foreground">Sin costos registrados</p>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
-        </Tabs>
+        <p className="text-sm text-muted-foreground">Selecciona un workspace para ver sus reportes.</p>
       )}
     </div>
   );

@@ -273,6 +273,17 @@ export interface PersonalReports {
   fixedVsVariable: { fixed: string; variable: string };
 }
 
+export interface BusinessReports {
+  years: number[];
+  income: string;
+  cost: string;
+  teamPayment: string;
+  utility: string;
+  costByApp: { name: string; total: string }[];
+  teamByPerson: { name: string; total: string }[];
+  talent: { paid: string; debt: string; pending: string; balance: string };
+}
+
 export interface Debt {
   id: string;
   direction: string;

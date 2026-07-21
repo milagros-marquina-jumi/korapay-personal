@@ -42,4 +42,11 @@ export class PendingItemService {
       data: { status },
     });
   }
+  async remove(id: string, workspaceId: string) {
+    const item = await this.prisma.pendingItem.findFirst({
+      where: { id, workspaceId, deletedAt: null },
+    });
+    if (!item) throw new NotFoundException('Pending item not found');
+    return this.prisma.pendingItem.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
 }

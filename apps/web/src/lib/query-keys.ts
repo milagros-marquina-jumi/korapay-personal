@@ -22,6 +22,8 @@ export const queryKeys = {
     ['saving-balances', workspaceId, filters ?? {}] as const,
   personalReports: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['personal-reports', workspaceId, filters ?? {}] as const,
+  businessReports: (workspaceId: string, filters?: Record<string, unknown>) =>
+    ['business-reports', workspaceId, filters ?? {}] as const,
   debts: (workspaceId: string) => ['debts', workspaceId] as const,
   pendingItems: (workspaceId: string) => ['pending-items', workspaceId] as const,
   talents: (workspaceId: string) => ['talents', workspaceId] as const,

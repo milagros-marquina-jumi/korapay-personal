@@ -18,6 +18,12 @@ export class ReportsController {
     return this.reportsService.personal(workspaceId, year);
   }
 
+  @Get('business')
+  @ApiOperation({ summary: 'Business reports: cost by app, utility, team payments, talents' })
+  businessReports(@Query() { workspaceId, year }: ReportsQueryDto) {
+    return this.reportsService.business(workspaceId, year);
+  }
+
   @Get('saving-balances')
   @ApiOperation({ summary: 'Monthly saving balances by account' })
   savingBalances(@Query() { workspaceId, year }: ReportsQueryDto) {

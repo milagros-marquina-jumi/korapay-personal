@@ -85,6 +85,59 @@ export class CatalogService {
     return contracts.map((c) => ({ ...c, salary: c.salary?.toString() ?? null }));
   }
 
+  async createEmploymentContract(data: {
+    workspaceId: string;
+    companyId?: string;
+    position?: string;
+    type?: string;
+    startDate: string;
+    endDate?: string;
+    salary?: string;
+    currency?: string;
+    notes?: string;
+  }) {
+    const created = await this.prisma.employmentContract.create({
+      data: {
+        workspaceId: data.workspaceId,
+        companyId: data.companyId ?? null,
+        position: data.position ?? null,
+        type: data.type ?? null,
+        startDate: new Date(data.startDate),
+        endDate: data.endDate ? new Date(data.endDate) : null,
+        salary: data.salary ?? null,
+        currency: data.currency ?? 'PEN',
+        status: data.endDate ? 'FINISHED' : 'ACTIVE',
+        notes: data.notes ?? null,
+      },
+    });
+    return { ...created, salary: created.salary?.toString() ?? null };
+  }
+
+  async updateEmploymentContract(id: string, workspaceId: string, data: Record<string, unknown>) {
+    const found = await this.prisma.employmentContract.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!found) throw new NotFoundException('Contrato no encontrado');
+    const updateData: Record<string, unknown> = {};
+    if (data.companyId !== undefined) updateData.companyId = data.companyId;
+    if (data.position !== undefined) updateData.position = data.position;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate as string);
+    if (data.endDate !== undefined) {
+      updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
+      updateData.status = data.endDate ? 'FINISHED' : 'ACTIVE';
+    }
+    if (data.salary !== undefined) updateData.salary = data.salary;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    const updated = await this.prisma.employmentContract.update({ where: { id }, data: updateData as never });
+    return { ...updated, salary: updated.salary?.toString() ?? null };
+  }
+
+  async removeEmploymentContract(id: string, workspaceId: string) {
+    const found = await this.prisma.employmentContract.findFirst({ where: { id, workspaceId, deletedAt: null } });
+    if (!found) throw new NotFoundException('Contrato no encontrado');
+    return this.prisma.employmentContract.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
   paymentMethods() {
     return this.prisma.paymentMethod.findMany({ orderBy: { name: 'asc' } });
   }

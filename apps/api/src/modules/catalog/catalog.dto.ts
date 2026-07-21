@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class CreateApplicationDto {
   @ApiProperty()
@@ -74,6 +74,54 @@ export class CreateBankDto {
 }
 
 export class UpdateBankDto extends PartialType(CreateBankDto) {}
+
+export class CreateEmploymentContractDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  companyId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  position?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  type?: string;
+
+  @ApiProperty({ example: '2025-01-01' })
+  @IsDateString()
+  startDate!: string;
+
+  @ApiPropertyOptional({ example: '2025-12-31' })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({ example: '3500.00' })
+  @IsOptional()
+  @IsNumberString()
+  salary?: string;
+
+  @ApiPropertyOptional({ enum: ['PEN', 'USD'] })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class UpdateEmploymentContractDto extends PartialType(CreateEmploymentContractDto) {}
 
 export class CreateCurrencyDto {
   @ApiProperty()

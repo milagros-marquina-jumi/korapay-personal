@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsIn,
   IsInt,
@@ -24,6 +25,7 @@ const TX_TYPES = [
   'ADJUSTMENT',
 ];
 const TX_STATUS = ['PAID', 'PENDING', 'OVERDUE', 'PARTIAL', 'CANCELLED', 'PENDING_REVIEW'];
+const RECURRENCE_FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY'];
 
 export class CreateTransactionDto {
   @ApiProperty()
@@ -107,6 +109,40 @@ export class CreateTransactionDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ example: '2026-08-15', description: 'Fecha de vencimiento del pago' })
+  @IsOptional()
+  @IsDateString()
+  dueDate?: string;
+
+  @ApiPropertyOptional({ default: false, description: 'Indica si es un pago recurrente' })
+  @IsOptional()
+  @IsBoolean()
+  isRecurring?: boolean;
+
+  @ApiPropertyOptional({ enum: RECURRENCE_FREQUENCIES })
+  @IsOptional()
+  @IsIn(RECURRENCE_FREQUENCIES)
+  recurrenceFrequency?: string;
+
+  @ApiPropertyOptional({ default: 1, description: 'Cada cuántos periodos se repite' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  recurrenceInterval?: number;
+
+  @ApiPropertyOptional({ example: '2027-06-30', description: 'Fin de la recurrencia' })
+  @IsOptional()
+  @IsDateString()
+  recurrenceEndDate?: string;
+
+  @ApiPropertyOptional({ description: 'Número de repeticiones antes de finalizar' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  recurrenceCount?: number;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

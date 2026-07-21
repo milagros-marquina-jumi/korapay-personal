@@ -522,15 +522,19 @@ model Subscription {
 }
 
 model TaxObligation {
-  id          String    @id @default(uuid())
-  workspaceId String    @map("workspace_id")
-  name        String
-  dueDate     DateTime  @map("due_date") @db.Date
-  amount      Decimal?  @db.Decimal(18, 2)
-  status      String    @default("PENDING")
-  notes       String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  id             String    @id @default(uuid())
+  workspaceId    String    @map("workspace_id")
+  name           String
+  year           Int?
+  dueDate        DateTime  @map("due_date") @db.Date
+  amount         Decimal?  @db.Decimal(18, 2)
+  status         String    @default("PENDING")
+  installments   Int?
+  paidInstallments Int     @default(0) @map("paid_installments")
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 

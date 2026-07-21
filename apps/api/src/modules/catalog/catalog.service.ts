@@ -85,14 +85,6 @@ export class CatalogService {
     return contracts.map((c) => ({ ...c, salary: c.salary?.toString() ?? null }));
   }
 
-  async taxObligations(workspaceId: string) {
-    const items = await this.prisma.taxObligation.findMany({
-      where: { workspaceId },
-      orderBy: { dueDate: 'asc' },
-    });
-    return items.map((t) => ({ ...t, amount: t.amount?.toString() ?? null }));
-  }
-
   paymentMethods() {
     return this.prisma.paymentMethod.findMany({ orderBy: { name: 'asc' } });
   }

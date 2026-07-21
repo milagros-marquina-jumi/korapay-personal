@@ -153,7 +153,7 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
 
           <div className="space-y-2">
             <Label htmlFor="ledger-desc">Descripción</Label>
-            <Textarea id="ledger-desc" rows={2} {...register('description')} />
+            <Textarea id="ledger-desc" rows={2} placeholder="Detalle del movimiento" {...register('description')} />
           </div>
 
           <DialogFooter>

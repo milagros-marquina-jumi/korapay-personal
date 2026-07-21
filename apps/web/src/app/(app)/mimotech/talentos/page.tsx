@@ -98,7 +98,7 @@ function TalentFormDialog({ workspaceId, onCreated }: { workspaceId: string; onC
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" {...register('name')} />
+            <Input id="name" placeholder="Nombre completo del talento" {...register('name')} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="grid grid-cols-2 gap-3">

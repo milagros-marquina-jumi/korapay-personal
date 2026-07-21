@@ -25,6 +25,7 @@ import { SavingGoalModule } from './modules/saving-goal/saving-goal.module';
 import { TalentModule } from './modules/talent/talent.module';
 import { TalentLedgerModule } from './modules/talent-ledger/talent-ledger.module';
 import { TalentPortalModule } from './modules/talent-portal/talent-portal.module';
+import { TaxObligationModule } from './modules/tax-obligation/tax-obligation.module';
 import { TransactionModule } from './modules/transaction/transaction.module';
 import { WorkspaceModule } from './modules/workspace/workspace.module';
 @Module({
@@ -52,6 +53,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     TalentModule,
     TalentLedgerModule,
     TalentPortalModule,
+    TaxObligationModule,
     CatalogModule,
     ExchangeRateModule,
     EmailSourcesModule,

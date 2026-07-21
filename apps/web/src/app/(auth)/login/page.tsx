@@ -48,12 +48,24 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Correo</Label>
-              <Input id="email" type="email" autoComplete="email" {...register('email')} />
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="tucorreo@ejemplo.com"
+                {...register('email')}
+              />
               {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" autoComplete="current-password" {...register('password')} />
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Tu contraseña"
+                {...register('password')}
+              />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>

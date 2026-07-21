@@ -2,26 +2,44 @@
 
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { TaxObligationFormDialog } from '@/components/forms/tax-obligation-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { Button } from '@/components/ui/button';
+import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch } from '@/lib/api';
 import type { TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useHighlightNew } from '@/lib/use-highlight-new';
 import { formatDate } from '@/lib/utils';
+
+const STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pendiente',
+  PAID: 'Pagado',
+  PARTIAL: 'Parcial',
+  OVERDUE: 'Vencido',
+  CANCELLED: 'Cancelado',
+};
 
 function RentaContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(FILTER_ALL);
+  const [editing, setEditing] = useState<TaxObligation | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.taxObligations(activeWorkspaceId ?? ''),
@@ -31,11 +49,21 @@ function RentaContent() {
 
   const allObligations = data ?? [];
 
+  const removeMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiFetch(`/tax-obligations/${id}?workspaceId=${activeWorkspaceId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.taxObligations(activeWorkspaceId ?? '') });
+      toast.success('Obligación eliminada');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const statusOptions = useMemo(
     () =>
       [...new Set(allObligations.map((o) => o.status).filter(Boolean) as string[])].map((v) => ({
         value: v,
-        label: v,
+        label: STATUS_LABELS[v] ?? v,
       })),
     [allObligations],
   );
@@ -66,6 +94,19 @@ function RentaContent() {
         cell: ({ row }) => <span className="text-sm">{formatDate(row.original.dueDate)}</span>,
       },
       {
+        id: 'installments',
+        header: 'Cuotas',
+        cell: ({ row }) => {
+          const t = row.original;
+          if (!t.installments) return <span className="text-sm text-muted-foreground">-</span>;
+          return (
+            <span className="text-sm tabular-nums">
+              {t.paidInstallments ?? 0} / {t.installments}
+            </span>
+          );
+        },
+      },
+      {
         id: 'amount',
         accessorFn: (r) => Number(r.amount),
         sortingFn: 'basic',
@@ -80,17 +121,51 @@ function RentaContent() {
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
       {
-        id: 'notes',
-        header: 'Notas',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.notes ?? '-'}</span>,
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-0.5">
+            <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
+            <IconAction
+              icon={Trash2}
+              label="Eliminar"
+              destructive
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Eliminar obligación',
+                  description: `Se eliminará "${row.original.name}". Esta acción no se puede deshacer.`,
+                  confirmLabel: 'Eliminar',
+                  destructive: true,
+                });
+                if (ok) removeMutation.mutate(row.original.id);
+              }}
+            />
+          </div>
+        ),
       },
     ],
-    [],
+    [confirm, removeMutation],
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Renta" description="Obligaciones tributarias y renta" />
+      <PageHeader
+        title="Renta"
+        description="Obligaciones tributarias y renta anual"
+        action={
+          activeWorkspaceId && (
+            <TaxObligationFormDialog
+              workspaceId={activeWorkspaceId}
+              onSaved={markNew}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Nueva obligación
+                </Button>
+              }
+            />
+          )
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <KPICard
@@ -130,10 +205,20 @@ function RentaContent() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
+        rowClassName={(o) => highlightClass(o.id)}
         emptyState={
-          <EmptyState title="Sin obligaciones" description="Aún no hay obligaciones tributarias registradas." />
+          <EmptyState title="Sin obligaciones" description="Crea tu primera obligación con el botón de arriba." />
         }
       />
+
+      {activeWorkspaceId && editing && (
+        <TaxObligationFormDialog
+          workspaceId={activeWorkspaceId}
+          obligation={editing}
+          open={!!editing}
+          onOpenChange={(next) => !next && setEditing(null)}
+        />
+      )}
     </div>
   );
 }

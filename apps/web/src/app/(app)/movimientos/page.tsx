@@ -34,6 +34,13 @@ const TYPE_LABELS: Record<string, string> = {
   TRANSFER: 'Transferencia',
 };
 
+const RECURRENCE_LABELS: Record<string, string> = {
+  WEEKLY: 'Semanal',
+  MONTHLY: 'Mensual',
+  QUARTERLY: 'Trimestral',
+  YEARLY: 'Anual',
+};
+
 const STATUS_LABELS: Record<string, string> = {
   PAID: 'Pagado',
   PENDING: 'Pendiente',
@@ -284,6 +291,11 @@ export default function MovimientosPage() {
               <DetailRow label="Estado" value={STATUS_LABELS[detail.status] ?? detail.status} />
               <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
               <DetailRow label="Cuenta" value={detail.account?.name ?? '—'} />
+              <DetailRow label="Vencimiento" value={detail.dueDate ? formatDate(detail.dueDate) : '—'} />
+              <DetailRow
+                label="Recurrencia"
+                value={detail.isRecurring ? (RECURRENCE_LABELS[detail.recurrenceRule?.frequency ?? ''] ?? 'Sí') : 'No'}
+              />
               <div className="col-span-2">
                 <dt className="text-xs text-muted-foreground">Notas</dt>
                 <dd className="mt-0.5 whitespace-pre-wrap">{detail.notes || detail.description || '—'}</dd>

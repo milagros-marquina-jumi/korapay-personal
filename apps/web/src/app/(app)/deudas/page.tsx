@@ -128,7 +128,7 @@ function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCre
 
           <div className="space-y-2">
             <Label htmlFor="concept">Concepto</Label>
-            <Input id="concept" {...register('concept')} />
+            <Input id="concept" placeholder="Ej. Préstamo a Juan, Tarjeta de crédito" {...register('concept')} />
             {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
           </div>
 

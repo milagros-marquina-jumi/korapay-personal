@@ -106,6 +106,7 @@ export function WorkspaceManager() {
                     id="ws-emoji"
                     value={form.emoji}
                     maxLength={4}
+                    placeholder="🏠"
                     className="text-center text-lg"
                     onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))}
                   />
@@ -117,6 +118,7 @@ export function WorkspaceManager() {
                     value={form.name}
                     required
                     maxLength={60}
+                    placeholder="Ej. Personal, MIMOTECH, Qoryx"
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   />
                 </div>
@@ -145,6 +147,7 @@ export function WorkspaceManager() {
                   id="ws-desc"
                   value={form.description}
                   maxLength={200}
+                  placeholder="Breve descripción del workspace"
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                 />
               </div>

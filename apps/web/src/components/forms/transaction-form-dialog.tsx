@@ -19,6 +19,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { Account, Category } from '@/lib/api.types';
@@ -34,6 +35,10 @@ const schema = z.object({
   categoryId: z.string().optional(),
   accountId: z.string().optional(),
   notes: z.string().optional(),
+  dueDate: z.string().optional(),
+  isRecurring: z.boolean().optional(),
+  recurrenceFrequency: z.enum(['WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']).optional(),
+  recurrenceEndDate: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -76,12 +81,24 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
       currency: 'PEN',
       date: new Date().toISOString().slice(0, 10),
       status: 'PAID',
+      isRecurring: false,
     },
   });
 
+  const isRecurring = watch('isRecurring');
+
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      apiFetch<{ id: string }>('/transactions', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
+    mutationFn: (values: FormValues) => {
+      const payload = {
+        ...values,
+        workspaceId,
+        recurrenceInterval: values.isRecurring ? 1 : undefined,
+        recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
+        recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate || undefined : undefined,
+        dueDate: values.dueDate || undefined,
+      };
+      return apiFetch<{ id: string }>('/transactions', { method: 'POST', body: JSON.stringify(payload) });
+    },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['transactions', workspaceId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(workspaceId) });
@@ -126,7 +143,7 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
 
           <div className="space-y-2">
             <Label htmlFor="concept">Concepto</Label>
-            <Input id="concept" {...register('concept')} />
+            <Input id="concept" placeholder="Ej. Pago de alquiler, sueldo, compra..." {...register('concept')} />
             {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
           </div>
 
@@ -186,6 +203,49 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
           <div className="space-y-2">
             <Label htmlFor="notes">Notas</Label>
             <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-border/60 p-3">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="isRecurring">Pago recurrente</Label>
+                <p className="text-xs text-muted-foreground">Se repite periódicamente con fecha de vencimiento.</p>
+              </div>
+              <Switch id="isRecurring" checked={!!isRecurring} onCheckedChange={(v) => setValue('isRecurring', v)} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Vencimiento</Label>
+                <Input id="dueDate" type="date" {...register('dueDate')} />
+              </div>
+              {isRecurring && (
+                <div className="space-y-2">
+                  <Label>Frecuencia</Label>
+                  <Select
+                    defaultValue="MONTHLY"
+                    onValueChange={(v) => setValue('recurrenceFrequency', v as FormValues['recurrenceFrequency'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WEEKLY">Semanal</SelectItem>
+                      <SelectItem value="MONTHLY">Mensual</SelectItem>
+                      <SelectItem value="QUARTERLY">Trimestral</SelectItem>
+                      <SelectItem value="YEARLY">Anual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {isRecurring && (
+              <div className="space-y-2">
+                <Label htmlFor="recurrenceEndDate">Fin de la recurrencia (opcional)</Label>
+                <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
+              </div>
+            )}
           </div>
 
           <input type="hidden" {...register('status')} value={watch('status')} />

@@ -86,13 +86,6 @@ export class CatalogController {
     return this.catalogService.employmentContracts(workspaceId);
   }
 
-  @Get('tax-obligations')
-  @UseGuards(WorkspaceGuard)
-  @ApiOperation({ summary: 'List tax obligations' })
-  taxObligations(@Query() { workspaceId }: WorkspaceQueryDto) {
-    return this.catalogService.taxObligations(workspaceId);
-  }
-
   // ---- Payment methods (global) ----
   @Get('payment-methods')
   @ApiOperation({ summary: 'List payment methods' })

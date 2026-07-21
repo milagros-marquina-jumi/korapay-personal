@@ -158,9 +158,20 @@ export interface Transaction {
   projectId?: string | null;
   applicationId?: string | null;
   notes?: string | null;
+  dueDate?: string | null;
+  isRecurring?: boolean;
+  recurrenceRule?: RecurrenceRule | null;
   tags: string[];
   account?: { name: string } | null;
   category?: { name: string } | null;
+}
+
+export interface RecurrenceRule {
+  id: string;
+  frequency: string;
+  interval: number;
+  endDate?: string | null;
+  endAfterCount?: number | null;
 }
 
 export interface DashboardSummary {
@@ -358,9 +369,12 @@ export interface EmploymentContract {
 export interface TaxObligation {
   id: string;
   name: string;
+  year?: number | null;
   dueDate: string;
   amount: string;
   status: string;
+  installments?: number | null;
+  paidInstallments?: number;
   notes?: string | null;
 }
 

@@ -122,7 +122,7 @@ function RuleFormDialog({
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" {...register('name')} />
+            <Input id="name" placeholder="Ej. Consumos BCP a Personal" {...register('name')} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">

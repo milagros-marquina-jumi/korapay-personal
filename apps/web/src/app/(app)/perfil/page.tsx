@@ -83,12 +83,12 @@ export default function PerfilPage() {
               <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="max-w-md space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nombre</Label>
-                  <Input id="name" {...register('name')} />
+                  <Input id="name" placeholder="Tu nombre completo" {...register('name')} />
                   {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Correo</Label>
-                  <Input id="email" type="email" {...register('email')} />
+                  <Input id="email" type="email" placeholder="tucorreo@ejemplo.com" {...register('email')} />
                   {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
                 </div>
                 <Button type="submit" disabled={mutation.isPending || !isDirty}>

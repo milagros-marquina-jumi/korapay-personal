@@ -57,6 +57,7 @@ export class TransactionService {
         include: {
           account: true,
           category: true,
+          recurrenceRule: true,
         },
       }),
       this.prisma.transaction.count({ where }),
@@ -79,7 +80,7 @@ export class TransactionService {
   async findOne(id: string, workspaceId: string) {
     const tx = await this.prisma.transaction.findFirst({
       where: { id, workspaceId, deletedAt: null },
-      include: { account: true, category: true, splits: true },
+      include: { account: true, category: true, splits: true, recurrenceRule: true },
     });
     if (!tx) throw new NotFoundException('Transaction not found');
     return {
@@ -107,6 +108,12 @@ export class TransactionService {
     projectId?: string;
     applicationId?: string;
     notes?: string;
+    dueDate?: string;
+    isRecurring?: boolean;
+    recurrenceFrequency?: string;
+    recurrenceInterval?: number;
+    recurrenceEndDate?: string;
+    recurrenceCount?: number;
   }) {
     const currency = data.currency ?? 'PEN';
     let exchangeRate = data.exchangeRate ?? '1';
@@ -115,6 +122,19 @@ export class TransactionService {
     }
     const amountBase =
       currency === 'PEN' ? data.amount : new Decimal(data.amount).mul(new Decimal(exchangeRate)).toFixed(2);
+    const recurrenceRuleId =
+      data.isRecurring && data.recurrenceFrequency
+        ? (
+            await this.prisma.recurrenceRule.create({
+              data: {
+                frequency: data.recurrenceFrequency,
+                interval: data.recurrenceInterval ?? 1,
+                endDate: data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null,
+                endAfterCount: data.recurrenceCount ?? null,
+              },
+            })
+          ).id
+        : null;
     return this.prisma.transaction.create({
       data: {
         workspaceId: data.workspaceId,
@@ -135,6 +155,9 @@ export class TransactionService {
         projectId: data.projectId,
         applicationId: data.applicationId,
         notes: data.notes,
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        isRecurring: data.isRecurring ?? false,
+        recurrenceRuleId,
       },
     });
   }
@@ -157,6 +180,8 @@ export class TransactionService {
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId as string;
     if (data.accountId !== undefined) updateData.accountId = data.accountId as string;
     if (data.notes !== undefined) updateData.notes = data.notes as string;
+    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
+    if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring as boolean;
     return this.prisma.transaction.update({ where: { id }, data: updateData });
   }
   async remove(id: string, workspaceId: string) {
@@ -176,6 +201,7 @@ export class TransactionService {
       account: _a,
       category: _cat,
       splits: _s,
+      recurrenceRule: _r,
       ...rest
     } = original as any;
     return this.prisma.transaction.create({

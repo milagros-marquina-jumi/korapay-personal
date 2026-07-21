@@ -114,7 +114,7 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
 
           <div className="space-y-2">
             <Label htmlFor="concept">Concepto</Label>
-            <Input id="concept" {...register('concept')} />
+            <Input id="concept" placeholder="Ej. Pago pendiente, cobro por realizar" {...register('concept')} />
             {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
           </div>
 
@@ -140,7 +140,7 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notas</Label>
-            <Textarea id="notes" rows={2} {...register('notes')} />
+            <Textarea id="notes" rows={2} placeholder="Detalle opcional" {...register('notes')} />
           </div>
 
           <DialogFooter>

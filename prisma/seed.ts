@@ -53,18 +53,47 @@ const PERU_BANKS = [
   'BBVA',
   'BCP',
   'IBK',
-  'Interbank',
   'Scotiabank',
   'Pichincha',
   'Mi Banco',
+  'Agora',
   'Caja Arequipa',
   'Caja Huancayo',
+  'Banco de la Nacion',
+];
+
+const BANK_ALIASES: Record<string, string> = { interbank: 'IBK' };
+
+function canonicalBank(name: string): string {
+  return BANK_ALIASES[name.trim().toLowerCase()] ?? name.trim();
+}
+
+const PAYMENT_METHODS = [
   'Efectivo',
-  'PayPal',
+  'Transferencia',
   'Yape',
   'Plin',
-  'Agora',
+  'Tarjeta de crédito',
+  'Tarjeta de débito',
+  'PayPal',
+  'Planilla',
+  'RxH',
 ];
+
+function dedupeByNormalized(names: string[]): string[] {
+  const seen = new Map<string, string>();
+  for (const name of names) {
+    const key = name.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (!seen.has(key)) seen.set(key, name.trim());
+  }
+  return [...seen.values()];
+}
+
+const BANK_TOKENS = new Set([...PERU_BANKS, 'Interbank'].map((b) => b.toLowerCase()));
+
+function isBank(name: string): boolean {
+  return BANK_TOKENS.has(name.trim().toLowerCase());
+}
 
 async function clean() {
   await prisma.auditLog.deleteMany();
@@ -137,11 +166,13 @@ async function main() {
       data: { fromCurrencyId: usd.id, toCurrencyId: pen.id, rate: USD_TO_PEN, date: new Date('2026-07-20') },
     });
   }
+  const excelMixed = [...catalogs.tipo_pagos, ...catalogs.medios_pago];
+  const paymentMethodNames = dedupeByNormalized([...PAYMENT_METHODS, ...excelMixed.filter((n) => !isBank(n))]);
   await prisma.paymentMethod.createMany({
-    data: [...new Set([...catalogs.tipo_pagos, ...catalogs.medios_pago])].map((name) => ({ name })),
+    data: paymentMethodNames.map((name) => ({ name })),
     skipDuplicates: true,
   });
-  const bankNames = [...new Set([...PERU_BANKS, ...catalogs.medios_pago])];
+  const bankNames = dedupeByNormalized([...PERU_BANKS, ...excelMixed.filter(isBank).map(canonicalBank)]);
   await prisma.bank.createMany({
     data: bankNames.map((name) => ({ name, country: 'PE' })),
     skipDuplicates: true,
@@ -263,6 +294,13 @@ async function main() {
   // ============================================================
   // Ingresos Laborales (EMPLOYMENT): empresas + ingresos + contratos + renta
   // ============================================================
+  for (const empresa of catalogs.empresas) await ensureCompany(empleos.id, empresa);
+  for (const cat of catalogs.categorias_ingreso) await ensureCategory(empleos.id, cat);
+
+  const INCOME_CATEGORY_ALIASES: Record<string, string> = { Empresas: 'Sueldo' };
+  const normalizeIncomeCategory = (concepto: string | null | undefined): string =>
+    INCOME_CATEGORY_ALIASES[(concepto ?? '').trim()] ?? concepto ?? 'Sueldo';
+
   const ingresosTrabajos = load<{
     fecha: string;
     mes: string | null;
@@ -281,7 +319,7 @@ async function main() {
     const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
     const original = currency === 'USD' ? (r.totalDolar ?? r.totalSoles ?? 0) : (r.totalSoles ?? 0);
     const companyId = await ensureCompany(empleos.id, r.empresa);
-    const categoryId = await ensureCategory(empleos.id, r.concepto ?? 'Sueldo');
+    const categoryId = await ensureCategory(empleos.id, normalizeIncomeCategory(r.concepto));
     await prisma.transaction.create({
       data: {
         workspaceId: empleos.id,
@@ -329,13 +367,22 @@ async function main() {
     'renta_anual',
   );
   for (const r of renta) {
+    const detalles = r.detalles ?? '';
+    const cuotasMatch = detalles.match(/(\d+)\s*cuota/i);
+    const finMatch = detalles.match(/FIN:\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    const installments = cuotasMatch ? Number(cuotasMatch[1]) : null;
+    const dueDate = finMatch
+      ? new Date(Date.UTC(Number(finMatch[3]), Number(finMatch[2]) - 1, Number(finMatch[1])))
+      : new Date(`${r.anio + 1}-06-30`);
     await prisma.taxObligation.create({
       data: {
         workspaceId: empleos.id,
         name: `Renta Anual ${r.anio}`,
-        dueDate: new Date(`${r.anio + 1}-06-30`),
+        year: r.anio,
+        dueDate,
         amount: money(r.monto),
         status: (r.estado ?? '').toLowerCase() === 'pagado' ? 'PAID' : 'PENDING',
+        installments,
         notes: r.detalles ?? null,
       },
     });
@@ -648,6 +695,8 @@ async function main() {
     'ws Personal (egresos)': expenseCount,
     'ws Personal (savingEntries)': savingEntryCount,
     'ws Empleos (ingresos)': incomeCount,
+    'ws Empleos (empresas)': Object.keys(companyByWs[empleos.id] ?? {}).length,
+    'ws Empleos (categorias)': Object.keys(catByWorkspace[empleos.id] ?? {}).length,
     'ws Empleos (contratos)': contractCount,
     'ws Empleos (renta)': renta.length,
     'ws MIMOTECH (costos)': costCount,

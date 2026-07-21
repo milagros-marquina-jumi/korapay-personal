@@ -319,7 +319,10 @@ export interface PendingItem {
 
 export interface TalentContract {
   id: string;
+  companyName?: string | null;
+  clientName?: string | null;
   position?: string | null;
+  paymentType?: string | null;
   rate?: string | null;
   currency: string;
   startDate: string;
@@ -331,11 +334,27 @@ export interface TalentContract {
 
 export interface TalentIncomeDistribution {
   id: string;
+  date?: string | null;
+  year?: number | null;
+  month?: number | null;
+  paymentType: string;
+  salary?: string | null;
   amountWithDiscount: string;
   amountReceived: string;
   amountRetained: string;
   status: string;
   notes?: string | null;
+}
+
+export interface GlobalCompany {
+  id: string;
+  name: string;
+  ruc?: string | null;
+}
+
+export interface GlobalClient {
+  id: string;
+  name: string;
 }
 
 export interface Talent {

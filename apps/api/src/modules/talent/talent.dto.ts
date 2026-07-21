@@ -1,5 +1,17 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsDateString, IsEmail, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDateString,
+  IsEmail,
+  IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsNumberString,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateTalentDto {
   @ApiProperty()
@@ -79,17 +91,22 @@ export class CreateTalentContractDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  companyId?: string;
+  companyName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  clientId?: string;
+  clientName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   position?: string;
+
+  @ApiPropertyOptional({ enum: ['Planilla', 'RxH', 'Transferencia'] })
+  @IsOptional()
+  @IsIn(['Planilla', 'RxH', 'Transferencia'])
+  paymentType?: string;
 
   @ApiPropertyOptional({ example: '3500.00' })
   @IsOptional()
@@ -110,22 +127,55 @@ export class CreateTalentContractDto {
   @IsDateString()
   endDate?: string;
 
+  @ApiPropertyOptional({ enum: ['ACTIVE', 'FINISHED'] })
+  @IsOptional()
+  @IsIn(['ACTIVE', 'FINISHED'])
+  status?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   notes?: string;
 }
 
-export class CreateTalentDistributionDto {
-  @ApiProperty()
-  @IsString()
-  @IsNotEmpty()
-  contractId!: string;
+export class UpdateTalentContractDto extends PartialType(CreateTalentContractDto) {}
 
+export class CreateTalentDistributionDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   transactionId?: string;
+
+  @ApiPropertyOptional({ example: '2025-01-01' })
+  @IsOptional()
+  @IsDateString()
+  date?: string;
+
+  @ApiPropertyOptional({ example: 2025 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year?: number;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month?: number;
+
+  @ApiPropertyOptional({ enum: ['Mensual', 'Gratificación', 'Liquidación', 'CTS', 'Extra'], default: 'Mensual' })
+  @IsOptional()
+  @IsIn(['Mensual', 'Gratificación', 'Liquidación', 'CTS', 'Extra'])
+  paymentType?: string;
+
+  @ApiPropertyOptional({ example: '4000.00' })
+  @IsOptional()
+  @IsNumberString()
+  salary?: string;
 
   @ApiProperty({ example: '3200.00' })
   @IsNumberString()
@@ -139,8 +189,15 @@ export class CreateTalentDistributionDto {
   @IsNumberString()
   amountRetained!: string;
 
+  @ApiPropertyOptional({ enum: ['PAID', 'PENDING', 'PARTIAL', 'OVERDUE', 'CANCELLED'], default: 'PENDING' })
+  @IsOptional()
+  @IsIn(['PAID', 'PENDING', 'PARTIAL', 'OVERDUE', 'CANCELLED'])
+  status?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   notes?: string;
 }
+
+export class UpdateTalentDistributionDto extends PartialType(CreateTalentDistributionDto) {}

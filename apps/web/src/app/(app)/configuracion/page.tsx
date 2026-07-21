@@ -117,6 +117,31 @@ export default function ConfiguracionPage() {
               />
             </CardContent>
           </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <CatalogManager
+                title="Empresas"
+                endpoint="/global-companies"
+                queryKey={queryKeys.globalCompanies()}
+                fields={[
+                  { name: 'name', label: 'Nombre', required: true },
+                  { name: 'ruc', label: 'RUC', placeholder: 'Opcional' },
+                ]}
+                display={(c) => String(c.name)}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <CatalogManager
+                title="Clientes"
+                endpoint="/global-clients"
+                queryKey={queryKeys.globalClients()}
+                fields={[{ name: 'name', label: 'Nombre', required: true }]}
+                display={(c) => String(c.name)}
+              />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="workspace" className="space-y-2">

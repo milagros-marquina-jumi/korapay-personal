@@ -190,6 +190,25 @@ model PaymentMethod {
   @@map("payment_methods")
 }
 
+model GlobalCompany {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  ruc       String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("global_companies")
+}
+
+model GlobalClient {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("global_clients")
+}
+
 model Person {
   id          String    @id @default(uuid())
   workspaceId String    @map("workspace_id")
@@ -658,7 +677,10 @@ model TalentContract {
   talentProfileId String   @map("talent_profile_id")
   companyId       String?  @map("company_id")
   clientId        String?  @map("client_id")
+  companyName     String?  @map("company_name")
+  clientName      String?  @map("client_name")
   position        String?
+  paymentType     String?  @map("payment_type")
   rate            Decimal? @db.Decimal(18, 2)
   currency        String   @default("PEN")
   startDate       DateTime @map("start_date") @db.Date
@@ -679,14 +701,20 @@ model TalentIncomeDistribution {
   id               String  @id @default(uuid())
   contractId       String  @map("contract_id")
   transactionId    String? @map("transaction_id")
+  date             DateTime? @db.Date
+  year             Int?
+  month            Int?
+  paymentType      String  @default("Mensual") @map("payment_type")
+  salary           Decimal? @db.Decimal(18, 2)
   amountWithDiscount Decimal @map("amount_with_discount") @db.Decimal(18, 2)
   amountReceived   Decimal @map("amount_received") @db.Decimal(18, 2)
   amountRetained   Decimal @map("amount_retained") @db.Decimal(18, 2)
   discountType     String? @map("discount_type")
   discountAmount   Decimal? @map("discount_amount") @db.Decimal(18, 2)
   notes            String?
-  status           String  @default("PENDING_REVIEW")
+  status           String  @default("PENDING")
   createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   contract TalentContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 

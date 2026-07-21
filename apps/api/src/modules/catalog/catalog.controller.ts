@@ -8,11 +8,13 @@ import {
   CreateBankDto,
   CreateCurrencyDto,
   CreateEmploymentContractDto,
+  CreateGlobalCompanyDto,
   CreateProjectDto,
   NamedCatalogDto,
   UpdateApplicationDto,
   UpdateBankDto,
   UpdateEmploymentContractDto,
+  UpdateGlobalCompanyDto,
   UpdateProjectDto,
 } from './catalog.dto';
 import { CatalogService } from './catalog.service';
@@ -147,6 +149,50 @@ export class CatalogController {
   @Delete('currencies/:id')
   removeCurrency(@Param('id') id: string) {
     return this.catalogService.removeCurrency(id);
+  }
+
+  // ---- Global companies ----
+  @Get('global-companies')
+  @ApiOperation({ summary: 'List global companies' })
+  globalCompanies() {
+    return this.catalogService.globalCompanies();
+  }
+
+  @Post('global-companies')
+  createGlobalCompany(@Body() body: CreateGlobalCompanyDto) {
+    return this.catalogService.createGlobalCompany(body);
+  }
+
+  @Patch('global-companies/:id')
+  updateGlobalCompany(@Param('id') id: string, @Body() body: UpdateGlobalCompanyDto) {
+    return this.catalogService.updateGlobalCompany(id, body);
+  }
+
+  @Delete('global-companies/:id')
+  removeGlobalCompany(@Param('id') id: string) {
+    return this.catalogService.removeGlobalCompany(id);
+  }
+
+  // ---- Global clients ----
+  @Get('global-clients')
+  @ApiOperation({ summary: 'List global clients' })
+  globalClients() {
+    return this.catalogService.globalClients();
+  }
+
+  @Post('global-clients')
+  createGlobalClient(@Body() body: NamedCatalogDto) {
+    return this.catalogService.createGlobalClient(body);
+  }
+
+  @Patch('global-clients/:id')
+  updateGlobalClient(@Param('id') id: string, @Body() body: NamedCatalogDto) {
+    return this.catalogService.updateGlobalClient(id, body);
+  }
+
+  @Delete('global-clients/:id')
+  removeGlobalClient(@Param('id') id: string) {
+    return this.catalogService.removeGlobalClient(id);
   }
 
   // ---- Banks (global) ----

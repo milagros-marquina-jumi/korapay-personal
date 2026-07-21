@@ -61,6 +61,20 @@ export class NamedCatalogDto {
   name!: string;
 }
 
+export class CreateGlobalCompanyDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ruc?: string;
+}
+
+export class UpdateGlobalCompanyDto extends PartialType(CreateGlobalCompanyDto) {}
+
 export class CreateBankDto {
   @ApiProperty()
   @IsString()

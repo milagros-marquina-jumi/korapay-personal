@@ -122,6 +122,8 @@ async function clean() {
   await prisma.project.deleteMany();
   await prisma.application.deleteMany();
   await prisma.paymentMethod.deleteMany();
+  await prisma.globalCompany.deleteMany();
+  await prisma.globalClient.deleteMany();
   await prisma.bank.deleteMany();
   await prisma.exchangeRate.deleteMany();
   await prisma.currency.deleteMany();
@@ -640,8 +642,11 @@ async function main() {
   const talentIngresos = load<{
     nombre: string;
     fecha: string;
+    anio: number | null;
+    nMes: number | null;
     empresa: string | null;
     cliente: string | null;
+    pagos: string | null;
     cargo: string | null;
     sueldo: number | null;
     conDescuento: number | null;
@@ -651,25 +656,62 @@ async function main() {
     inicio: string | null;
     fin: string | null;
   }>('talents_ingresos');
+
+  const SPECIAL_PAYMENT = ['GRATIFICACION', 'LIQUIDACION', 'CTS'];
+  const parseEmpresaField = (raw: string | null): { company: string | null; paymentType: string } => {
+    const v = (raw ?? '').trim();
+    if (!v) return { company: null, paymentType: 'Mensual' };
+    const upper = v.toUpperCase();
+    for (const kw of SPECIAL_PAYMENT) {
+      if (upper.startsWith(kw)) {
+        const inner = v.match(/\(([^)]+)\)/)?.[1]?.trim() ?? null;
+        const label = kw === 'GRATIFICACION' ? 'Gratificación' : kw === 'LIQUIDACION' ? 'Liquidación' : 'CTS';
+        return { company: inner, paymentType: label };
+      }
+    }
+    return { company: v.replace(/\s*\(\d+\)\s*$/, '').trim(), paymentType: 'Mensual' };
+  };
+
+  const globalCompanyNames = new Set<string>();
+  const globalClientNames = new Set<string>();
+  for (const r of talentIngresos) {
+    const { company } = parseEmpresaField(r.empresa);
+    if (company) globalCompanyNames.add(company);
+    if (r.cliente?.trim()) globalClientNames.add(r.cliente.trim());
+  }
+  for (const empresa of catalogs.empresas) globalCompanyNames.add(empresa.trim());
+  await prisma.globalCompany.createMany({
+    data: [...globalCompanyNames].map((name) => ({ name })),
+    skipDuplicates: true,
+  });
+  await prisma.globalClient.createMany({
+    data: [...globalClientNames].map((name) => ({ name })),
+    skipDuplicates: true,
+  });
+
   const contractByKey: Record<string, string> = {};
   let distCount = 0;
   let talentIncomeCount = 0;
   for (const r of talentIngresos) {
     const talentId = matchTalent(r.nombre);
     if (!talentId) continue;
-    const contractKey = `${talentId}-${r.empresa ?? ''}-${r.cargo ?? ''}`;
+    const { company, paymentType } = parseEmpresaField(r.empresa);
+    const contractKey = `${talentId}-${company ?? ''}-${r.cargo ?? ''}`;
     let contractId = contractByKey[contractKey];
     if (!contractId) {
       const c = await prisma.talentContract.create({
         data: {
           talentProfileId: talentId,
+          companyName: company,
+          clientName: r.cliente ?? null,
           position: r.cargo ?? null,
+          paymentType: r.pagos ?? null,
           rate: r.sueldo != null ? money(r.sueldo) : null,
           currency: 'PEN',
           startDate: date(r.inicio ?? r.fecha),
           endDate: r.fin ? date(r.fin) : null,
           status: r.fin ? 'FINISHED' : 'ACTIVE',
-          notes: [r.empresa, r.cliente].filter(Boolean).join(' / ') || null,
+          notes: null,
         },
       });
       contractId = c.id;
@@ -679,7 +721,7 @@ async function main() {
       data: {
         workspaceId: mimotech.id,
         type: 'INCOME',
-        concept: `${r.nombre} - ${r.empresa ?? r.cargo ?? 'Ingreso'}`,
+        concept: `${r.nombre} - ${company ?? r.cargo ?? 'Ingreso'}`,
         date: date(r.fecha),
         amountOriginal: money(r.sueldo),
         currency: 'PEN',
@@ -689,14 +731,20 @@ async function main() {
       },
     });
     talentIncomeCount++;
+    const d = date(r.fecha);
     await prisma.talentIncomeDistribution.create({
       data: {
         contractId,
         transactionId: tx.id,
+        date: d,
+        year: r.anio != null ? Math.trunc(r.anio) : d.getUTCFullYear(),
+        month: r.nMes != null ? Math.trunc(r.nMes) : d.getUTCMonth() + 1,
+        paymentType,
+        salary: r.sueldo != null ? money(r.sueldo) : null,
         amountWithDiscount: money(r.conDescuento ?? r.sueldo),
         amountReceived: money(r.recibi),
         amountRetained: money(r.seQuedoCon),
-        status: 'CONFIRMED',
+        status: mapExcelStatus(r.estado),
       },
     });
     distCount++;

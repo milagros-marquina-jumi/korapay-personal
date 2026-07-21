@@ -263,7 +263,8 @@ function TalentosContent() {
   const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState(FILTER_ALL);
+  const [status, setStatus] = useState('ACTIVE');
+  const [pending, setPending] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<Talent | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -304,7 +305,8 @@ function TalentosContent() {
       .filter((t) => {
         const matchesSearch = !q || t.name.toLowerCase().includes(q);
         const matchesStatus = status === FILTER_ALL || t.status === status;
-        return matchesSearch && matchesStatus;
+        const matchesPending = pending !== 'PENDING' || Number(summaryById[t.id]?.totalPending ?? 0) > 0;
+        return matchesSearch && matchesStatus && matchesPending;
       })
       .sort((a, b) => {
         if (a.status !== b.status) return a.status === 'ACTIVE' ? -1 : 1;
@@ -312,9 +314,9 @@ function TalentosContent() {
         const bStart = b.startedWithMeAt ? new Date(b.startedWithMeAt).getTime() : Number.POSITIVE_INFINITY;
         return aStart - bStart;
       });
-  }, [data, search, status]);
+  }, [data, search, status, pending, summaryById]);
 
-  const hasFilters = search.trim().length > 0 || status !== FILTER_ALL;
+  const hasFilters = search.trim().length > 0 || status !== 'ACTIVE' || pending !== FILTER_ALL;
 
   return (
     <div className="space-y-6">
@@ -343,18 +345,28 @@ function TalentosContent() {
         showClear={hasFilters}
         onClear={() => {
           setSearch('');
-          setStatus(FILTER_ALL);
+          setStatus('ACTIVE');
+          setPending(FILTER_ALL);
         }}
         filters={
-          statusOptions.length > 0 && (
+          <>
+            {statusOptions.length > 0 && (
+              <FilterSelect
+                value={status}
+                onValueChange={setStatus}
+                options={statusOptions}
+                placeholder="Estado"
+                allLabel="Todos los estados"
+              />
+            )}
             <FilterSelect
-              value={status}
-              onValueChange={setStatus}
-              options={statusOptions}
-              placeholder="Estado"
-              allLabel="Todos los estados"
+              value={pending}
+              onValueChange={setPending}
+              options={[{ value: 'PENDING', label: 'Con falta de pagar' }]}
+              placeholder="Pagos"
+              allLabel="Todos los pagos"
             />
-          )
+          </>
         }
       />
 
@@ -369,8 +381,19 @@ function TalentosContent() {
           {talents.map((talent) => {
             const talentSummary = summaryById[talent.id];
             return (
-              <Card key={talent.id} className={cn('flex h-full flex-col', highlightClass(talent.id))}>
-                <CardHeader className="flex flex-row items-start justify-between gap-3 p-5">
+              <Card
+                key={talent.id}
+                className={cn(
+                  'relative flex h-full flex-col transition-shadow hover:shadow-lift',
+                  highlightClass(talent.id),
+                )}
+              >
+                <Link
+                  href={`/mimotech/talentos/${talent.id}`}
+                  aria-label={`Ver detalle de ${talent.name}`}
+                  className="absolute inset-0 z-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                <CardHeader className="pointer-events-none flex flex-row items-start justify-between gap-3 p-5">
                   <CardTitle className="flex min-w-0 items-center gap-3">
                     <Avatar>
                       <AvatarFallback>{initials(talent.name)}</AvatarFallback>
@@ -385,38 +408,32 @@ function TalentosContent() {
                   <StatusBadge status={talent.status} />
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-2 px-5 pb-5 text-sm">
-                  <div className="flex items-center justify-between">
+                  <div className="pointer-events-none flex items-center justify-between">
                     <span className="text-muted-foreground">Tiempo conmigo</span>
                     <span className="font-medium">{formatDuration(talent.startedWithMeAt, talent.endedWithMeAt)}</span>
                   </div>
                   {talent.firstJobAt && (
-                    <div className="flex items-center justify-between">
+                    <div className="pointer-events-none flex items-center justify-between">
                       <span className="text-muted-foreground">Tiempo trabajando</span>
                       <span className="font-medium">{formatDuration(talent.firstJobAt)}</span>
                     </div>
                   )}
                   {talent.studyPlace && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <div className="pointer-events-none flex items-center gap-1.5 text-muted-foreground">
                       <GraduationCap className="size-3.5" />
                       <span className="truncate">{talent.studyPlace}</span>
                     </div>
                   )}
                   {talentSummary && Number(talentSummary.totalPending) > 0 && (
-                    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5">
+                    <div className="pointer-events-none flex items-center justify-between rounded-lg bg-muted/50 px-3 py-1.5">
                       <span className="text-muted-foreground">Falta pagar</span>
                       <span className="font-semibold tabular-nums text-destructive">
                         {formatMoney(talentSummary.totalPending, 'PEN')}
                       </span>
                     </div>
                   )}
-                  <div className="mt-auto flex items-center justify-between pt-2">
+                  <div className="relative z-10 mt-auto flex items-center justify-between pt-2">
                     <div className="flex gap-2">
-                      <Link
-                        href={`/mimotech/talentos/${talent.id}`}
-                        className="text-xs font-medium text-brand hover:underline"
-                      >
-                        Ver detalle
-                      </Link>
                       {talent.slideUrl && (
                         <a
                           href={talent.slideUrl}

@@ -184,6 +184,66 @@ export class CatalogService {
     return this.prisma.currency.delete({ where: { id } });
   }
 
+  globalCompanies() {
+    return this.prisma.globalCompany.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
+  }
+
+  async createGlobalCompany(data: { name: string; ruc?: string }) {
+    const dup = await this.prisma.globalCompany.findFirst({
+      where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
+    });
+    if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
+    return this.prisma.globalCompany.create({ data: { name: data.name, ruc: data.ruc ?? null } });
+  }
+
+  async updateGlobalCompany(id: string, data: { name?: string; ruc?: string }) {
+    const found = await this.prisma.globalCompany.findFirst({ where: { id, deletedAt: null } });
+    if (!found) throw new NotFoundException('Empresa no encontrada');
+    if (typeof data.name === 'string') {
+      const dup = await this.prisma.globalCompany.findFirst({
+        where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
+      });
+      if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
+    }
+    return this.prisma.globalCompany.update({ where: { id }, data });
+  }
+
+  async removeGlobalCompany(id: string) {
+    const found = await this.prisma.globalCompany.findFirst({ where: { id, deletedAt: null } });
+    if (!found) throw new NotFoundException('Empresa no encontrada');
+    return this.prisma.globalCompany.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
+  globalClients() {
+    return this.prisma.globalClient.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
+  }
+
+  async createGlobalClient(data: { name: string }) {
+    const dup = await this.prisma.globalClient.findFirst({
+      where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
+    });
+    if (dup) throw new ConflictException('Ya existe un cliente con ese nombre');
+    return this.prisma.globalClient.create({ data: { name: data.name } });
+  }
+
+  async updateGlobalClient(id: string, data: { name?: string }) {
+    const found = await this.prisma.globalClient.findFirst({ where: { id, deletedAt: null } });
+    if (!found) throw new NotFoundException('Cliente no encontrado');
+    if (typeof data.name === 'string') {
+      const dup = await this.prisma.globalClient.findFirst({
+        where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
+      });
+      if (dup) throw new ConflictException('Ya existe un cliente con ese nombre');
+    }
+    return this.prisma.globalClient.update({ where: { id }, data });
+  }
+
+  async removeGlobalClient(id: string) {
+    const found = await this.prisma.globalClient.findFirst({ where: { id, deletedAt: null } });
+    if (!found) throw new NotFoundException('Cliente no encontrado');
+    return this.prisma.globalClient.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
   banks() {
     return this.prisma.bank.findMany({ orderBy: { name: 'asc' } });
   }

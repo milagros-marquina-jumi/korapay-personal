@@ -3,7 +3,14 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
 import { WorkspaceGuard } from '@/common/auth/workspace.guard';
 import { WorkspaceQueryDto } from '@/common/dto/workspace-query.dto';
-import { CreateTalentContractDto, CreateTalentDistributionDto, CreateTalentDto, UpdateTalentDto } from './talent.dto';
+import {
+  CreateTalentContractDto,
+  CreateTalentDistributionDto,
+  CreateTalentDto,
+  UpdateTalentContractDto,
+  UpdateTalentDistributionDto,
+  UpdateTalentDto,
+} from './talent.dto';
 import { TalentService } from './talent.service';
 @ApiTags('Talents')
 @ApiBearerAuth()
@@ -40,6 +47,20 @@ export class TalentController {
   ) {
     return this.talentService.addContract(id, workspaceId, body);
   }
+  @Patch('contracts/:contractId')
+  @ApiOperation({ summary: 'Update talent contract' })
+  updateContract(
+    @Param('contractId') contractId: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+    @Body() body: UpdateTalentContractDto,
+  ) {
+    return this.talentService.updateContract(contractId, workspaceId, { ...body });
+  }
+  @Delete('contracts/:contractId')
+  @ApiOperation({ summary: 'Delete talent contract' })
+  removeContract(@Param('contractId') contractId: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.talentService.removeContract(contractId, workspaceId);
+  }
   @Post('contracts/:contractId/distributions')
   @ApiOperation({ summary: 'Create income distribution' })
   addDistribution(
@@ -47,7 +68,21 @@ export class TalentController {
     @Query() { workspaceId }: WorkspaceQueryDto,
     @Body() body: CreateTalentDistributionDto,
   ) {
-    return this.talentService.addDistribution(contractId, workspaceId, body);
+    return this.talentService.addDistribution(contractId, workspaceId, { ...body });
+  }
+  @Patch('distributions/:distId')
+  @ApiOperation({ summary: 'Update income distribution' })
+  updateDistribution(
+    @Param('distId') distId: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+    @Body() body: UpdateTalentDistributionDto,
+  ) {
+    return this.talentService.updateDistribution(distId, workspaceId, { ...body });
+  }
+  @Delete('distributions/:distId')
+  @ApiOperation({ summary: 'Delete income distribution' })
+  removeDistribution(@Param('distId') distId: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.talentService.removeDistribution(distId, workspaceId);
   }
   @Post(':id/access-token')
   @ApiOperation({ summary: 'Generate talent portal access token' })

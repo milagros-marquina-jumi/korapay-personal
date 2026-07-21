@@ -46,15 +46,19 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     const ItemIcon = item.icon;
     return (
       <div key={item.href} className="space-y-1">
-        <div
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-            groupActive ? 'text-primary' : 'text-muted-foreground',
-          )}
-        >
-          <ItemIcon className="h-[18px] w-[18px]" />
-          {item.label}
-        </div>
+        {item.linkable ? (
+          renderLink({ href: item.href, label: item.label, icon: item.icon })
+        ) : (
+          <div
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+              groupActive ? 'text-primary' : 'text-muted-foreground',
+            )}
+          >
+            <ItemIcon className="h-[18px] w-[18px]" />
+            {item.label}
+          </div>
+        )}
         <div className="space-y-1">{item.children.map((c) => renderLink(c, true))}</div>
       </div>
     );

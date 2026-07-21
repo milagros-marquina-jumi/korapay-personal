@@ -6,6 +6,7 @@ import {
   Building2,
   FileText,
   LayoutDashboard,
+  MailCheck,
   PiggyBank,
   Receipt,
   Rocket,
@@ -21,11 +22,18 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   children?: NavItem[];
+  linkable?: boolean;
 }
 
 const PERSONAL: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/movimientos', label: 'Movimientos', icon: ArrowLeftRight },
+  {
+    href: '/movimientos',
+    label: 'Movimientos',
+    icon: ArrowLeftRight,
+    linkable: true,
+    children: [{ href: '/movimientos/detectados', label: 'Detectados', icon: MailCheck }],
+  },
   { href: '/cuentas', label: 'Cuentas', icon: Wallet },
   { href: '/ahorros', label: 'Ahorros', icon: PiggyBank },
   { href: '/deudas', label: 'Deudas', icon: TrendingUp },

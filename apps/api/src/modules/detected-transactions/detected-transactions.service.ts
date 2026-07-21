@@ -1,0 +1,187 @@
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import Decimal from 'decimal.js';
+import { PrismaService } from '@/common/prisma/prisma.service';
+
+const BLOCKED_TYPES = ['DECLINED_TRANSACTION'];
+const NON_EXPENSE_TYPES = ['REFUND', 'REVERSAL'];
+
+interface ConfirmData {
+  workspaceId: string;
+  accountId?: string;
+  categoryId?: string;
+  projectId?: string;
+  applicationId?: string;
+  description?: string;
+  occurredAt?: string;
+  amount?: string;
+  currency?: string;
+  exchangeRate?: string;
+  createRule?: boolean;
+}
+
+@Injectable()
+export class DetectedTransactionsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(
+    profileId: string,
+    filters: { status?: string; emailSourceId?: string; bankCode?: string; currency?: string; search?: string },
+  ) {
+    const rows = await this.prisma.detectedBankTransaction.findMany({
+      where: {
+        profileId,
+        ...(filters.status ? { status: filters.status } : {}),
+        ...(filters.emailSourceId ? { emailSourceId: filters.emailSourceId } : {}),
+        ...(filters.bankCode ? { bankCode: filters.bankCode } : {}),
+        ...(filters.currency ? { currency: filters.currency } : {}),
+        ...(filters.search
+          ? { merchantNormalized: { contains: filters.search.toUpperCase(), mode: 'insensitive' } }
+          : {}),
+      },
+      orderBy: { occurredAt: 'desc' },
+      take: 500,
+    });
+    return rows.map((r) => ({ ...r, amount: r.amount.toString(), confidence: Number(r.confidence) }));
+  }
+
+  async summary(profileId: string) {
+    const rows = await this.prisma.detectedBankTransaction.findMany({ where: { profileId } });
+    return {
+      pendingReview: rows.filter((r) => r.status === 'PENDING_REVIEW').length,
+      highConfidence: rows.filter((r) => r.status === 'PENDING_REVIEW' && Number(r.confidence) >= 0.8).length,
+      withoutAccount: rows.filter((r) => r.status === 'PENDING_REVIEW' && !r.accountId).length,
+      duplicates: rows.filter((r) => r.status === 'DUPLICATE').length,
+      failed: rows.filter((r) => r.status === 'FAILED').length,
+    };
+  }
+
+  async findOne(id: string, profileId: string) {
+    const row = await this.prisma.detectedBankTransaction.findFirst({ where: { id, profileId } });
+    if (!row) throw new NotFoundException('Movimiento detectado no encontrado');
+    return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
+  }
+
+  async update(id: string, profileId: string, data: Record<string, unknown>) {
+    await this.findOne(id, profileId);
+    const row = await this.prisma.detectedBankTransaction.update({ where: { id }, data: data as never });
+    return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
+  }
+
+  async ignore(id: string, profileId: string) {
+    await this.findOne(id, profileId);
+    const row = await this.prisma.detectedBankTransaction.update({
+      where: { id },
+      data: { status: 'IGNORED', ignoredAt: new Date() },
+    });
+    return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
+  }
+
+  async markDuplicate(id: string, profileId: string) {
+    await this.findOne(id, profileId);
+    const row = await this.prisma.detectedBankTransaction.update({ where: { id }, data: { status: 'DUPLICATE' } });
+    return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
+  }
+
+  async confirm(id: string, profileId: string, data: ConfirmData) {
+    const detected = await this.prisma.detectedBankTransaction.findFirst({ where: { id, profileId } });
+    if (!detected) throw new NotFoundException('Movimiento detectado no encontrado');
+    if (detected.status === 'CONFIRMED') throw new ConflictException('Este movimiento ya fue confirmado');
+    if (detected.status === 'DUPLICATE') throw new BadRequestException('No se puede confirmar un duplicado');
+    if (detected.status === 'IGNORED') throw new BadRequestException('No se puede confirmar un movimiento ignorado');
+    if (BLOCKED_TYPES.includes(detected.transactionType)) {
+      throw new BadRequestException('No se puede confirmar una operación rechazada');
+    }
+
+    const membership = await this.prisma.workspaceMember.findFirst({
+      where: { workspaceId: data.workspaceId, profileId },
+    });
+    if (!membership) throw new BadRequestException('Workspace inválido');
+
+    const type = NON_EXPENSE_TYPES.includes(detected.transactionType)
+      ? 'INCOME'
+      : detected.transactionType === 'TRANSFER_RECEIVED'
+        ? 'INCOME'
+        : 'EXPENSE';
+    const amount = data.amount ?? detected.amount.toString();
+    const currency = data.currency ?? detected.currency;
+    const occurredAt = data.occurredAt ? new Date(data.occurredAt) : detected.occurredAt;
+    const exchangeRate = data.exchangeRate ?? (detected.exchangeRate ? detected.exchangeRate.toString() : '1');
+    const amountBase = new Decimal(amount).times(new Decimal(exchangeRate)).toFixed(2);
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.create({
+        data: {
+          workspaceId: data.workspaceId,
+          type,
+          concept: data.description ?? detected.description,
+          description: detected.merchantOriginal ?? null,
+          date: occurredAt,
+          amountOriginal: amount,
+          currency,
+          exchangeRate,
+          amountBase,
+          categoryId: data.categoryId ?? detected.categoryId ?? undefined,
+          accountId: data.accountId ?? detected.accountId ?? undefined,
+          projectId: data.projectId ?? detected.projectId ?? undefined,
+          applicationId: data.applicationId ?? detected.applicationId ?? undefined,
+          status: 'PAID',
+          notes: `Importado desde correo bancario (${detected.bankName ?? detected.bankCode ?? 'banco'})`,
+          tags: ['EMAIL_IMPORT'],
+        },
+      });
+      const updated = await tx.detectedBankTransaction.update({
+        where: { id },
+        data: {
+          status: 'CONFIRMED',
+          transactionId: transaction.id,
+          workspaceId: data.workspaceId,
+          accountId: data.accountId ?? detected.accountId,
+          categoryId: data.categoryId ?? detected.categoryId,
+          confirmedAt: new Date(),
+          confirmedBy: profileId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          workspaceId: data.workspaceId,
+          profileId,
+          action: 'CONFIRM',
+          entity: 'DetectedBankTransaction',
+          entityId: id,
+          changes: { transactionId: transaction.id, amount, currency },
+        },
+      });
+      return { transaction, updated };
+    });
+
+    if (data.createRule && detected.merchantNormalized) {
+      await this.prisma.reconciliationRule.create({
+        data: {
+          profileId,
+          workspaceId: data.workspaceId,
+          name: `Auto: ${detected.merchantNormalized}`,
+          merchantPattern: detected.merchantNormalized,
+          bankCode: detected.bankCode,
+          targetWorkspaceId: data.workspaceId,
+          targetAccountId: data.accountId ?? null,
+          targetCategoryId: data.categoryId ?? null,
+          autoConfirm: false,
+        },
+      });
+    }
+
+    return {
+      status: 'confirmed',
+      transactionId: result.transaction.id,
+      detectedTransactionId: id,
+    };
+  }
+
+  async bulkIgnore(ids: string[], profileId: string) {
+    const result = await this.prisma.detectedBankTransaction.updateMany({
+      where: { id: { in: ids }, profileId, status: 'PENDING_REVIEW' },
+      data: { status: 'IGNORED', ignoredAt: new Date() },
+    });
+    return { ignored: result.count };
+  }
+}

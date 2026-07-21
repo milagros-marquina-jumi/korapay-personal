@@ -1,0 +1,10 @@
+{
+  "provider": "GMAIL_APPS_SCRIPT",
+  "providerMessageId": "fixture-refund-001",
+  "providerThreadId": "fixture-refund-thread-1",
+  "sourceEmail": "demo.personal@gmail.com",
+  "sender": "BCP <notificaciones@notificacionesbcp.com.pe>",
+  "subject": "Devolucion procesada",
+  "receivedAt": "2026-07-17T16:00:00-05:00",
+  "textBody": "Se proceso una devolucion por S/ 89.90 a tu tarjeta terminada en 4589. Operacion original: ABC12345."
+}

@@ -1,0 +1,10 @@
+{
+  "provider": "GMAIL_APPS_SCRIPT",
+  "providerMessageId": "fixture-declined-001",
+  "providerThreadId": "fixture-declined-thread-1",
+  "sourceEmail": "demo.personal@gmail.com",
+  "sender": "Interbank <alertas@interbank.pe>",
+  "subject": "Operacion rechazada",
+  "receivedAt": "2026-07-18T08:00:00-05:00",
+  "textBody": "Tu operacion por S/ 500.00 con tu tarjeta terminada en 9021 fue rechazada por fondos insuficientes."
+}

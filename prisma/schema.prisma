@@ -768,3 +768,121 @@ model AuditLog {
   @@index([profileId])
   @@map("audit_logs")
 }
+
+model EmailSource {
+  id                        String    @id @default(uuid())
+  profileId                 String    @map("profile_id")
+  name                      String
+  email                     String
+  provider                  String    @default("GMAIL_APPS_SCRIPT")
+  status                    String    @default("ACTIVE")
+  defaultWorkspaceId        String?   @map("default_workspace_id")
+  defaultAccountId          String?   @map("default_account_id")
+  tokenHash                 String    @map("token_hash")
+  tokenPrefix               String    @map("token_prefix")
+  lastReceivedAt            DateTime? @map("last_received_at")
+  lastSuccessfulIngestionAt DateTime? @map("last_successful_ingestion_at")
+  createdAt                 DateTime  @default(now()) @map("created_at")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+  revokedAt                 DateTime? @map("revoked_at")
+
+  processedEmails ProcessedEmail[]
+  detectedTransactions DetectedBankTransaction[]
+
+  @@unique([profileId, provider, email])
+  @@index([tokenHash])
+  @@map("email_sources")
+}
+
+model ProcessedEmail {
+  id                String    @id @default(uuid())
+  emailSourceId     String    @map("email_source_id")
+  providerMessageId String    @map("provider_message_id")
+  providerThreadId  String?   @map("provider_thread_id")
+  sender            String
+  subject           String
+  receivedAt        DateTime  @map("received_at")
+  contentHash       String    @map("content_hash")
+  processingStatus  String    @default("RECEIVED") @map("processing_status")
+  parserKey         String?   @map("parser_key")
+  errorCode         String?   @map("error_code")
+  errorMessage      String?   @map("error_message")
+  processedAt       DateTime? @map("processed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  emailSource EmailSource @relation(fields: [emailSourceId], references: [id], onDelete: Cascade)
+  detectedTransactions DetectedBankTransaction[]
+
+  @@unique([emailSourceId, providerMessageId])
+  @@index([emailSourceId, createdAt])
+  @@map("processed_emails")
+}
+
+model DetectedBankTransaction {
+  id                 String    @id @default(uuid())
+  profileId          String    @map("profile_id")
+  workspaceId        String?   @map("workspace_id")
+  emailSourceId      String    @map("email_source_id")
+  processedEmailId   String    @map("processed_email_id")
+  accountId          String?   @map("account_id")
+  categoryId         String?   @map("category_id")
+  projectId          String?   @map("project_id")
+  applicationId      String?   @map("application_id")
+  bankCode           String?   @map("bank_code")
+  bankName           String?   @map("bank_name")
+  cardLast4          String?   @map("card_last4")
+  merchantOriginal   String?   @map("merchant_original")
+  merchantNormalized String?   @map("merchant_normalized")
+  description        String
+  transactionType    String    @map("transaction_type")
+  amount             Decimal   @db.Decimal(18, 2)
+  currency           String    @default("PEN")
+  exchangeRate       Decimal?  @map("exchange_rate") @db.Decimal(18, 6)
+  occurredAt         DateTime  @map("occurred_at")
+  externalReference  String?   @map("external_reference")
+  installments       Int?
+  confidence         Decimal   @db.Decimal(4, 2)
+  fingerprint        String
+  status             String    @default("PENDING_REVIEW")
+  transactionId      String?   @map("transaction_id")
+  duplicateOfId      String?   @map("duplicate_of_id")
+  rawDataSanitized   Json?     @map("raw_data_sanitized")
+  confirmedAt        DateTime? @map("confirmed_at")
+  confirmedBy        String?   @map("confirmed_by")
+  ignoredAt          DateTime? @map("ignored_at")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  emailSource    EmailSource    @relation(fields: [emailSourceId], references: [id], onDelete: Cascade)
+  processedEmail ProcessedEmail @relation(fields: [processedEmailId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, status])
+  @@index([fingerprint])
+  @@map("detected_bank_transactions")
+}
+
+model ReconciliationRule {
+  id                  String   @id @default(uuid())
+  profileId           String   @map("profile_id")
+  workspaceId         String   @map("workspace_id")
+  emailSourceId       String?  @map("email_source_id")
+  name                String
+  senderPattern       String?  @map("sender_pattern")
+  subjectPattern      String?  @map("subject_pattern")
+  merchantPattern     String?  @map("merchant_pattern")
+  bankCode            String?  @map("bank_code")
+  cardLast4           String?  @map("card_last4")
+  targetWorkspaceId   String   @map("target_workspace_id")
+  targetAccountId     String?  @map("target_account_id")
+  targetCategoryId    String?  @map("target_category_id")
+  targetProjectId     String?  @map("target_project_id")
+  targetApplicationId String?  @map("target_application_id")
+  autoConfirm         Boolean  @default(false) @map("auto_confirm")
+  priority            Int      @default(100)
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([profileId, active, priority])
+  @@map("reconciliation_rules")
+}

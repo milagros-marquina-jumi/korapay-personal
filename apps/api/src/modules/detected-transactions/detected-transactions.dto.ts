@@ -1,0 +1,135 @@
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsNotEmpty,
+  IsNumberString,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+
+export class ListDetectedDto {
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  emailSourceId?: string;
+
+  @IsOptional()
+  @IsString()
+  bankCode?: string;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+}
+
+export class UpdateDetectedDto {
+  @IsOptional()
+  @IsString()
+  workspaceId?: string;
+
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @IsOptional()
+  @IsString()
+  applicationId?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+}
+
+export class ConfirmDetectedDto {
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @IsOptional()
+  @IsString()
+  applicationId?: string;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsDateString()
+  occurredAt?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  amount?: string;
+
+  @IsOptional()
+  @IsIn(['PEN', 'USD'])
+  currency?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  exchangeRate?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  createRule?: boolean;
+}
+
+export class BulkActionDto {
+  @IsArray()
+  @IsString({ each: true })
+  ids!: string[];
+}
+
+export class BulkConfirmDto {
+  @IsArray()
+  @Type(() => ConfirmItemDto)
+  items!: ConfirmItemDto[];
+}
+
+export class ConfirmItemDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @IsOptional()
+  @IsString()
+  accountId?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+}

@@ -1,0 +1,10 @@
+{
+  "provider": "GMAIL_APPS_SCRIPT",
+  "providerMessageId": "fixture-bbva-001",
+  "providerThreadId": "fixture-bbva-thread-1",
+  "sourceEmail": "demo.personal@gmail.com",
+  "sender": "BBVA <notificaciones@bbva.pe>",
+  "subject": "Notificacion de consumo",
+  "receivedAt": "2026-07-18T13:00:00-05:00",
+  "textBody": "Se registro un consumo en TOTTUS por S/ 156.40 con tu tarjeta terminada en 3322. Operacion 998877."
+}

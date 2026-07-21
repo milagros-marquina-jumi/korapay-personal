@@ -1,0 +1,10 @@
+{
+  "provider": "GMAIL_APPS_SCRIPT",
+  "providerMessageId": "fixture-bcp-usd-001",
+  "providerThreadId": "fixture-bcp-thread-2",
+  "sourceEmail": "demo.trabajo@gmail.com",
+  "sender": "BCP <notificaciones@notificacionesbcp.com.pe>",
+  "subject": "Consumo en el exterior con tu tarjeta",
+  "receivedAt": "2026-07-20T09:10:00-05:00",
+  "textBody": "Realizaste una compra en OPENAI por US$ 20.00 con tu tarjeta terminada en 4589. Operacion: OAI-556677."
+}

@@ -16,6 +16,7 @@
 		"db:push": "prisma db push --schema=../../prisma/schema.prisma",
 		"db:migrate": "prisma migrate dev --schema=../../prisma/schema.prisma",
 		"db:seed": "tsx ../../prisma/seed.ts",
+		"email:ingest:fixture": "tsx scripts/ingest-fixture.ts",
 		"db:studio": "prisma studio --schema=../../prisma/schema.prisma",
 		"openapi": "tsx scripts/generate-openapi.ts"
 	},

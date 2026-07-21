@@ -1,5 +1,7 @@
 'use client';
 
+import { Mail, SlidersHorizontal } from 'lucide-react';
+import Link from 'next/link';
 import { CatalogManager } from '@/components/catalog/catalog-manager';
 import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
@@ -23,7 +25,35 @@ export default function ConfiguracionPage() {
           <TabsTrigger value="cambio">Tipo de cambio</TabsTrigger>
           <TabsTrigger value="globales">Catálogos globales</TabsTrigger>
           <TabsTrigger value="workspace">Catálogos del workspace</TabsTrigger>
+          <TabsTrigger value="integraciones">Integraciones</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="integraciones" className="grid gap-4 md:grid-cols-2">
+          <Link href="/configuracion/integraciones/correo">
+            <Card className="h-full transition-shadow hover:shadow-lift">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Mail className="size-5 text-brand" /> Correos bancarios
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Conecta tus correos mediante Google Apps Script para importar consumos automáticamente.
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/configuracion/reglas-conciliacion">
+            <Card className="h-full transition-shadow hover:shadow-lift">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <SlidersHorizontal className="size-5 text-brand" /> Reglas de conciliación
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Asigna automáticamente workspace, cuenta y categoría según el comercio.
+              </CardContent>
+            </Card>
+          </Link>
+        </TabsContent>
 
         <TabsContent value="workspaces">
           <Card>

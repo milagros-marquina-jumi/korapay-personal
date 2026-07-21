@@ -100,6 +100,12 @@ export class CreateTransactionDto {
   @IsString()
   projectId?: string;
 
+  @ApiPropertyOptional({ type: [String], description: 'IDs de proyectos asociados (un costo puede tener varios)' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  projectIds?: string[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

@@ -1,15 +1,19 @@
 'use client';
 
-import { EmptyState } from '@korapay/ui';
+import { formatMoney } from '@korapay/domain';
+import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { toast } from 'sonner';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
 import type { TalentLedgerEntry, TalentPortalProfile } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 function normalize(values: LedgerFormValues) {
   return {
@@ -93,6 +97,62 @@ export default function TalentPortalPage() {
         <p className="text-sm text-muted-foreground">Estado de cuenta</p>
         <h1 className="font-display text-2xl font-bold tracking-tight">{profile.talent.name}</h1>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Mi deuda</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {profile.debtRows.length ? (
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Descripción</TableHead>
+                    <TableHead className="text-right">Deuda</TableHead>
+                    <TableHead className="text-right">Falta pagar</TableHead>
+                    <TableHead>Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {profile.debtRows.map((d) => (
+                    <TableRow key={d.id}>
+                      <TableCell className="whitespace-nowrap text-sm">{formatDate(d.date)}</TableCell>
+                      <TableCell className="max-w-xs truncate text-sm" title={d.description}>
+                        {d.description || '—'}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-warning">
+                        {formatMoney(d.debt, 'PEN')}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-destructive">
+                        {formatMoney(d.pending, 'PEN')}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={d.status} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="border-t-2 bg-muted/40">
+                    <TableCell colSpan={2} className="text-sm font-semibold">
+                      Total
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums text-warning">
+                      {formatMoney(profile.summary.totalDebt, 'PEN')}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums text-destructive">
+                      {formatMoney(profile.summary.totalPending, 'PEN')}
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">No tienes deudas pendientes.</p>
+          )}
+        </CardContent>
+      </Card>
 
       <LedgerSection
         entries={entries ?? []}

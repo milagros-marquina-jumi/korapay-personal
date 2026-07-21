@@ -104,22 +104,6 @@ export default function ConfiguracionPage() {
           <Card>
             <CardContent className="pt-6">
               <CatalogManager
-                title="Monedas"
-                endpoint="/currencies"
-                queryKey={queryKeys.currencies()}
-                fields={[
-                  { name: 'code', label: 'Código', required: true, placeholder: 'PEN' },
-                  { name: 'symbol', label: 'Símbolo', required: true, placeholder: 'S/' },
-                  { name: 'name', label: 'Nombre', required: true },
-                ]}
-                display={(c) => `${c.symbol} ${c.code} — ${c.name}`}
-                editable={false}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <CatalogManager
                 title="Empresas"
                 endpoint="/global-companies"
                 queryKey={queryKeys.globalCompanies()}
@@ -139,6 +123,22 @@ export default function ConfiguracionPage() {
                 queryKey={queryKeys.globalClients()}
                 fields={[{ name: 'name', label: 'Nombre', required: true }]}
                 display={(c) => String(c.name)}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <CatalogManager
+                title="Monedas"
+                endpoint="/currencies"
+                queryKey={queryKeys.currencies()}
+                fields={[
+                  { name: 'code', label: 'Código', required: true, placeholder: 'PEN' },
+                  { name: 'symbol', label: 'Símbolo', required: true, placeholder: 'S/' },
+                  { name: 'name', label: 'Nombre', required: true },
+                ]}
+                display={(c) => `${c.symbol} ${c.code} — ${c.name}`}
+                editable={false}
               />
             </CardContent>
           </Card>
@@ -162,22 +162,6 @@ export default function ConfiguracionPage() {
                     { name: 'emoji', label: 'Emoji', placeholder: '📁' },
                   ]}
                   display={(c) => `${c.emoji ?? ''} ${c.name}`}
-                />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <CatalogManager
-                  title="Empresas"
-                  endpoint="/companies"
-                  queryKey={queryKeys.companies(ws)}
-                  extraBody={{ workspaceId: ws }}
-                  fields={[
-                    { name: 'name', label: 'Nombre', required: true },
-                    { name: 'ruc', label: 'RUC' },
-                    { name: 'industry', label: 'Industria' },
-                  ]}
-                  display={(c) => String(c.name)}
                 />
               </CardContent>
             </Card>

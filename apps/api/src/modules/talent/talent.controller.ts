@@ -7,6 +7,7 @@ import {
   CreateTalentContractDto,
   CreateTalentDistributionDto,
   CreateTalentDto,
+  TalentReportQueryDto,
   UpdateTalentContractDto,
   UpdateTalentDistributionDto,
   UpdateTalentDto,
@@ -21,6 +22,16 @@ export class TalentController {
   @Get()
   findAll(@Query() { workspaceId }: WorkspaceQueryDto) {
     return this.talentService.findAll(workspaceId);
+  }
+  @Get('report/global')
+  @ApiOperation({ summary: 'Global Mimotalents report: income/expense per person + pivots' })
+  globalReport(@Query() { workspaceId, year }: TalentReportQueryDto) {
+    return this.talentService.globalReport(workspaceId, year);
+  }
+  @Get(':id/report')
+  @ApiOperation({ summary: 'Talent income vs expense report' })
+  report(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.talentService.report(id, workspaceId);
   }
   @Get(':id')
   findOne(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {

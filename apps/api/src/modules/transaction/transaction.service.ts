@@ -101,6 +101,8 @@ export class TransactionService {
           account: true,
           category: true,
           recurrenceRule: true,
+          application: true,
+          projects: { select: { id: true, name: true } },
         },
       }),
       this.prisma.transaction.count({ where }),
@@ -209,7 +211,14 @@ export class TransactionService {
   async findOne(id: string, workspaceId: string) {
     const tx = await this.prisma.transaction.findFirst({
       where: { id, workspaceId, deletedAt: null },
-      include: { account: true, category: true, splits: true, recurrenceRule: true },
+      include: {
+        account: true,
+        category: true,
+        splits: true,
+        recurrenceRule: true,
+        application: true,
+        projects: { select: { id: true, name: true } },
+      },
     });
     if (!tx) throw new NotFoundException('Transaction not found');
     return {
@@ -235,6 +244,7 @@ export class TransactionService {
     companyId?: string;
     clientId?: string;
     projectId?: string;
+    projectIds?: string[];
     applicationId?: string;
     notes?: string;
     tags?: string[];
@@ -253,6 +263,9 @@ export class TransactionService {
     const amountBase =
       currency === 'PEN' ? data.amount : new Decimal(data.amount).mul(new Decimal(exchangeRate)).toFixed(2);
 
+    const projectIds = (data.projectIds ?? []).filter(Boolean);
+    const primaryProjectId = data.projectId ?? projectIds[0];
+
     const baseData = {
       workspaceId: data.workspaceId,
       type: data.type,
@@ -267,10 +280,11 @@ export class TransactionService {
       personId: data.personId,
       companyId: data.companyId,
       clientId: data.clientId,
-      projectId: data.projectId,
+      projectId: primaryProjectId,
       applicationId: data.applicationId,
       notes: data.notes,
       tags: data.tags ?? [],
+      ...(projectIds.length ? { projects: { connect: projectIds.map((id) => ({ id })) } } : {}),
     };
 
     const isRecurring = !!(data.isRecurring && data.recurrenceFrequency);
@@ -351,11 +365,26 @@ export class TransactionService {
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId as string;
     if (data.companyId !== undefined) updateData.companyId = data.companyId as string;
     if (data.accountId !== undefined) updateData.accountId = data.accountId as string;
+    if (data.applicationId !== undefined) updateData.applicationId = data.applicationId as string;
     if (data.notes !== undefined) updateData.notes = data.notes as string;
     if (Array.isArray(data.tags)) updateData.tags = data.tags as string[];
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
     if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring as boolean;
-    return this.prisma.transaction.update({ where: { id }, data: updateData });
+
+    const projectIds = Array.isArray(data.projectIds) ? (data.projectIds as string[]).filter(Boolean) : undefined;
+    if (data.projectId !== undefined) {
+      updateData.projectId = (data.projectId as string) || null;
+    } else if (projectIds) {
+      updateData.projectId = projectIds[0] ?? null;
+    }
+
+    return this.prisma.transaction.update({
+      where: { id },
+      data: {
+        ...updateData,
+        ...(projectIds ? { projects: { set: projectIds.map((pid) => ({ id: pid })) } } : {}),
+      },
+    });
   }
   async remove(id: string, workspaceId: string) {
     await this.findOne(id, workspaceId);

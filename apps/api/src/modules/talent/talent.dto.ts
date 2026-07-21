@@ -13,6 +13,21 @@ import {
   Min,
 } from 'class-validator';
 
+export class TalentReportQueryDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @ApiPropertyOptional({ example: 2025 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year?: number;
+}
+
 export class CreateTalentDto {
   @ApiProperty()
   @IsString()

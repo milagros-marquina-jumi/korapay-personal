@@ -2,9 +2,9 @@
 
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Plus, Server } from 'lucide-react';
+import { Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -13,10 +13,13 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch, buildQuery } from '@/lib/api';
-import type { Application, Category, Paginated, Transaction } from '@/lib/api.types';
+import type { Application, Paginated, Project, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
@@ -27,23 +30,26 @@ const STATUS_LABELS: Record<string, string> = {
   PARTIAL: 'Parcial',
   CANCELLED: 'Cancelado',
   PENDING_REVIEW: 'Revisión',
-  ACTIVE: 'Activo',
-  INACTIVE: 'Inactivo',
 };
 
 function CostosContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const ws = activeWorkspaceId ?? '';
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>(FILTER_ALL);
-  const [categoryId, setCategoryId] = useState<string>(FILTER_ALL);
   const [applicationId, setApplicationId] = useState<string>(FILTER_ALL);
+  const [projectId, setProjectId] = useState<string>(FILTER_ALL);
+  const [editing, setEditing] = useState<Transaction | null>(null);
+  const [usdDetail, setUsdDetail] = useState<Transaction | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { type: 'BUSINESS_COST', all: true }),
+    queryKey: queryKeys.transactions(ws, { type: 'BUSINESS_COST', all: true }),
     queryFn: () =>
       apiFetch<Paginated<Transaction>>(
         `/transactions${buildQuery({
-          workspaceId: activeWorkspaceId ?? '',
+          workspaceId: ws,
           type: 'BUSINESS_COST',
           page: 1,
           pageSize: 500,
@@ -51,19 +57,27 @@ function CostosContent() {
           sortOrder: 'desc',
         })}`,
       ),
-    enabled: !!activeWorkspaceId,
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: queryKeys.categories(activeWorkspaceId ?? ''),
-    queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${activeWorkspaceId}`),
-    enabled: !!activeWorkspaceId,
+    enabled: !!ws,
   });
 
   const { data: applications } = useQuery({
-    queryKey: queryKeys.applications(activeWorkspaceId ?? ''),
-    queryFn: () => apiFetch<Application[]>(`/applications?workspaceId=${activeWorkspaceId}`),
-    enabled: !!activeWorkspaceId,
+    queryKey: queryKeys.applications(ws),
+    queryFn: () => apiFetch<Application[]>(`/applications?workspaceId=${ws}`),
+    enabled: !!ws,
+  });
+
+  const { data: projects } = useQuery({
+    queryKey: queryKeys.projects(ws),
+    queryFn: () => apiFetch<Project[]>(`/projects?workspaceId=${ws}`),
+    enabled: !!ws,
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/transactions/${id}?workspaceId=${ws}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions', ws] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(ws) });
+    },
   });
 
   const statusOptions = useMemo(() => {
@@ -71,23 +85,23 @@ function CostosContent() {
     return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
   }, [data?.data]);
 
-  const categoryOptions = useMemo(() => (categories ?? []).map((c) => ({ value: c.id, label: c.name })), [categories]);
-
   const applicationOptions = useMemo(
     () => (applications ?? []).map((a) => ({ value: a.id, label: a.name })),
     [applications],
   );
+  const projectOptions = useMemo(() => (projects ?? []).map((p) => ({ value: p.id, label: p.name })), [projects]);
 
   const rows = useMemo(() => {
     return (data?.data ?? []).filter((tx) => {
       if (status !== FILTER_ALL && tx.status !== status) return false;
-      if (categoryId !== FILTER_ALL && tx.categoryId !== categoryId) return false;
       if (applicationId !== FILTER_ALL && tx.applicationId !== applicationId) return false;
+      if (projectId !== FILTER_ALL && !(tx.projects ?? []).some((p) => p.id === projectId)) return false;
       return true;
     });
-  }, [data?.data, status, categoryId, applicationId]);
+  }, [data?.data, status, applicationId, projectId]);
 
   const totalCostos = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
+  const appName = (id?: string | null) => applications?.find((a) => a.id === id)?.name;
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
@@ -99,31 +113,90 @@ function CostosContent() {
       {
         accessorKey: 'concept',
         header: ({ column }) => <SortableHeader column={column} label="Aplicación" />,
-        cell: ({ row }) => <span className="font-medium">{row.original.concept}</span>,
+        cell: ({ row }) => (
+          <span className="font-medium">{appName(row.original.applicationId) ?? row.original.concept}</span>
+        ),
       },
       {
-        id: 'description',
-        header: 'Descripción',
-        cell: ({ row }) => <span className="text-muted-foreground">{row.original.description ?? '-'}</span>,
+        id: 'projects',
+        header: 'Proyecto(s)',
+        cell: ({ row }) => {
+          const names = (row.original.projects ?? []).map((p) => p.name);
+          if (!names.length) return <span className="text-muted-foreground">—</span>;
+          return (
+            <div className="flex max-w-[16rem] flex-wrap gap-1">
+              {names.map((n) => (
+                <span key={n} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                  {n}
+                </span>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'bank',
+        header: 'Banco',
+        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.tags?.[0] ?? '—'}</span>,
       },
       {
         id: 'amount',
         accessorFn: (r) => Number(r.amountBase),
         sortingFn: 'basic',
-        header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
-        cell: ({ row }) => (
-          <div className="text-right font-semibold tabular-nums text-destructive">
-            {formatMoney(row.original.amountOriginal, row.original.currency as 'PEN' | 'USD')}
-          </div>
-        ),
+        header: ({ column }) => <SortableHeader column={column} label="Monto (S/)" className="ml-auto" />,
+        cell: ({ row }) => {
+          const tx = row.original;
+          const soles = (
+            <span className="font-semibold tabular-nums text-destructive">{formatMoney(tx.amountBase, 'PEN')}</span>
+          );
+          if (tx.currency === 'USD') {
+            return (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setUsdDetail(tx)}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
+                  title="Ver conversión en dólares"
+                >
+                  {soles}
+                  <span className="rounded bg-brand/10 px-1 text-[10px] font-medium text-brand">USD</span>
+                </button>
+              </div>
+            );
+          }
+          return <div className="text-right">{soles}</div>;
+        },
       },
       {
         accessorKey: 'status',
         header: 'Estado',
         cell: ({ row }) => <StatusBadge status={row.original.status} />,
       },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-0.5">
+            <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
+            <IconAction
+              icon={Trash2}
+              label="Eliminar"
+              destructive
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Eliminar costo',
+                  description: `Se eliminará "${appName(row.original.applicationId) ?? row.original.concept}". Esta acción no se puede deshacer.`,
+                  confirmLabel: 'Eliminar',
+                  destructive: true,
+                });
+                if (ok) removeMutation.mutate(row.original.id);
+              }}
+            />
+          </div>
+        ),
+      },
     ],
-    [],
+    [confirm, removeMutation, applications],
   );
 
   return (
@@ -132,9 +205,9 @@ function CostosContent() {
         title="Costos de infraestructura"
         description="Costos de aplicaciones y servicios de MIMOTECH"
         action={
-          activeWorkspaceId && (
+          ws && (
             <TransactionFormDialog
-              workspaceId={activeWorkspaceId}
+              workspaceId={ws}
               defaultType="BUSINESS_COST"
               trigger={
                 <Button>
@@ -159,12 +232,12 @@ function CostosContent() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar costos..."
-        showClear={search !== '' || status !== FILTER_ALL || categoryId !== FILTER_ALL || applicationId !== FILTER_ALL}
+        showClear={search !== '' || status !== FILTER_ALL || applicationId !== FILTER_ALL || projectId !== FILTER_ALL}
         onClear={() => {
           setSearch('');
           setStatus(FILTER_ALL);
-          setCategoryId(FILTER_ALL);
           setApplicationId(FILTER_ALL);
+          setProjectId(FILTER_ALL);
         }}
         filters={
           <>
@@ -176,18 +249,18 @@ function CostosContent() {
               allLabel="Todo estado"
             />
             <FilterSelect
-              value={categoryId}
-              onValueChange={setCategoryId}
-              options={categoryOptions}
-              placeholder="Categoría"
-              allLabel="Toda categoría"
-            />
-            <FilterSelect
               value={applicationId}
               onValueChange={setApplicationId}
               options={applicationOptions}
               placeholder="Aplicación"
               allLabel="Toda app"
+            />
+            <FilterSelect
+              value={projectId}
+              onValueChange={setProjectId}
+              options={projectOptions}
+              placeholder="Proyecto"
+              allLabel="Todo proyecto"
             />
           </>
         }
@@ -201,6 +274,45 @@ function CostosContent() {
         onGlobalFilterChange={setSearch}
         emptyState={<EmptyState title="Sin costos" description="Registra tu primer costo con el botón de arriba." />}
       />
+
+      <Dialog open={usdDetail !== null} onOpenChange={(next) => !next && setUsdDetail(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conversión a soles</DialogTitle>
+            <DialogDescription>
+              {usdDetail ? (appName(usdDetail.applicationId) ?? usdDetail.concept) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {usdDetail && (
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Monto en dólares</span>
+                <span className="font-semibold tabular-nums">{formatMoney(usdDetail.amountOriginal, 'USD')}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Tipo de cambio del {formatDate(usdDetail.date)}</span>
+                <span className="font-medium tabular-nums">S/ {Number(usdDetail.exchangeRate ?? 0).toFixed(3)}</span>
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="font-medium">Total en soles</span>
+                <span className="font-semibold tabular-nums text-brand">
+                  {formatMoney(usdDetail.amountBase, 'PEN')}
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {ws && editing && (
+        <TransactionFormDialog
+          workspaceId={ws}
+          defaultType="BUSINESS_COST"
+          transaction={editing}
+          open={!!editing}
+          onOpenChange={(next) => !next && setEditing(null)}
+        />
+      )}
     </div>
   );
 }

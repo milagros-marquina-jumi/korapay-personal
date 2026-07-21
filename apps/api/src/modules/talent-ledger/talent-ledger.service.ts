@@ -106,6 +106,23 @@ export class TalentLedgerService {
     return this.totals(entries);
   }
 
+  async debtDetail(talentId: string) {
+    const entries = await this.prisma.talentLedgerEntry.findMany({
+      where: { talentId, deletedAt: null },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    });
+    return entries
+      .filter((e) => new Decimal(String(e.debtAmount)).gt(0) || new Decimal(String(e.pendingAmount)).gt(0))
+      .map((e) => ({
+        id: e.id,
+        date: e.date.toISOString().slice(0, 10),
+        description: e.description ?? '',
+        debt: new Decimal(String(e.debtAmount)).toFixed(2),
+        pending: new Decimal(String(e.pendingAmount)).toFixed(2),
+        status: e.status,
+      }));
+  }
+
   async create(workspaceId: string, talentId: string, data: LedgerCreateInput, source: string, actor: LedgerActor) {
     const talent = await this.prisma.talentProfile.findFirst({ where: { id: talentId, workspaceId, deletedAt: null } });
     if (!talent) throw new NotFoundException('Talento no encontrado');

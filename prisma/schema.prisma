@@ -285,7 +285,8 @@ model Project {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions Transaction[] @relation("TransactionProjects")
 
   @@index([workspaceId])
   @@map("projects")
@@ -305,6 +306,7 @@ model Application {
 
   workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   subscriptions Subscription[]
+  transactions  Transaction[]
 
   @@index([workspaceId])
   @@map("applications")
@@ -359,6 +361,8 @@ model Transaction {
   linkedFrom         Transaction[]   @relation("LinkedTransactions")
   recurrenceRule     RecurrenceRule? @relation(fields: [recurrenceRuleId], references: [id])
   splits             TransactionSplit[]
+  projects           Project[]       @relation("TransactionProjects")
+  application        Application?    @relation(fields: [applicationId], references: [id])
 
   @@index([workspaceId, date])
   @@index([workspaceId, type])

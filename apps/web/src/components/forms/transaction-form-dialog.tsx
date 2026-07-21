@@ -26,7 +26,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
-import type { BankCatalog, Category, Company, PaymentMethodCatalog, Transaction } from '@/lib/api.types';
+import type {
+  Application,
+  BankCatalog,
+  Category,
+  Company,
+  PaymentMethodCatalog,
+  Project,
+  Transaction,
+} from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const TYPE_OPTIONS = [
@@ -51,6 +59,8 @@ const schema = z.object({
   status: z.enum(['PAID', 'PENDING', 'OVERDUE', 'PARTIAL']),
   categoryId: z.string().optional(),
   companyId: z.string().optional(),
+  applicationId: z.string().optional(),
+  projectIds: z.array(z.string()).optional(),
   paymentTags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
@@ -134,6 +144,18 @@ export function TransactionFormDialog({
   });
 
   const isRecurring = watch('isRecurring');
+  const currentType = watch('type');
+  const showBusinessFields = currentType === 'BUSINESS_COST';
+  const { data: applications } = useQuery({
+    queryKey: queryKeys.applications(workspaceId),
+    queryFn: () => apiFetch<Application[]>(`/applications?workspaceId=${workspaceId}`),
+    enabled: open && showBusinessFields,
+  });
+  const { data: projects } = useQuery({
+    queryKey: queryKeys.projects(workspaceId),
+    queryFn: () => apiFetch<Project[]>(`/projects?workspaceId=${workspaceId}`),
+    enabled: open && showBusinessFields,
+  });
 
   useEffect(() => {
     if (open && transaction) {
@@ -146,6 +168,8 @@ export function TransactionFormDialog({
         status: (transaction.status as FormValues['status']) ?? 'PENDING',
         categoryId: transaction.categoryId ?? undefined,
         companyId: transaction.companyId ?? undefined,
+        applicationId: transaction.applicationId ?? undefined,
+        projectIds: transaction.projects?.map((p) => p.id) ?? [],
         paymentTags: transaction.tags ?? [],
         notes: transaction.notes ?? '',
         dueDate: transaction.dueDate ? transaction.dueDate.slice(0, 10) : '',
@@ -156,7 +180,8 @@ export function TransactionFormDialog({
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const { recurrenceCount, paymentTags, ...rest } = values;
+      const { recurrenceCount, paymentTags, projectIds, ...rest } = values;
+      const isBusinessCost = rest.type === 'BUSINESS_COST';
       if (editing && transaction) {
         const editPayload = {
           type: rest.type,
@@ -167,6 +192,8 @@ export function TransactionFormDialog({
           status: rest.status,
           categoryId: rest.categoryId,
           companyId: rest.companyId,
+          applicationId: isBusinessCost ? (rest.applicationId ?? null) : undefined,
+          projectIds: isBusinessCost ? (projectIds ?? []) : undefined,
           notes: rest.notes,
           dueDate: values.dueDate || undefined,
           tags: paymentTags?.length ? paymentTags : undefined,
@@ -179,6 +206,8 @@ export function TransactionFormDialog({
       const payload = {
         ...rest,
         workspaceId,
+        applicationId: isBusinessCost ? rest.applicationId : undefined,
+        projectIds: isBusinessCost && projectIds?.length ? projectIds : undefined,
         tags: paymentTags?.length ? paymentTags : undefined,
         recurrenceInterval: values.isRecurring ? 1 : undefined,
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
@@ -261,6 +290,38 @@ export function TransactionFormDialog({
           </div>
 
           <CollapsibleSection label="Ver más opciones">
+            {showBusinessFields && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Aplicación</Label>
+                  <SearchSelect
+                    placeholder="Opcional"
+                    searchPlaceholder="Buscar aplicación..."
+                    value={watch('applicationId') ?? ''}
+                    onValueChange={(v) => setValue('applicationId', v)}
+                    options={(applications ?? []).map((a) => ({ value: a.id, label: a.name }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Proyecto(s)</Label>
+                  <MultiSelect
+                    placeholder="Uno o varios"
+                    searchPlaceholder="Buscar proyecto..."
+                    selected={
+                      (watch('projectIds') ?? [])
+                        .map((id) => projects?.find((p) => p.id === id)?.name)
+                        .filter(Boolean) as string[]
+                    }
+                    onChange={(names) => {
+                      const ids = names.map((n) => projects?.find((p) => p.name === n)?.id).filter(Boolean) as string[];
+                      setValue('projectIds', ids);
+                    }}
+                    groups={[{ label: 'Proyectos', options: (projects ?? []).map((p) => p.name) }]}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Categoría</Label>

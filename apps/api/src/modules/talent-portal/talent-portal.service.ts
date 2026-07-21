@@ -32,9 +32,11 @@ export class TalentPortalService {
   async profile(token: string) {
     const talent = await this.resolve(token);
     const summary = await this.ledger.talentSummary(talent.id);
+    const debtRows = await this.ledger.debtDetail(talent.id);
     return {
       talent: { id: talent.id, name: talent.name, status: talent.status },
       summary,
+      debtRows,
     };
   }
 

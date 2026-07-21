@@ -1,9 +1,25 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
+import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Copy, ExternalLink, KeyRound, Pencil, Plus, ShieldOff, Trash2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowLeft,
+  ArrowUpRight,
+  Banknote,
+  Copy,
+  ExternalLink,
+  KeyRound,
+  Landmark,
+  Pencil,
+  Plus,
+  ReceiptText,
+  ShieldOff,
+  Trash2,
+  Wallet,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -32,6 +48,7 @@ import type {
   TalentIncomeDistribution,
   TalentLedgerEntry,
   TalentLedgerSummary,
+  TalentReport,
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate, formatDuration, formatMonthYear } from '@/lib/utils';
@@ -73,6 +90,12 @@ function TalentDetailContent() {
   const { data: audit } = useQuery({
     queryKey: queryKeys.talentAudit(ws, id),
     queryFn: () => apiFetch<TalentAuditEntry[]>(`/talent-ledger/audit?workspaceId=${ws}&talentId=${id}`),
+    enabled: !!ws && !!id,
+  });
+
+  const { data: report } = useQuery({
+    queryKey: queryKeys.talentReport(ws, id),
+    queryFn: () => apiFetch<TalentReport>(`/talents/${id}/report?workspaceId=${ws}`),
     enabled: !!ws && !!id,
   });
 
@@ -311,10 +334,171 @@ function TalentDetailContent() {
 
       <Tabs defaultValue="ledger">
         <TabsList>
+          <TabsTrigger value="report">Reportes</TabsTrigger>
           <TabsTrigger value="ledger">Estado de cuenta</TabsTrigger>
           <TabsTrigger value="contracts">Contratos</TabsTrigger>
           <TabsTrigger value="audit">Auditoría</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="report" className="space-y-6">
+          {report ? (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <KPICard
+                  label="Recibí (MIMOTECH)"
+                  value={formatMoney(report.income.receivedByMe, 'PEN')}
+                  icon={ArrowDownLeft}
+                  color="text-info"
+                />
+                <KPICard
+                  label="Se quedó (talento)"
+                  value={formatMoney(report.income.keptByTalent, 'PEN')}
+                  icon={ArrowUpRight}
+                  color="text-teal"
+                />
+                <KPICard
+                  label="Pagado a talento"
+                  value={formatMoney(report.expense.paid, 'PEN')}
+                  icon={Wallet}
+                  color="text-success"
+                />
+                <KPICard
+                  label="Neto (MIMOTECH)"
+                  value={formatMoney(report.net, 'PEN')}
+                  icon={Landmark}
+                  color="text-brand"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <KPICard
+                  label="Sueldo total"
+                  value={formatMoney(report.income.salary, 'PEN')}
+                  icon={Banknote}
+                  color="text-muted-foreground"
+                />
+                <KPICard
+                  label="Deuda"
+                  value={formatMoney(report.expense.debt, 'PEN')}
+                  icon={ReceiptText}
+                  color="text-warning"
+                />
+                <KPICard
+                  label="Falta pagar"
+                  value={formatMoney(report.expense.pending, 'PEN')}
+                  icon={AlertTriangle}
+                  color="text-destructive"
+                />
+              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Detalle por mes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {report.byMonth.length ? (
+                    <div className="overflow-x-auto rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Mes</TableHead>
+                            <TableHead className="text-right">Sueldo</TableHead>
+                            <TableHead className="text-right">Recibí (MIMOTECH)</TableHead>
+                            <TableHead className="text-right">Se quedó (talento)</TableHead>
+                            <TableHead className="text-right">Egreso (pagado)</TableHead>
+                            <TableHead className="text-right">Falta pagar</TableHead>
+                            <TableHead className="text-right">Neto</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {report.byMonth.map((m) => (
+                            <TableRow key={`${m.year}-${m.month}`}>
+                              <TableCell className="whitespace-nowrap text-sm capitalize">{m.label}</TableCell>
+                              <TableCell className="text-right tabular-nums text-muted-foreground">
+                                {formatMoney(m.salary, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-info">
+                                {formatMoney(m.income, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">{formatMoney(m.kept, 'PEN')}</TableCell>
+                              <TableCell className="text-right tabular-nums text-success">
+                                {formatMoney(m.expense, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-destructive">
+                                {formatMoney(m.pending, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold tabular-nums">
+                                {formatMoney(m.net, 'PEN')}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">Sin datos para el reporte.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Deuda del talento</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {report.debtRows.length ? (
+                    <div className="overflow-x-auto rounded-lg border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Descripción</TableHead>
+                            <TableHead className="text-right">Deuda</TableHead>
+                            <TableHead className="text-right">Falta pagar</TableHead>
+                            <TableHead>Estado</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {report.debtRows.map((d) => (
+                            <TableRow key={d.id}>
+                              <TableCell className="whitespace-nowrap text-sm">{formatDate(d.date)}</TableCell>
+                              <TableCell className="max-w-xs truncate text-sm" title={d.description}>
+                                {d.description || '—'}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-warning">
+                                {formatMoney(d.debt, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-destructive">
+                                {formatMoney(d.pending, 'PEN')}
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge status={d.status} />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          <TableRow className="border-t-2 bg-muted/40">
+                            <TableCell colSpan={2} className="text-sm font-semibold">
+                              Total
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums text-warning">
+                              {formatMoney(report.expense.debt, 'PEN')}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums text-destructive">
+                              {formatMoney(report.expense.pending, 'PEN')}
+                            </TableCell>
+                            <TableCell />
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <p className="py-8 text-center text-sm text-muted-foreground">Sin deudas pendientes.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Skeleton className="h-40 rounded-xl" />
+          )}
+        </TabsContent>
 
         <TabsContent value="ledger">
           <LedgerSection

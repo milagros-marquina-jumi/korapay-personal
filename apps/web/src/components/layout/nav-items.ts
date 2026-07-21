@@ -65,7 +65,13 @@ const BUSINESS: NavItem[] = [
     children: [
       { href: '/mimotech/costos', label: 'Costos', icon: Boxes },
       { href: '/mimotech/equipo', label: 'Pagos equipo', icon: Users },
-      { href: '/mimotech/talentos', label: 'Talentos', icon: Rocket },
+      {
+        href: '/mimotech/talentos',
+        label: 'Talentos',
+        icon: Rocket,
+        linkable: true,
+        children: [{ href: '/mimotech/talentos/reporte', label: 'Reporte general', icon: BarChart3 }],
+      },
     ],
   },
   { href: '/proyectos', label: 'Proyectos', icon: Boxes },

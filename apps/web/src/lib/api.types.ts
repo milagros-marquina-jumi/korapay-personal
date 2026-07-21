@@ -196,6 +196,8 @@ export interface Transaction {
   tags: string[];
   account?: { name: string } | null;
   category?: { name: string } | null;
+  application?: { id: string; name: string } | null;
+  projects?: { id: string; name: string }[];
 }
 
 export interface RecurrenceRule {
@@ -357,6 +359,68 @@ export interface GlobalClient {
   name: string;
 }
 
+export interface TalentDebtRow {
+  id: string;
+  date: string;
+  description: string;
+  debt: string;
+  pending: string;
+  status: string;
+}
+
+export interface TalentReport {
+  income: { salary: string; withDiscount: string; receivedByMe: string; keptByTalent: string };
+  expense: { paid: string; debt: string; pending: string };
+  net: string;
+  byMonth: {
+    year: number;
+    month: number;
+    label: string;
+    salary: string;
+    withDiscount: string;
+    income: string;
+    kept: string;
+    expense: string;
+    debt: string;
+    pending: string;
+    net: string;
+  }[];
+  debtRows: TalentDebtRow[];
+}
+
+export interface TalentPivotPeriod {
+  year: number;
+  month: number;
+  label: string;
+  total: string;
+  cells: { name: string; amount: string }[];
+}
+
+export interface TalentGlobalReport {
+  years: number[];
+  totals: {
+    salary: string;
+    withDiscount: string;
+    received: string;
+    kept: string;
+    paid: string;
+    debt: string;
+    pending: string;
+    net: string;
+  };
+  incomeByPerson: {
+    talentId: string;
+    name: string;
+    salary: string;
+    withDiscount: string;
+    received: string;
+    kept: string;
+  }[];
+  expenseByPerson: { talentId: string; name: string; paid: string; debt: string; pending: string }[];
+  incomePivot: TalentPivotPeriod[];
+  expensePivot: TalentPivotPeriod[];
+}
+
 export interface Talent {
   id: string;
   name: string;
@@ -426,6 +490,7 @@ export interface TalentAuditEntry {
 export interface TalentPortalProfile {
   talent: { id: string; name: string; status: string };
   summary: TalentSummaryTotals;
+  debtRows: TalentDebtRow[];
 }
 
 export interface CurrencyCatalog {

@@ -62,9 +62,15 @@ IBK dólar, Efectivo…), banco, moneda, monto, importeTotal.
 → `SavingBalance`: saldo mensual por cuenta/bucket. Vista de saldos por mes (soles + USD).
 
 ### Mimotech_Costos → Costos
-Campos: fecha, aplicacion, proyecto, descripcion, numeroTarjetaCuenta, banco, moneda,
-monto, importeTotal, estado.
-→ `Transaction` tipo BUSINESS_COST. `aplicacion`→Application, `proyecto`→Project.
+Campos: fecha, aplicacion (AWS/Cloudflare/Fly/Render), **proyecto** (uno o VARIOS separados
+por coma), descripcion, numeroTarjetaCuenta, banco (BCP/IBK), moneda (USD), monto (USD),
+**importeTotal** (monto × 3.42 = soles), estado (Pagado/Pendiente).
+→ `Transaction` tipo BUSINESS_COST. `aplicacion`→Application (relación `application`).
+`proyecto`→ **muchos-a-muchos** `Transaction.projects` (`_TransactionProjects`): el seed hace
+split por coma y vincula a los proyectos reales; `projectId` guarda el primero por compat.
+`importeTotal`→`amountBase` (soles) con `exchangeRate`; el monto USD se ve en un modal al
+hacer clic. `banco`→tag. CRUD completo en `/mimotech/costos` (crear/editar/eliminar, filtros
+por estado/app/proyecto, columnas Proyecto(s) y Banco).
 
 ### Mimotech_Pagos → Pagos equipo
 Campos: persona, salario, fecha, mes, estado, notas, monto.
@@ -112,3 +118,19 @@ Campos: nombre, fecha, anio, nMes, mes, tipoPago (Egreso/Deuda), **cantidadE** (
 - **Ingresos Laborales**: ingresos por empresa/mes (Resumen por mes), renta.
 - **MIMOTECH**: costos por aplicación, utilidad, pagos de equipo, saldo de talentos.
 - **Qoryx**: ingresos vs egresos por mes.
+
+## Reportes de Mimotalents (hojas Mimotalents_Ingresos + _Egresos)
+
+Reconstruye los pivotes del Excel (INGRESOS/EGRESOS por persona y por mes) cruzando las dos
+fuentes. No existe una hoja `Mimotalents_Reporte` exportada: era un pivote calculado.
+
+- **Reporte general** (`/mimotech/talentos/reporte`, `GET /talents/report/global?year=`):
+  KPIs (recibí MIMOTECH, se quedaron talentos, pagado, neto, sueldo, deuda, falta pagar) +
+  ingresos por talento (recibí vs se quedó) + egresos por talento (pagado vs falta pagar) +
+  tablas pivote persona × mes/año (ingresos recibí y egresos pagado). Filtro por año.
+- **Reporte por talento** (tab Reportes en el detalle, `GET /talents/:id/report`): mismos KPIs
+  del talento + detalle por mes (sueldo, recibí, se quedó, egreso, falta pagar, neto) +
+  **deuda del talento** (filas préstamo/egreso con deuda o falta pagar y total).
+- **Deuda visible por el talento**: la sección "Mi deuda" del portal `/t/[token]`
+  (`GET /portal/:token` incluye `debtRows` + totales). El talento ve sus préstamos y el total,
+  no ve a otros talentos ni la auditoría.

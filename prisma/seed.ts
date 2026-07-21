@@ -288,10 +288,24 @@ async function main() {
   async function ensureProject(name: string | null | undefined): Promise<string | null> {
     if (!name) return null;
     const key = name.trim();
+    if (!key) return null;
     if (projectByName[key]) return projectByName[key];
     const p = await prisma.project.create({ data: { workspaceId: mimotech.id, name: key, emoji: '📦' } });
     projectByName[key] = p.id;
     return p.id;
+  }
+  async function ensureProjects(raw: string | null | undefined): Promise<string[]> {
+    if (!raw) return [];
+    const names = raw
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean);
+    const ids: string[] = [];
+    for (const n of names) {
+      const id = await ensureProject(n);
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+    return ids;
   }
 
   // ============================================================
@@ -540,7 +554,7 @@ async function main() {
   for (const r of costos) {
     const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
     const applicationId = await ensureApplication(r.aplicacion);
-    const projectId = await ensureProject(r.proyecto);
+    const projectIds = await ensureProjects(r.proyecto);
     await prisma.transaction.create({
       data: {
         workspaceId: mimotech.id,
@@ -553,7 +567,8 @@ async function main() {
         exchangeRate: currency === 'USD' ? USD_TO_PEN : null,
         amountBase: r.importeTotal != null ? money(r.importeTotal) : toBase(r.monto, currency),
         applicationId,
-        projectId,
+        projectId: projectIds[0] ?? null,
+        projects: projectIds.length ? { connect: projectIds.map((id) => ({ id })) } : undefined,
         status: mapExcelStatus(r.estado),
         notes: r.numeroTarjetaCuenta ? redactSensitiveData(r.numeroTarjetaCuenta) : null,
         tags: [r.banco ?? ''].filter(Boolean),

@@ -32,6 +32,9 @@ export const queryKeys = {
   talentLedger: (workspaceId: string, talentId: string, filters?: Record<string, unknown>) =>
     ['talent-ledger', workspaceId, talentId, filters ?? {}] as const,
   talentAudit: (workspaceId: string, talentId: string) => ['talent-audit', workspaceId, talentId] as const,
+  talentReport: (workspaceId: string, talentId: string) => ['talent-report', workspaceId, talentId] as const,
+  talentGlobalReport: (workspaceId: string, filters?: Record<string, unknown>) =>
+    ['talent-global-report', workspaceId, filters ?? {}] as const,
   portal: (token: string) => ['portal', token] as const,
   portalLedger: (token: string, filters?: Record<string, unknown>) => ['portal-ledger', token, filters ?? {}] as const,
   employmentContracts: (workspaceId: string) => ['employment-contracts', workspaceId] as const,

@@ -28,7 +28,7 @@ const STATUS_LABELS: Record<string, string> = {
   OVERDUE: 'Vencido',
   PARTIAL: 'Parcial',
   CANCELLED: 'Cancelado',
-  PENDING_REVIEW: 'Revision',
+  PENDING_REVIEW: 'Revisión',
   ACTIVE: 'Activo',
   INACTIVE: 'Inactivo',
 };
@@ -109,12 +109,12 @@ function CostosContent() {
       },
       {
         accessorKey: 'concept',
-        header: ({ column }) => <SortableHeader column={column} label="Aplicacion" />,
+        header: ({ column }) => <SortableHeader column={column} label="Aplicación" />,
         cell: ({ row }) => <span className="font-medium">{row.original.concept}</span>,
       },
       {
         id: 'description',
-        header: 'Descripcion',
+        header: 'Descripción',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.description ?? '-'}</span>,
       },
       {
@@ -166,7 +166,7 @@ function CostosContent() {
         />
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Costos por aplicacion</CardTitle>
+            <CardTitle>Costos por aplicación</CardTitle>
           </CardHeader>
           <CardContent>
             {donutData.length ? (
@@ -202,14 +202,14 @@ function CostosContent() {
               value={categoryId}
               onValueChange={setCategoryId}
               options={categoryOptions}
-              placeholder="Categoria"
-              allLabel="Toda categoria"
+              placeholder="Categoría"
+              allLabel="Toda categoría"
             />
             <FilterSelect
               value={applicationId}
               onValueChange={setApplicationId}
               options={applicationOptions}
-              placeholder="Aplicacion"
+              placeholder="Aplicación"
               allLabel="Toda app"
             />
           </>
@@ -222,7 +222,7 @@ function CostosContent() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        emptyState={<EmptyState title="Sin costos" description="Registra tu primer costo con el boton de arriba." />}
+        emptyState={<EmptyState title="Sin costos" description="Registra tu primer costo con el botón de arriba." />}
       />
     </div>
   );

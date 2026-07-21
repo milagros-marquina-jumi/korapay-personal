@@ -47,7 +47,7 @@ import { queryKeys } from '@/lib/query-keys';
 const kindLabels: Record<string, string> = {
   SAVINGS: 'Ahorros',
   CHECKING: 'Corriente',
-  CREDIT_CARD: 'Tarjeta credito',
+  CREDIT_CARD: 'Tarjeta crédito',
   CASH: 'Efectivo',
   DIGITAL_WALLET: 'Billetera digital',
   PAYPAL: 'PayPal',
@@ -67,7 +67,7 @@ const schema = z.object({
   bank: z.string().min(1, 'Requerido'),
   kind: z.enum(['SAVINGS', 'CHECKING', 'CREDIT_CARD', 'CASH', 'DIGITAL_WALLET', 'PAYPAL']),
   currency: z.enum(['PEN', 'USD']),
-  initialBalance: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  initialBalance: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -165,7 +165,7 @@ function AccountFormDialog({
                 <SelectContent>
                   <SelectItem value="SAVINGS">Ahorros</SelectItem>
                   <SelectItem value="CHECKING">Corriente</SelectItem>
-                  <SelectItem value="CREDIT_CARD">Tarjeta credito</SelectItem>
+                  <SelectItem value="CREDIT_CARD">Tarjeta crédito</SelectItem>
                   <SelectItem value="CASH">Efectivo</SelectItem>
                   <SelectItem value="DIGITAL_WALLET">Billetera digital</SelectItem>
                   <SelectItem value="PAYPAL">PayPal</SelectItem>
@@ -183,7 +183,7 @@ function AccountFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dolares ($)</SelectItem>
+                  <SelectItem value="USD">Dólares ($)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -279,7 +279,7 @@ export default function CuentasPage() {
               onValueChange={setCurrencyFilter}
               options={[
                 { value: 'PEN', label: 'Soles' },
-                { value: 'USD', label: 'Dolares' },
+                { value: 'USD', label: 'Dólares' },
               ]}
               placeholder="Moneda"
               allLabel="Toda moneda"
@@ -328,7 +328,7 @@ export default function CuentasPage() {
                       onClick={async () => {
                         const ok = await confirm({
                           title: 'Eliminar cuenta',
-                          description: `Se archivara "${account.name}". Los movimientos asociados se conservan.`,
+                          description: `Se archivará "${account.name}". Los movimientos asociados se conservan.`,
                           confirmLabel: 'Eliminar',
                           destructive: true,
                         });
@@ -356,7 +356,7 @@ export default function CuentasPage() {
       ) : (
         <EmptyState
           title="Sin cuentas"
-          description="Aun no tienes cuentas registradas. Crea la primera para empezar."
+          description="Aún no tienes cuentas registradas. Crea la primera para empezar."
         />
       )}
 

@@ -64,7 +64,7 @@ export default function ReportesPage() {
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== 'EXPENSE') continue;
-    const name = t.category?.name ?? 'Sin categoria';
+    const name = t.category?.name ?? 'Sin categoría';
     byCategory.set(name, (byCategory.get(name) ?? 0) + Number(t.amountBase));
   }
   const donutData = [...byCategory.entries()]
@@ -74,13 +74,13 @@ export default function ReportesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reportes" description="Resumen y analisis financiero" />
+      <PageHeader title="Reportes" description="Resumen y análisis financiero" />
 
       <Tabs defaultValue="resumen">
         <TabsList>
           <TabsTrigger value="resumen">Resumen</TabsTrigger>
           <TabsTrigger value="mes">Por mes</TabsTrigger>
-          <TabsTrigger value="categoria">Por categoria</TabsTrigger>
+          <TabsTrigger value="categoria">Por categoría</TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumen" className="mt-4">
@@ -155,7 +155,7 @@ export default function ReportesPage() {
         <TabsContent value="categoria" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Gastos por categoria</CardTitle>
+              <CardTitle>Gastos por categoría</CardTitle>
             </CardHeader>
             <CardContent>
               {donutData.length ? (

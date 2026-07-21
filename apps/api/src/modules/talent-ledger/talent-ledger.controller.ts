@@ -4,7 +4,7 @@ import { AuthGuard } from '@/common/auth/auth.guard';
 import { CurrentUser } from '@/common/auth/current-user.decorator';
 import { WorkspaceGuard } from '@/common/auth/workspace.guard';
 import { WorkspaceQueryDto } from '@/common/dto/workspace-query.dto';
-import { CreateTalentLedgerDto, ListTalentLedgerDto, UpdateTalentLedgerDto } from './talent-ledger.dto';
+import { AuditQueryDto, CreateTalentLedgerDto, ListTalentLedgerDto, UpdateTalentLedgerDto } from './talent-ledger.dto';
 import { type LedgerActor, TalentLedgerService } from './talent-ledger.service';
 
 @ApiTags('TalentLedger')
@@ -33,7 +33,7 @@ export class TalentLedgerController {
 
   @Get('audit')
   @ApiOperation({ summary: 'Ledger audit history (admin only)' })
-  audit(@Query() { workspaceId }: WorkspaceQueryDto, @Query('talentId') talentId?: string) {
+  audit(@Query() { workspaceId, talentId }: AuditQueryDto) {
     return this.service.auditHistory(workspaceId, talentId);
   }
 

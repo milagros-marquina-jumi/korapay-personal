@@ -81,7 +81,7 @@ export default function TalentPortalPage() {
   if (isError || !profile) {
     return (
       <EmptyState
-        title="Enlace no valido"
+        title="Enlace no válido"
         description="Este enlace no existe o fue revocado. Solicita uno nuevo al administrador."
       />
     );

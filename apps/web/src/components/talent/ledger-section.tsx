@@ -16,6 +16,13 @@ import { formatDate } from '@/lib/utils';
 import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
 
 const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
+const STATUS_LABELS: Record<string, string> = {
+  PAID: 'Pagado',
+  PENDING: 'Pendiente',
+  PARTIAL: 'Parcial',
+  OVERDUE: 'Vencido',
+  CANCELLED: 'Cancelado',
+};
 
 interface LedgerSectionProps {
   entries: TalentLedgerEntry[];
@@ -49,7 +56,7 @@ export function LedgerSection({
   const cur = currency as 'PEN' | 'USD';
   const years = useMemo(() => yearsFrom(entries.map((e) => e.year)), [entries]);
   const statusOptions = useMemo(
-    () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: v })),
+    () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: STATUS_LABELS[v] ?? v })),
     [entries],
   );
 
@@ -120,7 +127,7 @@ export function LedgerSection({
       },
       {
         id: 'description',
-        header: 'Descripcion',
+        header: 'Descripción',
         cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.description ?? '-'}</span>,
       },
     ];
@@ -185,7 +192,7 @@ export function LedgerSection({
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Buscar descripcion..."
+        placeholder="Buscar descripción..."
         showClear={hasFilters}
         onClear={clear}
         filters={
@@ -217,7 +224,7 @@ export function LedgerSection({
         data={rows}
         isLoading={isLoading}
         pageSize={20}
-        emptyState={<EmptyState title="Sin registros" description="Aun no hay movimientos registrados." />}
+        emptyState={<EmptyState title="Sin registros" description="Aún no hay movimientos registrados." />}
       />
     </div>
   );

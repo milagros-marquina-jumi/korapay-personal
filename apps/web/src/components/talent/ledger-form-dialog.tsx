@@ -14,7 +14,7 @@ import type { TalentLedgerEntry } from '@/lib/api.types';
 
 const money = z
   .string()
-  .regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido')
+  .regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido')
   .or(z.literal(''));
 
 const schema = z.object({
@@ -146,7 +146,7 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending }: Props)
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ledger-desc">Descripcion</Label>
+            <Label htmlFor="ledger-desc">Descripción</Label>
             <Textarea id="ledger-desc" rows={2} {...register('description')} />
           </div>
 

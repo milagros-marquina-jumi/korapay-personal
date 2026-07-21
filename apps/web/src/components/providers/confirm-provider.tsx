@@ -53,9 +53,9 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       >
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{options.title ?? 'Confirmar accion'}</DialogTitle>
+            <DialogTitle>{options.title ?? 'Confirmar acción'}</DialogTitle>
             <DialogDescription>
-              {options.description ?? 'Esta accion no se puede deshacer. Deseas continuar?'}
+              {options.description ?? 'Esta acción no se puede deshacer. ¿Deseas continuar?'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

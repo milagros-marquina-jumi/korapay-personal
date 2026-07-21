@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const schema = z.object({
-  email: z.string().email('Correo invalido'),
-  password: z.string().min(1, 'Ingresa tu contrasena'),
+  email: z.string().email('Correo inválido'),
+  password: z.string().min(1, 'Ingresa tu contraseña'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -42,7 +42,7 @@ export default function LoginPage() {
         <CardHeader className="items-center text-center">
           <Logo size={48} withWordmark={false} className="mb-2" />
           <CardTitle className="font-display text-2xl">KoraPay</CardTitle>
-          <CardDescription>Gestion financiera personal y empresarial</CardDescription>
+          <CardDescription>Gestión financiera personal y empresarial</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -52,7 +52,7 @@ export default function LoginPage() {
               {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Contrasena</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input id="password" type="password" autoComplete="current-password" {...register('password')} />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>

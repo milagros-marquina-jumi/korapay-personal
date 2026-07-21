@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<string, string> = {
   OVERDUE: 'Vencido',
   PARTIAL: 'Parcial',
   CANCELLED: 'Cancelado',
-  PENDING_REVIEW: 'Revision',
+  PENDING_REVIEW: 'Revisión',
   ACTIVE: 'Activo',
   INACTIVE: 'Inactivo',
 };
@@ -170,7 +170,7 @@ function IngresosContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         emptyState={
-          <EmptyState title="Sin ingresos" description="Registra tu primer ingreso con el boton de arriba." />
+          <EmptyState title="Sin ingresos" description="Registra tu primer ingreso con el botón de arriba." />
         }
       />
     </div>

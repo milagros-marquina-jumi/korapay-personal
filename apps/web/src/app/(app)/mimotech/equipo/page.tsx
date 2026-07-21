@@ -29,7 +29,7 @@ const STATUS_LABELS: Record<string, string> = {
   OVERDUE: 'Vencido',
   PARTIAL: 'Parcial',
   CANCELLED: 'Cancelado',
-  PENDING_REVIEW: 'Revision',
+  PENDING_REVIEW: 'Revisión',
   ACTIVE: 'Activo',
   INACTIVE: 'Inactivo',
 };
@@ -189,7 +189,7 @@ function EquipoContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         emptyState={
-          <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el boton de arriba." />
+          <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el botón de arriba." />
         }
       />
 

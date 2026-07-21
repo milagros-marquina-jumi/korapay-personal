@@ -13,7 +13,7 @@ export class TalentPortalService {
     const talent = await this.prisma.talentProfile.findFirst({
       where: { accessToken: token, deletedAt: null },
     });
-    if (!talent) throw new NotFoundException('Enlace no valido o revocado');
+    if (!talent) throw new NotFoundException('Enlace no válido o revocado');
     return talent;
   }
 

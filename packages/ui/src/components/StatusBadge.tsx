@@ -13,7 +13,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     className: 'bg-muted text-muted-foreground',
   },
   PENDING_REVIEW: {
-    label: 'Revision',
+    label: 'Revisión',
     className: 'bg-warning/10 text-warning',
   },
   ACTIVE: { label: 'Activo', className: 'bg-success/10 text-success' },

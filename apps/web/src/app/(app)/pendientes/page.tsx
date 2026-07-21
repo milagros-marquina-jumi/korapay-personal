@@ -37,7 +37,7 @@ import { formatDate } from '@/lib/utils';
 const schema = z.object({
   kind: z.enum(['COBRAR', 'PAGAR']),
   concept: z.string().min(1, 'Requerido'),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   currency: z.enum(['PEN', 'USD']),
   dueDate: z.string().min(1, 'Requerido'),
   notes: z.string().optional(),
@@ -130,7 +130,7 @@ function PendingFormDialog({ workspaceId }: { workspaceId: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dolares ($)</SelectItem>
+                  <SelectItem value="USD">Dólares ($)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -255,7 +255,7 @@ export default function PendientesPage() {
               onValueChange={setCurrencyFilter}
               options={[
                 { value: 'PEN', label: 'Soles' },
-                { value: 'USD', label: 'Dolares' },
+                { value: 'USD', label: 'Dólares' },
               ]}
               placeholder="Moneda"
               allLabel="Toda moneda"

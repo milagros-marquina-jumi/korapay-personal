@@ -163,7 +163,7 @@ export function CatalogManager({
                     onClick={async () => {
                       const ok = await confirm({
                         title: `Eliminar ${title.toLowerCase()}`,
-                        description: `Se eliminara "${display(item)}". Esta accion no se puede deshacer.`,
+                        description: `Se eliminará "${display(item)}". Esta acción no se puede deshacer.`,
                         confirmLabel: 'Eliminar',
                         destructive: true,
                       });

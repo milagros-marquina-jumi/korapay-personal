@@ -13,7 +13,7 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'KoraPay — Gestion financiera inteligente',
+  title: 'KoraPay — Gestión financiera inteligente',
   description: 'Organiza tus finanzas personales y empresariales con KoraPay',
 };
 

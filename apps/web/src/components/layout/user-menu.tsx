@@ -39,7 +39,7 @@ export function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>
-          <LogOut className="mr-2 h-4 w-4" /> Cerrar sesion
+          <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

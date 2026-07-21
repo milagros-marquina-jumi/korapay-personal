@@ -27,7 +27,7 @@ import { queryKeys } from '@/lib/query-keys';
 const schema = z.object({
   type: z.enum(['INCOME', 'EXPENSE', 'SAVING', 'BUSINESS_COST', 'TEAM_PAYMENT']),
   concept: z.string().min(1, 'Requerido'),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   currency: z.enum(['PEN', 'USD']),
   date: z.string().min(1, 'Requerido'),
   status: z.enum(['PAID', 'PENDING', 'OVERDUE', 'PARTIAL']),
@@ -142,7 +142,7 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dolares ($)</SelectItem>
+                  <SelectItem value="USD">Dólares ($)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -150,7 +150,7 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Categoria</Label>
+              <Label>Categoría</Label>
               <Select onValueChange={(v) => setValue('categoryId', v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Opcional" />
@@ -182,7 +182,7 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descripcion</Label>
+            <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" rows={2} {...register('description')} />
           </div>
 

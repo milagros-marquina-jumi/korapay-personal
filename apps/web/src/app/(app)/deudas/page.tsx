@@ -36,12 +36,12 @@ import { formatDate } from '@/lib/utils';
 const debtSchema = z.object({
   direction: z.enum(['DEBO', 'ME_DEBEN']),
   concept: z.string().min(1, 'Requerido'),
-  originalAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  originalAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   currency: z.enum(['PEN', 'USD']),
   dueDate: z.string().optional(),
   interestRate: z
     .string()
-    .regex(/^\d+(\.\d{1,2})?$/, 'Valor invalido')
+    .regex(/^\d+(\.\d{1,2})?$/, 'Valor inválido')
     .optional()
     .or(z.literal('')),
 });
@@ -49,7 +49,7 @@ const debtSchema = z.object({
 type DebtFormValues = z.infer<typeof debtSchema>;
 
 const paymentSchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   date: z.string().min(1, 'Requerido'),
   method: z.string().optional(),
 });
@@ -112,7 +112,7 @@ function DebtFormDialog({ workspaceId }: { workspaceId: string }) {
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="space-y-2">
-            <Label>Direccion</Label>
+            <Label>Dirección</Label>
             <Select defaultValue="DEBO" onValueChange={(v) => setValue('direction', v as DebtFormValues['direction'])}>
               <SelectTrigger>
                 <SelectValue />
@@ -144,7 +144,7 @@ function DebtFormDialog({ workspaceId }: { workspaceId: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dolares ($)</SelectItem>
+                  <SelectItem value="USD">Dólares ($)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -156,7 +156,7 @@ function DebtFormDialog({ workspaceId }: { workspaceId: string }) {
               <Input id="dueDate" type="date" {...register('dueDate')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="interestRate">Tasa interes (%)</Label>
+              <Label htmlFor="interestRate">Tasa interés (%)</Label>
               <Input id="interestRate" inputMode="decimal" placeholder="0.00" {...register('interestRate')} />
               {errors.interestRate && <p className="text-xs text-destructive">{errors.interestRate.message}</p>}
             </div>
@@ -236,7 +236,7 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="method">Metodo</Label>
+            <Label htmlFor="method">Método</Label>
             <Input id="method" placeholder="Opcional" {...register('method')} />
           </div>
 
@@ -314,8 +314,8 @@ export default function DeudasPage() {
                 { value: 'DEBO', label: 'Debo' },
                 { value: 'ME_DEBEN', label: 'Me deben' },
               ]}
-              placeholder="Direccion"
-              allLabel="Toda direccion"
+              placeholder="Dirección"
+              allLabel="Toda dirección"
             />
             <FilterSelect
               value={statusFilter}
@@ -329,7 +329,7 @@ export default function DeudasPage() {
               onValueChange={setCurrencyFilter}
               options={[
                 { value: 'PEN', label: 'Soles' },
-                { value: 'USD', label: 'Dolares' },
+                { value: 'USD', label: 'Dólares' },
               ]}
               placeholder="Moneda"
               allLabel="Toda moneda"

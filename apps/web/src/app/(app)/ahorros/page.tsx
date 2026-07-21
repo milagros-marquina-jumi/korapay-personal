@@ -35,12 +35,12 @@ import { formatDate } from '@/lib/utils';
 
 const goalSchema = z.object({
   name: z.string().min(1, 'Requerido'),
-  targetAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  targetAmount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   currency: z.enum(['PEN', 'USD']),
   targetDate: z.string().optional(),
   monthlyRecommend: z
     .string()
-    .regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido')
+    .regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido')
     .optional()
     .or(z.literal('')),
 });
@@ -48,7 +48,7 @@ const goalSchema = z.object({
 type GoalFormValues = z.infer<typeof goalSchema>;
 
 const entrySchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto invalido'),
+  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   type: z.enum(['CONTRIBUTION', 'WITHDRAWAL']),
   date: z.string().min(1, 'Requerido'),
 });
@@ -128,7 +128,7 @@ function GoalFormDialog({ workspaceId }: { workspaceId: string }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dolares ($)</SelectItem>
+                  <SelectItem value="USD">Dólares ($)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -305,7 +305,7 @@ export default function AhorrosPage() {
               onValueChange={setCurrencyFilter}
               options={[
                 { value: 'PEN', label: 'Soles' },
-                { value: 'USD', label: 'Dolares' },
+                { value: 'USD', label: 'Dólares' },
               ]}
               placeholder="Moneda"
               allLabel="Toda moneda"

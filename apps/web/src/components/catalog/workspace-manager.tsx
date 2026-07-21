@@ -16,12 +16,12 @@ import type { Workspace } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const TYPE_OPTIONS: { value: string; label: string; hint: string }[] = [
-  { value: 'PERSONAL', label: 'Personal', hint: 'Finanzas personales del dia a dia' },
+  { value: 'PERSONAL', label: 'Personal', hint: 'Finanzas personales del día a día' },
   { value: 'EMPLOYMENT', label: 'Ingresos laborales', hint: 'Empresas donde trabajas (planilla/recibos)' },
   { value: 'BUSINESS', label: 'Empresa', hint: 'Tu empresa: costos, equipo, proyectos' },
   { value: 'SHARED', label: 'Compartido', hint: 'Sociedad o gastos compartidos' },
   { value: 'SAVINGS', label: 'Ahorros', hint: 'Metas y fondos de ahorro' },
-  { value: 'DEBTS', label: 'Deudas', hint: 'Prestamos y obligaciones' },
+  { value: 'DEBTS', label: 'Deudas', hint: 'Préstamos y obligaciones' },
 ];
 
 interface FormState {
@@ -139,7 +139,7 @@ export function WorkspaceManager() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ws-desc">Descripcion</Label>
+                <Label htmlFor="ws-desc">Descripción</Label>
                 <Input
                   id="ws-desc"
                   value={form.description}
@@ -156,7 +156,7 @@ export function WorkspaceManager() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PEN">Soles (S/)</SelectItem>
-                    <SelectItem value="USD">Dolares ($)</SelectItem>
+                    <SelectItem value="USD">Dólares ($)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

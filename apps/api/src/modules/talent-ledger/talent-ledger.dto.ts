@@ -35,6 +35,16 @@ export class ListTalentLedgerDto {
   month?: number;
 }
 
+export class AuditQueryDto {
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @IsOptional()
+  @IsString()
+  talentId?: string;
+}
+
 export class CreateTalentLedgerDto {
   @IsString()
   @IsNotEmpty()

@@ -185,7 +185,7 @@ function EmpresasContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         emptyState={
-          <EmptyState title="Sin empresas" description="Registra tu primera empresa con el boton de arriba." />
+          <EmptyState title="Sin empresas" description="Registra tu primera empresa con el botón de arriba." />
         }
       />
     </div>

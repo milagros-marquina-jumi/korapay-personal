@@ -37,7 +37,7 @@ const STATUS_LABELS: Record<string, string> = {
   OVERDUE: 'Vencido',
   PARTIAL: 'Parcial',
   CANCELLED: 'Cancelado',
-  PENDING_REVIEW: 'Revision',
+  PENDING_REVIEW: 'Revisión',
   ACTIVE: 'Activo',
   INACTIVE: 'Inactivo',
 };
@@ -126,7 +126,7 @@ export default function MovimientosPage() {
       },
       {
         id: 'category',
-        header: 'Categoria',
+        header: 'Categoría',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.category?.name ?? '-'}</span>,
       },
       {
@@ -178,7 +178,7 @@ export default function MovimientosPage() {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Eliminar movimiento',
-                  description: `Se eliminara "${row.original.description}". Esta accion no se puede deshacer.`,
+                  description: `Se eliminará "${row.original.description}". Esta acción no se puede deshacer.`,
                   confirmLabel: 'Eliminar',
                   destructive: true,
                 });
@@ -251,8 +251,8 @@ export default function MovimientosPage() {
               value={categoryId}
               onValueChange={setCategoryId}
               options={categoryOptions}
-              placeholder="Categoria"
-              allLabel="Toda categoria"
+              placeholder="Categoría"
+              allLabel="Toda categoría"
             />
           </>
         }
@@ -265,7 +265,7 @@ export default function MovimientosPage() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         emptyState={
-          <EmptyState title="Sin movimientos" description="Crea tu primer movimiento con el boton de arriba." />
+          <EmptyState title="Sin movimientos" description="Crea tu primer movimiento con el botón de arriba." />
         }
       />
     </div>

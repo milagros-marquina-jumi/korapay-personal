@@ -16,15 +16,15 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Configuracion" description="Perfil, workspaces, tipo de cambio y catalogos" />
+      <PageHeader title="Configuración" description="Perfil, workspaces, tipo de cambio y catálogos" />
 
       <Tabs defaultValue="perfil">
         <TabsList>
           <TabsTrigger value="perfil">Perfil</TabsTrigger>
           <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
           <TabsTrigger value="cambio">Tipo de cambio</TabsTrigger>
-          <TabsTrigger value="globales">Catalogos globales</TabsTrigger>
-          <TabsTrigger value="workspace">Catalogos del workspace</TabsTrigger>
+          <TabsTrigger value="globales">Catálogos globales</TabsTrigger>
+          <TabsTrigger value="workspace">Catálogos del workspace</TabsTrigger>
         </TabsList>
 
         <TabsContent value="perfil" className="space-y-6">
@@ -79,7 +79,7 @@ export default function ConfiguracionPage() {
                 queryKey={queryKeys.banks()}
                 fields={[
                   { name: 'name', label: 'Nombre', required: true },
-                  { name: 'country', label: 'Pais', placeholder: 'PE' },
+                  { name: 'country', label: 'País', placeholder: 'PE' },
                 ]}
                 display={(b) => String(b.name)}
               />
@@ -92,8 +92,8 @@ export default function ConfiguracionPage() {
                 endpoint="/currencies"
                 queryKey={queryKeys.currencies()}
                 fields={[
-                  { name: 'code', label: 'Codigo', required: true, placeholder: 'PEN' },
-                  { name: 'symbol', label: 'Simbolo', required: true, placeholder: 'S/' },
+                  { name: 'code', label: 'Código', required: true, placeholder: 'PEN' },
+                  { name: 'symbol', label: 'Símbolo', required: true, placeholder: 'S/' },
                   { name: 'name', label: 'Nombre', required: true },
                 ]}
                 display={(c) => `${c.symbol} ${c.code} — ${c.name}`}
@@ -105,14 +105,14 @@ export default function ConfiguracionPage() {
 
         <TabsContent value="workspace" className="space-y-2">
           <p className="text-sm text-muted-foreground">
-            Catalogos de <span className="font-medium text-foreground">{activeWorkspace?.name}</span>. Cambia de
+            Catálogos de <span className="font-medium text-foreground">{activeWorkspace?.name}</span>. Cambia de
             workspace en el selector para gestionar los de otro.
           </p>
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardContent className="pt-6">
                 <CatalogManager
-                  title="Categorias"
+                  title="Categorías"
                   endpoint="/categories"
                   queryKey={queryKeys.categories(ws)}
                   extraBody={{ workspaceId: ws }}
@@ -152,7 +152,7 @@ export default function ConfiguracionPage() {
                       fields={[
                         { name: 'name', label: 'Nombre', required: true },
                         { name: 'provider', label: 'Proveedor' },
-                        { name: 'category', label: 'Categoria' },
+                        { name: 'category', label: 'Categoría' },
                       ]}
                       display={(a) => String(a.name)}
                     />
@@ -167,7 +167,7 @@ export default function ConfiguracionPage() {
                       extraBody={{ workspaceId: ws }}
                       fields={[
                         { name: 'name', label: 'Nombre', required: true },
-                        { name: 'description', label: 'Descripcion' },
+                        { name: 'description', label: 'Descripción' },
                         { name: 'emoji', label: 'Emoji', placeholder: '📦' },
                       ]}
                       display={(p) => `${p.emoji ?? ''} ${p.name}`}
@@ -184,7 +184,7 @@ export default function ConfiguracionPage() {
                       fields={[
                         { name: 'name', label: 'Nombre', required: true },
                         { name: 'email', label: 'Email' },
-                        { name: 'phone', label: 'Telefono' },
+                        { name: 'phone', label: 'Teléfono' },
                       ]}
                       display={(p) => String(p.name)}
                     />

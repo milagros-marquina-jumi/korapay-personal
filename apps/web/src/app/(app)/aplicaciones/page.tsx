@@ -76,7 +76,7 @@ function AplicacionesContent() {
       },
       {
         id: 'category',
-        header: 'Categoria',
+        header: 'Categoría',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.category ?? '-'}</span>,
       },
     ],
@@ -99,8 +99,8 @@ function AplicacionesContent() {
               value={category}
               onValueChange={setCategory}
               options={categoryOptions}
-              placeholder="Categoria"
-              allLabel="Toda categoria"
+              placeholder="Categoría"
+              allLabel="Toda categoría"
             />
             <FilterSelect
               value={provider}
@@ -119,7 +119,7 @@ function AplicacionesContent() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        emptyState={<EmptyState title="Sin aplicaciones" description="Aun no hay aplicaciones registradas." />}
+        emptyState={<EmptyState title="Sin aplicaciones" description="Aún no hay aplicaciones registradas." />}
       />
     </div>
   );

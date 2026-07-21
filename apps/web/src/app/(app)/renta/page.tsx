@@ -131,7 +131,7 @@ function RentaContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         emptyState={
-          <EmptyState title="Sin obligaciones" description="Aun no hay obligaciones tributarias registradas." />
+          <EmptyState title="Sin obligaciones" description="Aún no hay obligaciones tributarias registradas." />
         }
       />
     </div>

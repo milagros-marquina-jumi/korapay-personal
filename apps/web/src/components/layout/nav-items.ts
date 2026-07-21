@@ -75,4 +75,4 @@ export function navForType(type: string | undefined): NavItem[] {
   return navByWorkspaceType[type ?? 'PERSONAL'] ?? PERSONAL;
 }
 
-export const footerNavItem: NavItem = { href: '/configuracion', label: 'Configuracion', icon: Settings };
+export const footerNavItem: NavItem = { href: '/configuracion', label: 'Configuración', icon: Settings };

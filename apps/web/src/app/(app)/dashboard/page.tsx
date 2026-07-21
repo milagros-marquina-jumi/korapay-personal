@@ -55,7 +55,7 @@ export default function DashboardPage() {
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== 'EXPENSE') continue;
-    const name = t.category?.name ?? 'Sin categoria';
+    const name = t.category?.name ?? 'Sin categoría';
     byCategory.set(name, (byCategory.get(name) ?? 0) + Number(t.amountBase));
   }
   const donutData = [...byCategory.entries()]
@@ -115,7 +115,7 @@ export default function DashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Gastos por categoria</CardTitle>
+            <CardTitle>Gastos por categoría</CardTitle>
           </CardHeader>
           <CardContent>
             {donutData.length ? (
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm font-medium">{t.concept}</p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(t.date)} · {t.category?.name ?? 'Sin categoria'}
+                    {formatDate(t.date)} · {t.category?.name ?? 'Sin categoría'}
                   </p>
                 </div>
                 <span

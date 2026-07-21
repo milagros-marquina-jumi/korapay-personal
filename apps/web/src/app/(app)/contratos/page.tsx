@@ -56,7 +56,7 @@ function ContratosContent() {
 
   const currencyOptions = [
     { value: 'PEN', label: 'Soles' },
-    { value: 'USD', label: 'Dolares' },
+    { value: 'USD', label: 'Dólares' },
   ];
 
   const contracts = useMemo(
@@ -159,7 +159,7 @@ function ContratosContent() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        emptyState={<EmptyState title="Sin contratos" description="Aun no hay contratos registrados." />}
+        emptyState={<EmptyState title="Sin contratos" description="Aún no hay contratos registrados." />}
       />
     </div>
   );

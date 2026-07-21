@@ -61,7 +61,7 @@ function ProyectosContent() {
       },
       {
         id: 'description',
-        header: 'Descripcion',
+        header: 'Descripción',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.description ?? '-'}</span>,
       },
       {
@@ -100,7 +100,7 @@ function ProyectosContent() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
-        emptyState={<EmptyState title="Sin proyectos" description="Aun no hay proyectos registrados." />}
+        emptyState={<EmptyState title="Sin proyectos" description="Aún no hay proyectos registrados." />}
       />
     </div>
   );

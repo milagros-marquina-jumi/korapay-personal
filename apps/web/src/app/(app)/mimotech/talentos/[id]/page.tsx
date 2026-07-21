@@ -13,6 +13,7 @@ import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,7 +28,7 @@ function formatDateOrActive(value?: string | null) {
   return value ? formatDate(value) : 'Actual';
 }
 
-const ACTION_LABELS: Record<string, string> = { CREATE: 'Creo', UPDATE: 'Edito', DELETE: 'Elimino' };
+const ACTION_LABELS: Record<string, string> = { CREATE: 'Creó', UPDATE: 'Editó', DELETE: 'Eliminó' };
 
 function TalentDetailContent() {
   const { activeWorkspaceId } = useWorkspace();
@@ -168,7 +169,7 @@ function TalentDetailContent() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Cualquiera con este enlace puede ver y registrar los movimientos de este talento. Revocalo si se filtra.
+                Cualquiera con este enlace puede ver y registrar los movimientos de este talento. Revócalo si se filtra.
               </p>
             </>
           ) : (
@@ -188,7 +189,7 @@ function TalentDetailContent() {
         <TabsList>
           <TabsTrigger value="ledger">Estado de cuenta</TabsTrigger>
           <TabsTrigger value="contracts">Contratos</TabsTrigger>
-          <TabsTrigger value="audit">Auditoria</TabsTrigger>
+          <TabsTrigger value="audit">Auditoría</TabsTrigger>
         </TabsList>
 
         <TabsContent value="ledger">
@@ -200,7 +201,7 @@ function TalentDetailContent() {
             onDelete={async (entryId) => {
               const ok = await confirm({
                 title: 'Eliminar registro',
-                description: 'Esta accion no se puede deshacer.',
+                description: 'Esta acción no se puede deshacer.',
                 confirmLabel: 'Eliminar',
                 destructive: true,
               });
@@ -269,7 +270,7 @@ function TalentDetailContent() {
               ))}
             </div>
           ) : (
-            <EmptyState title="Sin contratos" description="Este talento aun no tiene contratos registrados." />
+            <EmptyState title="Sin contratos" description="Este talento aún no tiene contratos registrados." />
           )}
         </TabsContent>
 
@@ -279,28 +280,38 @@ function TalentDetailContent() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Accion</TableHead>
+                    <TableHead>Fecha y hora</TableHead>
+                    <TableHead>Acción</TableHead>
                     <TableHead>Autor</TableHead>
-                    <TableHead>Cambio</TableHead>
+                    <TableHead>Detalle</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {audit.map((a) => (
                     <TableRow key={a.id}>
-                      <TableCell className="text-sm">{new Date(a.createdAt).toLocaleString('es-PE')}</TableCell>
-                      <TableCell className="text-sm">{ACTION_LABELS[a.action] ?? a.action}</TableCell>
-                      <TableCell className="text-sm">
-                        {a.changes?.actor?.startsWith('TALENT') ? 'Talento' : 'Admin'}
+                      <TableCell className="whitespace-nowrap text-sm">
+                        {new Date(a.createdAt).toLocaleString('es-PE')}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{auditSummary(a)}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={a.action === 'DELETE' ? 'destructive' : a.action === 'CREATE' ? 'success' : 'info'}
+                        >
+                          {ACTION_LABELS[a.action] ?? a.action}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {a.changes?.actor?.startsWith('TALENT') ? 'Talento' : 'Administrador'}
+                      </TableCell>
+                      <TableCell>
+                        <AuditDetail entry={a} />
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
           ) : (
-            <EmptyState title="Sin cambios" description="Aun no hay historial de auditoria." />
+            <EmptyState title="Sin cambios" description="Aún no hay historial de auditoría." />
           )}
         </TabsContent>
       </Tabs>
@@ -320,11 +331,72 @@ function normalize(values: LedgerFormValues) {
   };
 }
 
-function auditSummary(a: TalentAuditEntry): string {
-  const after = a.changes?.after as { pendingAmount?: string; paidAmount?: string; status?: string } | undefined;
-  if (a.action === 'DELETE') return 'Registro eliminado';
-  if (!after) return '-';
-  return `Pagado ${after.paidAmount ?? '-'} · Falta ${after.pendingAmount ?? '-'} · ${after.status ?? ''}`;
+const STATUS_LABELS: Record<string, string> = {
+  PAID: 'Pagado',
+  PENDING: 'Pendiente',
+  PARTIAL: 'Parcial',
+  OVERDUE: 'Vencido',
+  CANCELLED: 'Cancelado',
+};
+const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
+
+interface LedgerSnapshot {
+  date?: string;
+  type?: string;
+  paidAmount?: string;
+  debtAmount?: string;
+  pendingAmount?: string;
+  status?: string;
+  description?: string | null;
+}
+
+function snapshotLines(snap: LedgerSnapshot): string[] {
+  const lines: string[] = [];
+  if (snap.date) lines.push(`Fecha: ${formatDate(snap.date)}`);
+  if (snap.type) lines.push(`Tipo: ${TYPE_LABELS[snap.type] ?? snap.type}`);
+  if (snap.paidAmount !== undefined) lines.push(`Pagado: ${formatMoney(snap.paidAmount, 'PEN')}`);
+  if (snap.debtAmount !== undefined) lines.push(`Deuda: ${formatMoney(snap.debtAmount, 'PEN')}`);
+  if (snap.pendingAmount !== undefined) lines.push(`Falta pagar: ${formatMoney(snap.pendingAmount, 'PEN')}`);
+  if (snap.status) lines.push(`Estado: ${STATUS_LABELS[snap.status] ?? snap.status}`);
+  if (snap.description) lines.push(`Descripción: ${snap.description}`);
+  return lines;
+}
+
+function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
+  const before = entry.changes?.before as LedgerSnapshot | undefined;
+  const after = entry.changes?.after as LedgerSnapshot | undefined;
+
+  if (entry.action === 'DELETE' && before) {
+    return (
+      <div className="space-y-0.5 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Registro eliminado</p>
+        {snapshotLines(before).map((l) => (
+          <p key={l}>{l}</p>
+        ))}
+      </div>
+    );
+  }
+
+  if (entry.action === 'UPDATE' && before && after) {
+    const changed = snapshotLines(after).filter((line, i) => line !== snapshotLines(before)[i]);
+    return (
+      <div className="space-y-0.5 text-xs text-muted-foreground">
+        {changed.length ? changed.map((l) => <p key={l}>{l}</p>) : <p>Sin cambios de valor</p>}
+      </div>
+    );
+  }
+
+  if (after) {
+    return (
+      <div className="space-y-0.5 text-xs text-muted-foreground">
+        {snapshotLines(after).map((l) => (
+          <p key={l}>{l}</p>
+        ))}
+      </div>
+    );
+  }
+
+  return <span className="text-xs text-muted-foreground">—</span>;
 }
 
 export default function TalentDetailPage() {

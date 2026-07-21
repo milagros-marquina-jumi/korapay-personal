@@ -23,7 +23,7 @@ export function WorkspaceGate({ type, children }: { type: string | string[]; chi
     const label = allowed.map((t) => TYPE_LABEL[t] ?? t).join(' o ');
     return (
       <EmptyState
-        title={`Esta seccion pertenece a ${label}`}
+        title={`Esta sección pertenece a ${label}`}
         description={`Cambia a un workspace ${label} desde el selector para verla.`}
         action={
           <Button asChild variant="outline">

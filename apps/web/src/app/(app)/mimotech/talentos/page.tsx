@@ -104,7 +104,7 @@ function TalentFormDialog({ workspaceId }: { workspaceId: string }) {
               <Input id="email" placeholder="Opcional" {...register('email')} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefono</Label>
+              <Label htmlFor="phone">Teléfono</Label>
               <Input id="phone" placeholder="Opcional" {...register('phone')} />
             </div>
           </div>
@@ -250,7 +250,7 @@ function TalentosContent() {
           })}
         </div>
       ) : (
-        <EmptyState title="Sin talentos" description="Registra tu primer talento con el boton de arriba." />
+        <EmptyState title="Sin talentos" description="Registra tu primer talento con el botón de arriba." />
       )}
     </div>
   );

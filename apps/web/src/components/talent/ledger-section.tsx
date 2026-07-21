@@ -10,7 +10,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PeriodFilter } from '@/components/data-table/period-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
-import { Button } from '@/components/ui/button';
+import { IconAction } from '@/components/ui/icon-action';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
 import { formatDate } from '@/lib/utils';
 import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
@@ -52,6 +52,7 @@ export function LedgerSection({
   const [type, setType] = useState(FILTER_ALL);
   const [year, setYear] = useState(FILTER_ALL);
   const [month, setMonth] = useState(FILTER_ALL);
+  const [editing, setEditing] = useState<TalentLedgerEntry | null>(null);
 
   const cur = currency as 'PEN' | 'USD';
   const statusOptions = useMemo(
@@ -134,33 +135,16 @@ export function LedgerSection({
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <div className="flex justify-end gap-1">
-          <LedgerFormDialog
-            entry={row.original}
-            isPending={isMutating}
-            onSubmit={(v) => onUpdate(row.original.id, v)}
-            trigger={
-              <Button size="icon" variant="ghost" className="size-8" aria-label="Editar">
-                <Pencil className="size-4" />
-              </Button>
-            }
-          />
+        <div className="flex justify-end gap-0.5">
+          <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
           {canDelete && onDelete && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-8"
-              aria-label="Eliminar"
-              onClick={() => onDelete(row.original.id)}
-            >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+            <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onDelete(row.original.id)} />
           )}
         </div>
       ),
     });
     return base;
-  }, [cur, canDelete, onDelete, onUpdate, isMutating]);
+  }, [cur, canDelete, onDelete]);
 
   return (
     <div className="space-y-6">
@@ -225,6 +209,18 @@ export function LedgerSection({
         pageSize={20}
         emptyState={<EmptyState title="Sin registros" description="Aún no hay movimientos registrados." />}
       />
+
+      {editing && (
+        <LedgerFormDialog
+          entry={editing}
+          isPending={isMutating}
+          onSubmit={(v) => onUpdate(editing.id, v)}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -15,8 +15,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-  const renderLink = (item: NavItem, indented = false) => {
-    const active = isActive(item.href);
+  const renderLink = (item: NavItem, indented = false, exact = false) => {
+    const active = exact ? pathname === item.href : isActive(item.href);
+    const descendantActive = exact && !active && isActive(item.href);
     const Icon = item.icon;
     return (
       <Link
@@ -28,7 +29,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           indented ? 'pl-10 pr-3' : 'px-3',
           active
             ? 'bg-brand-soft font-semibold text-brand shadow-soft'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+            : descendantActive
+              ? 'font-semibold text-brand hover:bg-accent'
+              : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         )}
       >
         {active && !indented && (
@@ -42,17 +45,17 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   const renderItem = (item: NavItem) => {
     if (!item.children?.length) return renderLink(item);
-    const groupActive = item.children.some((c) => isActive(c.href));
+    const groupActive = item.children.some((c) => isActive(c.href)) || isActive(item.href);
     const ItemIcon = item.icon;
     return (
       <div key={item.href} className="space-y-1">
         {item.linkable ? (
-          renderLink({ href: item.href, label: item.label, icon: item.icon })
+          renderLink({ href: item.href, label: item.label, icon: item.icon }, false, true)
         ) : (
           <div
             className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
-              groupActive ? 'text-primary' : 'text-muted-foreground',
+              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium',
+              groupActive ? 'text-brand' : 'text-muted-foreground',
             )}
           >
             <ItemIcon className="h-[18px] w-[18px]" />

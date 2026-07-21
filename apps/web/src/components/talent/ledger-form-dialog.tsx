@@ -40,10 +40,14 @@ interface Props {
   trigger?: ReactNode;
   onSubmit: (values: LedgerFormValues) => Promise<void>;
   isPending?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function LedgerFormDialog({ entry, trigger, onSubmit, isPending }: Props) {
-  const [open, setOpen] = useState(false);
+export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: controlledOpen, onOpenChange }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const isEdit = !!entry;
 
   const {
@@ -88,7 +92,9 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending }: Props)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger ?? <Button>Nuevo registro</Button>}</DialogTrigger>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>{trigger ?? <Button>Nuevo registro</Button>}</DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar registro' : 'Nuevo registro'}</DialogTitle>

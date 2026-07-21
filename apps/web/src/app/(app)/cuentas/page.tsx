@@ -36,6 +36,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -311,20 +312,11 @@ export default function CuentasPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-0.5">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8"
-                      aria-label="Editar"
-                      onClick={() => setEditing(account)}
-                    >
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-8"
-                      aria-label="Eliminar"
+                    <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(account)} />
+                    <IconAction
+                      icon={Trash2}
+                      label="Eliminar"
+                      destructive
                       onClick={async () => {
                         const ok = await confirm({
                           title: 'Eliminar cuenta',
@@ -334,9 +326,7 @@ export default function CuentasPage() {
                         });
                         if (ok) removeMutation.mutate(account.id);
                       }}
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
+                    />
                   </div>
                 </div>
                 <p className="mt-4 font-display text-2xl font-bold tabular-nums">

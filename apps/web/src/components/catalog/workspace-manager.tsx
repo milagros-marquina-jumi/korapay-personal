@@ -8,6 +8,7 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -185,9 +186,7 @@ export function WorkspaceManager() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{w.type}</Badge>
-              <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => openEdit(w)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(w)} />
             </div>
           </div>
         ))}

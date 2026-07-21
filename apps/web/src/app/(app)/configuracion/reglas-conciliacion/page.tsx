@@ -20,6 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -268,20 +269,11 @@ export default function ReglasConciliacionPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-0.5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-8"
-                        aria-label="Editar"
-                        onClick={() => setEditing(rule)}
-                      >
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-8"
-                        aria-label="Eliminar"
+                      <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(rule)} />
+                      <IconAction
+                        icon={Trash2}
+                        label="Eliminar"
+                        destructive
                         onClick={async () => {
                           const ok = await confirm({
                             title: 'Eliminar regla',
@@ -291,9 +283,7 @@ export default function ReglasConciliacionPage() {
                           });
                           if (ok) removeMutation.mutate(rule.id);
                         }}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                      </Button>
+                      />
                     </div>
                   </TableCell>
                 </TableRow>

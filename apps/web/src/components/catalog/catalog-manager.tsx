@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
@@ -149,17 +150,13 @@ export function CatalogManager({
           items.map((item) => (
             <div key={item.id} className="flex items-center justify-between px-3 py-2">
               <span className="text-sm">{display(item)}</span>
-              <div className="flex gap-1">
-                {editable && (
-                  <Button size="icon" variant="ghost" aria-label="Editar" onClick={() => openEdit(item)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
+              <div className="flex gap-0.5">
+                {editable && <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(item)} />}
                 {deletable && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Eliminar"
+                  <IconAction
+                    icon={Trash2}
+                    label="Eliminar"
+                    destructive
                     onClick={async () => {
                       const ok = await confirm({
                         title: `Eliminar ${title.toLowerCase()}`,
@@ -169,9 +166,7 @@ export function CatalogManager({
                       });
                       if (ok) remove.mutate(item.id);
                     }}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  />
                 )}
               </div>
             </div>

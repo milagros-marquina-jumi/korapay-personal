@@ -34,6 +34,7 @@ const schema = z.object({
   categoryId: z.string().optional(),
   accountId: z.string().optional(),
   description: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -184,6 +185,11 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
           <div className="space-y-2">
             <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" rows={2} {...register('description')} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notas</Label>
+            <Textarea id="notes" rows={2} placeholder="Opcional" {...register('notes')} />
           </div>
 
           <input type="hidden" {...register('status')} value={watch('status')} />

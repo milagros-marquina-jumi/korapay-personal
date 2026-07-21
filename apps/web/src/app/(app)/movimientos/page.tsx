@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
+import { IconAction } from '@/components/ui/icon-action';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Category, Paginated, Transaction } from '@/lib/api.types';
@@ -162,19 +163,12 @@ export default function MovimientosPage() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Duplicar"
-              onClick={() => duplicateMutation.mutate(row.original.id)}
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Eliminar"
+          <div className="flex justify-end gap-0.5">
+            <IconAction icon={Copy} label="Duplicar" onClick={() => duplicateMutation.mutate(row.original.id)} />
+            <IconAction
+              icon={Trash2}
+              label="Eliminar"
+              destructive
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Eliminar movimiento',
@@ -184,9 +178,7 @@ export default function MovimientosPage() {
                 });
                 if (ok) removeMutation.mutate(row.original.id);
               }}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            />
           </div>
         ),
       },

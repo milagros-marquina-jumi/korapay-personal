@@ -177,6 +177,12 @@ export class DetectedTransactionsService {
     };
   }
 
+  async remove(id: string, profileId: string) {
+    await this.findOne(id, profileId);
+    await this.prisma.detectedBankTransaction.delete({ where: { id } });
+    return { ok: true };
+  }
+
   async bulkIgnore(ids: string[], profileId: string) {
     const result = await this.prisma.detectedBankTransaction.updateMany({
       where: { id: { in: ids }, profileId, status: 'PENDING_REVIEW' },

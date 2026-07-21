@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
 import { CurrentUser } from '@/common/auth/current-user.decorator';
@@ -51,5 +51,10 @@ export class DetectedTransactionsController {
   @Post('bulk-ignore')
   bulkIgnore(@Body() body: BulkActionDto, @CurrentUser('sub') userId: string) {
     return this.service.bulkIgnore(body.ids, userId);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser('sub') userId: string) {
+    return this.service.remove(id, userId);
   }
 }

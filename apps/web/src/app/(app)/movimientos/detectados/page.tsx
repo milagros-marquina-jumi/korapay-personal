@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { AlertTriangle, CheckCircle2, CopyCheck, Inbox, WalletCards } from 'lucide-react';
+import { AlertTriangle, Ban, CheckCircle2, CopyCheck, Inbox, RefreshCw, Trash2, WalletCards } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
@@ -64,9 +65,17 @@ const STATUS_VARIANTS: Record<string, 'warning' | 'success' | 'secondary' | 'inf
 
 const NON_CONFIRMABLE_TYPES = new Set(['DECLINED_TRANSACTION']);
 
+function confirmBlockedReason(detected: DetectedTransaction): string | null {
+  if (detected.status === 'CONFIRMED') return 'Ya confirmado';
+  if (detected.status === 'DUPLICATE') return 'Duplicado';
+  if (detected.status === 'IGNORED') return 'Ignorado';
+  if (NON_CONFIRMABLE_TYPES.has(detected.transactionType)) return 'No se puede confirmar (rechazada)';
+  return null;
+}
+
 function confidenceLabel(confidence: number): { label: string; className: string } {
   if (confidence >= 0.8) return { label: 'Alta', className: 'text-success' };
-  if (confidence >= 0.55) return { label: 'Media', className: 'text-warning-foreground' };
+  if (confidence >= 0.55) return { label: 'Media', className: 'text-warning' };
   return { label: 'Baja', className: 'text-muted-foreground' };
 }
 
@@ -205,6 +214,7 @@ export default function DetectadosPage() {
   const [bankFilter, setBankFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
   const [confirming, setConfirming] = useState<DetectedTransaction | null>(null);
+  const [syncOpen, setSyncOpen] = useState(false);
 
   const filters = useMemo(
     () => ({
@@ -252,6 +262,15 @@ export default function DetectadosPage() {
     onSuccess: () => {
       invalidate();
       toast.success('Marcado como duplicado');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/detected-transactions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      invalidate();
+      toast.success('Movimiento eliminado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -342,24 +361,20 @@ export default function DetectadosPage() {
         header: '',
         cell: ({ row }) => {
           const t = row.original;
-          if (t.status !== 'PENDING_REVIEW') {
-            return <span className="text-xs text-muted-foreground">—</span>;
-          }
-          const blocked = NON_CONFIRMABLE_TYPES.has(t.transactionType);
+          const isPending = t.status === 'PENDING_REVIEW';
+          const confirmDisabledLabel = confirmBlockedReason(t);
           return (
-            <div className="flex justify-end gap-1.5">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={blocked}
-                title={blocked ? 'No se puede confirmar una transacción rechazada' : undefined}
+            <div className="flex justify-end gap-0.5">
+              <IconAction
+                icon={CheckCircle2}
+                label={confirmDisabledLabel ?? 'Revisar y confirmar'}
+                disabled={!!confirmDisabledLabel}
                 onClick={() => setConfirming(t)}
-              >
-                Revisar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
+              />
+              <IconAction
+                icon={Ban}
+                label="Ignorar"
+                disabled={!isPending}
                 onClick={async () => {
                   const ok = await confirm({
                     title: 'Ignorar movimiento',
@@ -368,18 +383,33 @@ export default function DetectadosPage() {
                   });
                   if (ok) ignoreMutation.mutate(t.id);
                 }}
-              >
-                Ignorar
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => duplicateMutation.mutate(t.id)}>
-                Duplicado
-              </Button>
+              />
+              <IconAction
+                icon={CopyCheck}
+                label="Marcar como duplicado"
+                disabled={!isPending}
+                onClick={() => duplicateMutation.mutate(t.id)}
+              />
+              <IconAction
+                icon={Trash2}
+                label="Eliminar"
+                destructive
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: 'Eliminar movimiento detectado',
+                    description: 'Se eliminará de la lista de detectados. Esta acción no se puede deshacer.',
+                    confirmLabel: 'Eliminar',
+                    destructive: true,
+                  });
+                  if (ok) deleteMutation.mutate(t.id);
+                }}
+              />
             </div>
           );
         },
       },
     ],
-    [confirm, ignoreMutation, duplicateMutation],
+    [confirm, ignoreMutation, duplicateMutation, deleteMutation],
   );
 
   const hasFilters =
@@ -390,6 +420,11 @@ export default function DetectadosPage() {
       <PageHeader
         title="Movimientos detectados"
         description="Revisa y confirma los consumos importados desde tus correos"
+        action={
+          <Button variant="outline" onClick={() => setSyncOpen(true)}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
+          </Button>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -459,6 +494,21 @@ export default function DetectadosPage() {
           />
         }
       />
+
+      <Dialog open={syncOpen} onOpenChange={setSyncOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sincronizar correos</DialogTitle>
+            <DialogDescription>
+              La sincronización corre automáticamente cada 15 minutos desde Google Apps Script. Para forzarla ahora,
+              abre tu proyecto en script.google.com y ejecuta la función syncKoraPayBankEmails.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => window.open('https://script.google.com', '_blank')}>Abrir Apps Script</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {confirming && (
         <ConfirmDialog

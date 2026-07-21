@@ -39,11 +39,14 @@ export function MonthlyBar({ data, height = 300 }: Props) {
           cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
           contentStyle={{
             borderRadius: 12,
-            border: '1px solid rgba(120,120,120,0.2)',
-            background: isDark ? '#1a1a19' : '#ffffff',
-            color: isDark ? '#ffffff' : '#0b0b0b',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
+            background: isDark ? '#1e293b' : '#ffffff',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
             fontSize: 12,
+            padding: '8px 12px',
           }}
+          itemStyle={{ color: isDark ? '#f1f5f9' : '#0f172a' }}
+          labelStyle={{ color: isDark ? '#f1f5f9' : '#0f172a', fontWeight: 600 }}
           formatter={(value: number, name) => [formatMoney(String(value), 'PEN'), name]}
         />
         <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />

@@ -34,6 +34,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { Talent, TalentLedgerSummary } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useHighlightNew } from '@/lib/use-highlight-new';
+import { cn } from '@/lib/utils';
 
 function initials(name: string) {
   return name
@@ -53,7 +55,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-function TalentFormDialog({ workspaceId }: { workspaceId: string }) {
+function TalentFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -70,12 +72,13 @@ function TalentFormDialog({ workspaceId }: { workspaceId: string }) {
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      apiFetch('/talents', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
-    onSuccess: () => {
+      apiFetch<Talent>('/talents', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.talents(workspaceId) });
       toast.success('Talento creado');
       reset();
       setOpen(false);
+      if (created?.id) onCreated?.(created.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -138,6 +141,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 function TalentosContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(FILTER_ALL);
 
@@ -180,7 +184,7 @@ function TalentosContent() {
       <PageHeader
         title="Talentos"
         description="Talentos tercerizados de MIMOTECH"
-        action={activeWorkspaceId && <TalentFormDialog workspaceId={activeWorkspaceId} />}
+        action={activeWorkspaceId && <TalentFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} />}
       />
 
       <DataTableToolbar
@@ -217,7 +221,7 @@ function TalentosContent() {
             const talentSummary = summaryById[talent.id];
             return (
               <Link key={talent.id} href={`/mimotech/talentos/${talent.id}`}>
-                <Card className="h-full transition-shadow hover:shadow-lift">
+                <Card className={cn('h-full transition-shadow hover:shadow-lift', highlightClass(talent.id))}>
                   <CardHeader className="flex flex-row items-center justify-between gap-4 p-6">
                     <CardTitle className="flex items-center gap-3">
                       <Avatar>

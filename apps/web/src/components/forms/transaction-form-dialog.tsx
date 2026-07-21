@@ -33,7 +33,6 @@ const schema = z.object({
   status: z.enum(['PAID', 'PENDING', 'OVERDUE', 'PARTIAL']),
   categoryId: z.string().optional(),
   accountId: z.string().optional(),
-  description: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -43,9 +42,10 @@ interface Props {
   workspaceId: string;
   defaultType?: FormValues['type'];
   trigger: ReactNode;
+  onCreated?: (id: string) => void;
 }
 
-export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', trigger }: Props) {
+export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', trigger, onCreated }: Props) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -81,11 +81,12 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      apiFetch('/transactions', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
-    onSuccess: () => {
+      apiFetch<{ id: string }>('/transactions', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['transactions', workspaceId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(workspaceId) });
       toast.success('Movimiento creado');
+      if (created?.id) onCreated?.(created.id);
       reset();
       setOpen(false);
     },
@@ -183,13 +184,8 @@ export function TransactionFormDialog({ workspaceId, defaultType = 'EXPENSE', tr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
-            <Textarea id="description" rows={2} {...register('description')} />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="notes">Notas</Label>
-            <Textarea id="notes" rows={2} placeholder="Opcional" {...register('notes')} />
+            <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
           </div>
 
           <input type="hidden" {...register('status')} value={watch('status')} />

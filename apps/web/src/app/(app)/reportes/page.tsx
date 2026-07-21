@@ -64,7 +64,7 @@ export default function ReportesPage() {
 
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
-    if (t.type !== 'EXPENSE') continue;
+    if (t.type !== 'EXPENSE' && t.type !== 'BUSINESS_COST' && t.type !== 'TEAM_PAYMENT') continue;
     const name = t.category?.name ?? 'Sin categoría';
     byCategory.set(name, (byCategory.get(name) ?? 0) + Number(t.amountBase));
   }

@@ -92,7 +92,12 @@ export default function ConfiguracionPage() {
                   { name: 'name', label: 'Nombre', required: true },
                   { name: 'country', label: 'País', placeholder: 'PE' },
                 ]}
-                display={(b) => String(b.name)}
+                display={(b) => (
+                  <span>
+                    {String(b.name)}
+                    {b.country ? <span className="ml-2 text-xs text-muted-foreground">{String(b.country)}</span> : null}
+                  </span>
+                )}
               />
             </CardContent>
           </Card>

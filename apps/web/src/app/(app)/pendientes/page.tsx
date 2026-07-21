@@ -32,7 +32,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { PendingItem } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { useHighlightNew } from '@/lib/use-highlight-new';
+import { cn, formatDate } from '@/lib/utils';
 
 const schema = z.object({
   kind: z.enum(['COBRAR', 'PAGAR']),
@@ -45,7 +46,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-function PendingFormDialog({ workspaceId }: { workspaceId: string }) {
+function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -69,12 +70,13 @@ function PendingFormDialog({ workspaceId }: { workspaceId: string }) {
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      apiFetch('/pending-items', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
-    onSuccess: () => {
+      apiFetch<PendingItem>('/pending-items', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingItems(workspaceId) });
       toast.success('Pendiente creado');
       reset();
       setOpen(false);
+      if (created?.id) onCreated?.(created.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -177,6 +179,7 @@ function MarkPaidButton({ workspaceId, item }: { workspaceId: string; item: Pend
 
 export default function PendientesPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
@@ -225,7 +228,7 @@ export default function PendientesPage() {
       <PageHeader
         title="Pendientes"
         description="Cobros y pagos pendientes"
-        action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} /> : null}
+        action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
       />
 
       <DataTableToolbar
@@ -275,7 +278,7 @@ export default function PendientesPage() {
           {items.map((item) => {
             const currency = item.currency as 'PEN' | 'USD';
             return (
-              <Card key={item.id}>
+              <Card key={item.id} className={cn(highlightClass(item.id))}>
                 <CardHeader className="flex flex-row items-start justify-between gap-2">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">

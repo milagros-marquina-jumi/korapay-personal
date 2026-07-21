@@ -23,6 +23,7 @@ interface DataTableProps<T> {
   onGlobalFilterChange?: (value: string) => void;
   emptyState?: ReactNode;
   pageSize?: number;
+  rowClassName?: (row: T) => string;
 }
 
 export function DataTable<T>({
@@ -33,6 +34,7 @@ export function DataTable<T>({
   onGlobalFilterChange,
   emptyState,
   pageSize = 15,
+  rowClassName,
 }: DataTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -90,7 +92,7 @@ export function DataTable<T>({
                   </TableRow>
                 ))
               : rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} className={rowClassName?.(row.original)}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                     ))}

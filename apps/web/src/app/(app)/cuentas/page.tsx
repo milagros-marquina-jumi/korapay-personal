@@ -44,6 +44,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { Account } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useHighlightNew } from '@/lib/use-highlight-new';
+import { cn } from '@/lib/utils';
 
 const kindLabels: Record<string, string> = {
   SAVINGS: 'Ahorros',
@@ -79,12 +81,14 @@ function AccountFormDialog({
   trigger,
   open: controlledOpen,
   onOpenChange,
+  onCreated,
 }: {
   workspaceId: string;
   account?: Account;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onCreated?: (id: string) => void;
 }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -112,15 +116,18 @@ function AccountFormDialog({
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
       isEdit
-        ? apiFetch(`/accounts/${account.id}?workspaceId=${workspaceId}`, {
+        ? apiFetch<Account>(`/accounts/${account.id}?workspaceId=${workspaceId}`, {
             method: 'PATCH',
             body: JSON.stringify(values),
           })
-        : apiFetch('/accounts', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
-    onSuccess: () => {
+        : apiFetch<Account>('/accounts', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.accounts(workspaceId) });
       toast.success(isEdit ? 'Cuenta actualizada' : 'Cuenta creada');
-      if (!isEdit) reset();
+      if (!isEdit) {
+        reset();
+        if (created?.id) onCreated?.(created.id);
+      }
       setOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -211,6 +218,7 @@ export default function CuentasPage() {
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
+  const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [kindFilter, setKindFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
@@ -257,7 +265,7 @@ export default function CuentasPage() {
       <PageHeader
         title="Cuentas"
         description="Tus cuentas bancarias, tarjetas y billeteras"
-        action={activeWorkspaceId ? <AccountFormDialog workspaceId={activeWorkspaceId} /> : null}
+        action={activeWorkspaceId ? <AccountFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
       />
 
       <DataTableToolbar
@@ -300,7 +308,7 @@ export default function CuentasPage() {
           {accounts.map((account) => {
             const KindIcon = kindIcons[account.kind] ?? Wallet;
             return (
-              <Card key={account.id} className="p-5">
+              <Card key={account.id} className={cn('p-5', highlightClass(account.id))}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <span className="flex size-11 items-center justify-center rounded-xl bg-brand-soft text-brand">

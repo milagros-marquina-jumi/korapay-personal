@@ -31,7 +31,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { SavingGoal } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { useHighlightNew } from '@/lib/use-highlight-new';
+import { cn, formatDate } from '@/lib/utils';
 
 const goalSchema = z.object({
   name: z.string().min(1, 'Requerido'),
@@ -55,7 +56,7 @@ const entrySchema = z.object({
 
 type EntryFormValues = z.infer<typeof entrySchema>;
 
-function GoalFormDialog({ workspaceId }: { workspaceId: string }) {
+function GoalFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -86,13 +87,14 @@ function GoalFormDialog({ workspaceId }: { workspaceId: string }) {
       };
       if (values.targetDate) payload.targetDate = values.targetDate;
       if (values.monthlyRecommend) payload.monthlyRecommend = values.monthlyRecommend;
-      return apiFetch('/saving-goals', { method: 'POST', body: JSON.stringify(payload) });
+      return apiFetch<SavingGoal>('/saving-goals', { method: 'POST', body: JSON.stringify(payload) });
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.savingGoals(workspaceId) });
       toast.success('Meta creada');
       reset();
       setOpen(false);
+      if (created?.id) onCreated?.(created.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -243,6 +245,7 @@ function EntryFormDialog({ workspaceId, goalId }: { workspaceId: string; goalId:
 
 export default function AhorrosPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
@@ -282,7 +285,7 @@ export default function AhorrosPage() {
       <PageHeader
         title="Ahorros"
         description="Metas de ahorro y su progreso"
-        action={activeWorkspaceId ? <GoalFormDialog workspaceId={activeWorkspaceId} /> : null}
+        action={activeWorkspaceId ? <GoalFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
       />
 
       <DataTableToolbar
@@ -325,7 +328,7 @@ export default function AhorrosPage() {
           {goals.map((goal) => {
             const currency = goal.currency as 'PEN' | 'USD';
             return (
-              <Card key={goal.id}>
+              <Card key={goal.id} className={cn(highlightClass(goal.id))}>
                 <CardHeader className="flex flex-row items-start justify-between gap-2">
                   <CardTitle className="text-base">{goal.name}</CardTitle>
                   <StatusBadge status={goal.status} />

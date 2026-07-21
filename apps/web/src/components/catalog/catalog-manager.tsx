@@ -11,6 +11,8 @@ import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
+import { useHighlightNew } from '@/lib/use-highlight-new';
+import { cn } from '@/lib/utils';
 
 export interface CatalogField {
   name: string;
@@ -47,15 +49,24 @@ export function CatalogManager({
 }: Props) {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
+  const { markNew, highlightClass } = useHighlightNew();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
 
-  const { data: items } = useQuery({
+  const { data } = useQuery({
     queryKey,
     queryFn: () =>
       apiFetch<CatalogItem[]>(endpoint.startsWith('/') ? endpointWithQuery(endpoint, extraBody) : endpoint),
   });
+
+  const items = data
+    ? [...data].sort((a, b) => {
+        const av = String(a.name ?? a.code ?? '').toLowerCase();
+        const bv = String(b.name ?? b.code ?? '').toLowerCase();
+        return av.localeCompare(bv, 'es');
+      })
+    : undefined;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
@@ -63,16 +74,20 @@ export function CatalogManager({
     mutationFn: () => {
       const body = { ...extraBody, ...values };
       if (editing) {
-        return apiFetch(withId(endpoint, editing.id, extraBody), { method: 'PATCH', body: JSON.stringify(body) });
+        return apiFetch<CatalogItem>(withId(endpoint, editing.id, extraBody), {
+          method: 'PATCH',
+          body: JSON.stringify(body),
+        });
       }
-      return apiFetch(endpoint.startsWith('/') ? endpoint : endpoint, {
+      return apiFetch<CatalogItem>(endpoint.startsWith('/') ? endpoint : endpoint, {
         method: 'POST',
         body: JSON.stringify(body),
       });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidate();
       toast.success(editing ? 'Actualizado' : 'Creado');
+      if (!editing && result?.id) markNew(result.id);
       setOpen(false);
       setEditing(null);
       setValues({});
@@ -148,7 +163,7 @@ export function CatalogManager({
       <div className="divide-y rounded-lg border">
         {items?.length ? (
           items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between px-3 py-2">
+            <div key={item.id} className={cn('flex items-center justify-between px-3 py-2', highlightClass(item.id))}>
               <span className="text-sm">{display(item)}</span>
               <div className="flex gap-0.5">
                 {editable && <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(item)} />}

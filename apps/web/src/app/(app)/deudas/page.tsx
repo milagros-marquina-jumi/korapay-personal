@@ -31,7 +31,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { Debt } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { useHighlightNew } from '@/lib/use-highlight-new';
+import { cn, formatDate } from '@/lib/utils';
 
 const debtSchema = z.object({
   direction: z.enum(['DEBO', 'ME_DEBEN']),
@@ -56,7 +57,7 @@ const paymentSchema = z.object({
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
-function DebtFormDialog({ workspaceId }: { workspaceId: string }) {
+function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -89,13 +90,14 @@ function DebtFormDialog({ workspaceId }: { workspaceId: string }) {
       };
       if (values.dueDate) payload.dueDate = values.dueDate;
       if (values.interestRate) payload.interestRate = values.interestRate;
-      return apiFetch('/debts', { method: 'POST', body: JSON.stringify(payload) });
+      return apiFetch<Debt>('/debts', { method: 'POST', body: JSON.stringify(payload) });
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.debts(workspaceId) });
       toast.success('Deuda creada');
       reset();
       setOpen(false);
+      if (created?.id) onCreated?.(created.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -253,6 +255,7 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
 
 export default function DeudasPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
@@ -296,7 +299,7 @@ export default function DeudasPage() {
       <PageHeader
         title="Deudas"
         description="Gestiona lo que debes y lo que te deben"
-        action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} /> : null}
+        action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
       />
 
       <DataTableToolbar
@@ -349,7 +352,7 @@ export default function DeudasPage() {
           {debts.map((debt) => {
             const currency = debt.currency as 'PEN' | 'USD';
             return (
-              <Card key={debt.id}>
+              <Card key={debt.id} className={cn(highlightClass(debt.id))}>
                 <CardHeader className="flex flex-row items-start justify-between gap-2">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">

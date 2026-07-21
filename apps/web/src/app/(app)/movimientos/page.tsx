@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Copy, Plus, Trash2 } from 'lucide-react';
+import { Copy, Eye, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
@@ -16,11 +16,13 @@ import { PageHeader } from '@/components/layout/page-header';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IconAction } from '@/components/ui/icon-action';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Category, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useHighlightNew } from '@/lib/use-highlight-new';
 import { formatDate } from '@/lib/utils';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -51,6 +53,8 @@ export default function MovimientosPage() {
   const [type, setType] = useState<string>(FILTER_ALL);
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [categoryId, setCategoryId] = useState<string>(FILTER_ALL);
+  const [detail, setDetail] = useState<Transaction | null>(null);
+  const { markNew, highlightClass } = useHighlightNew();
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { all: true }),
@@ -164,6 +168,7 @@ export default function MovimientosPage() {
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-0.5">
+            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetail(row.original)} />
             <IconAction icon={Copy} label="Duplicar" onClick={() => duplicateMutation.mutate(row.original.id)} />
             <IconAction
               icon={Trash2}
@@ -172,7 +177,7 @@ export default function MovimientosPage() {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Eliminar movimiento',
-                  description: `Se eliminará "${row.original.description}". Esta acción no se puede deshacer.`,
+                  description: `Se eliminará "${row.original.concept}". Esta acción no se puede deshacer.`,
                   confirmLabel: 'Eliminar',
                   destructive: true,
                 });
@@ -186,6 +191,8 @@ export default function MovimientosPage() {
     [duplicateMutation, removeMutation, confirm],
   );
 
+  const categoryName = (id?: string | null) => categories?.find((c) => c.id === id)?.name ?? '—';
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -196,6 +203,7 @@ export default function MovimientosPage() {
             <TransactionFormDialog
               workspaceId={activeWorkspaceId}
               defaultType="EXPENSE"
+              onCreated={markNew}
               trigger={
                 <Button>
                   <Plus className="mr-2 h-4 w-4" /> Nuevo movimiento
@@ -256,10 +264,43 @@ export default function MovimientosPage() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
+        rowClassName={(t) => highlightClass(t.id)}
         emptyState={
           <EmptyState title="Sin movimientos" description="Crea tu primer movimiento con el botón de arriba." />
         }
       />
+
+      <Dialog open={detail !== null} onOpenChange={(next) => !next && setDetail(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{detail?.concept}</DialogTitle>
+            <DialogDescription>Detalle del movimiento</DialogDescription>
+          </DialogHeader>
+          {detail && (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <DetailRow label="Fecha" value={formatDate(detail.date)} />
+              <DetailRow label="Tipo" value={TYPE_LABELS[detail.type] ?? detail.type} />
+              <DetailRow label="Monto" value={formatMoney(detail.amountOriginal, detail.currency as 'PEN' | 'USD')} />
+              <DetailRow label="Estado" value={STATUS_LABELS[detail.status] ?? detail.status} />
+              <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
+              <DetailRow label="Cuenta" value={detail.account?.name ?? '—'} />
+              <div className="col-span-2">
+                <dt className="text-xs text-muted-foreground">Notas</dt>
+                <dd className="mt-0.5 whitespace-pre-wrap">{detail.notes || detail.description || '—'}</dd>
+              </div>
+            </dl>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium tabular-nums">{value}</dd>
     </div>
   );
 }

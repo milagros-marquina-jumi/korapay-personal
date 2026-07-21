@@ -51,4 +51,16 @@ export class CatalogController {
   currencies() {
     return this.catalogService.currencies();
   }
+
+  @Get('banks')
+  @ApiOperation({ summary: 'List banks' })
+  banks() {
+    return this.catalogService.banks();
+  }
+
+  @Get('exchange-rate')
+  @ApiOperation({ summary: 'Latest exchange rate' })
+  exchangeRate() {
+    return this.catalogService.exchangeRate();
+  }
 }

@@ -42,4 +42,22 @@ export class CatalogService {
   currencies() {
     return this.prisma.currency.findMany({ orderBy: { code: 'asc' } });
   }
+
+  banks() {
+    return this.prisma.bank.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  async exchangeRate() {
+    const rate = await this.prisma.exchangeRate.findFirst({
+      orderBy: { date: 'desc' },
+      include: { fromCurrency: true, toCurrency: true },
+    });
+    if (!rate) return null;
+    return {
+      from: rate.fromCurrency.code,
+      to: rate.toCurrency.code,
+      rate: rate.rate.toString(),
+      date: rate.date,
+    };
+  }
 }

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreatePersonDto {
   @ApiProperty()
@@ -26,6 +26,23 @@ export class CreatePersonDto {
   @IsOptional()
   @IsString()
   role?: string;
+
+  @ApiPropertyOptional({ enum: ['TEAM', 'TALENT_REF'] })
+  @IsOptional()
+  @IsIn(['TEAM', 'TALENT_REF'])
+  kind?: string;
 }
 
 export class UpdatePersonDto extends PartialType(CreatePersonDto) {}
+
+export class ListPeopleDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  workspaceId!: string;
+
+  @ApiPropertyOptional({ enum: ['TEAM', 'TALENT_REF'] })
+  @IsOptional()
+  @IsIn(['TEAM', 'TALENT_REF'])
+  kind?: string;
+}

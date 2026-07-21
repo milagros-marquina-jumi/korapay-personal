@@ -3,14 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WorkspaceSwitcher } from '@/components/layout/workspace-switcher';
+import { useWorkspace } from '@/components/providers/workspace-provider';
 import { cn } from '@/lib/utils';
-import { footerNavItem, navItems } from './nav-items';
+import { footerNavItem, type NavItem, navForType } from './nav-items';
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { activeWorkspace } = useWorkspace();
+  const items = navForType(activeWorkspace?.type);
 
-  const renderItem = (item: (typeof navItems)[number]) => {
-    const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  const renderLink = (item: NavItem, indented = false) => {
+    const active = isActive(item.href);
     const Icon = item.icon;
     return (
       <Link
@@ -18,13 +23,34 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         href={item.href}
         onClick={onNavigate}
         className={cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+          'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
+          indented ? 'pl-10 pr-3' : 'px-3',
           active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
         )}
       >
         <Icon className="h-[18px] w-[18px]" />
         {item.label}
       </Link>
+    );
+  };
+
+  const renderItem = (item: NavItem) => {
+    if (!item.children?.length) return renderLink(item);
+    const groupActive = item.children.some((c) => isActive(c.href));
+    const ItemIcon = item.icon;
+    return (
+      <div key={item.href} className="space-y-1">
+        <div
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+            groupActive ? 'text-primary' : 'text-muted-foreground',
+          )}
+        >
+          <ItemIcon className="h-[18px] w-[18px]" />
+          {item.label}
+        </div>
+        <div className="space-y-1">{item.children.map((c) => renderLink(c, true))}</div>
+      </div>
     );
   };
 
@@ -41,9 +67,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <WorkspaceSwitcher />
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">{navItems.map(renderItem)}</nav>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">{items.map(renderItem)}</nav>
 
-      <div className="border-t p-3">{renderItem(footerNavItem)}</div>
+      <div className="border-t p-3">{renderLink(footerNavItem)}</div>
     </div>
   );
 }

@@ -3,13 +3,20 @@ import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class PersonService {
   constructor(private readonly prisma: PrismaService) {}
-  async findAll(workspaceId: string) {
+  async findAll(workspaceId: string, kind?: string) {
     return this.prisma.person.findMany({
-      where: { workspaceId, deletedAt: null },
+      where: { workspaceId, deletedAt: null, ...(kind && { kind }) },
       orderBy: { name: 'asc' },
     });
   }
-  async create(data: { workspaceId: string; name: string; email?: string; phone?: string; role?: string }) {
+  async create(data: {
+    workspaceId: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+    kind?: string;
+  }) {
     return this.prisma.person.create({ data });
   }
   async update(id: string, workspaceId: string, data: Record<string, unknown>) {

@@ -1,5 +1,6 @@
 export const WorkspaceType = {
   PERSONAL: 'PERSONAL',
+  EMPLOYMENT: 'EMPLOYMENT',
   BUSINESS: 'BUSINESS',
   SHARED: 'SHARED',
   SAVINGS: 'SAVINGS',

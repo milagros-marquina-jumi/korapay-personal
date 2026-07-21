@@ -197,6 +197,7 @@ model Person {
   initials    String?
   color       String?
   role        String?
+  kind        String    @default("TEAM")
   status      String    @default("ACTIVE")
   notes       String?
   createdAt   DateTime  @default(now()) @map("created_at")

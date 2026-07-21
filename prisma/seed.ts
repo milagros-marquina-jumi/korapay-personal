@@ -49,6 +49,23 @@ type Catalogs = {
   suscripciones: string[];
 };
 
+const PERU_BANKS = [
+  'BBVA',
+  'BCP',
+  'IBK',
+  'Interbank',
+  'Scotiabank',
+  'Pichincha',
+  'Mi Banco',
+  'Caja Arequipa',
+  'Caja Huancayo',
+  'Efectivo',
+  'PayPal',
+  'Yape',
+  'Plin',
+  'Agora',
+];
+
 async function clean() {
   await prisma.auditLog.deleteMany();
   await prisma.calendarEvent.deleteMany();
@@ -75,6 +92,7 @@ async function clean() {
   await prisma.project.deleteMany();
   await prisma.application.deleteMany();
   await prisma.paymentMethod.deleteMany();
+  await prisma.bank.deleteMany();
   await prisma.exchangeRate.deleteMany();
   await prisma.currency.deleteMany();
   await prisma.importIssue.deleteMany();
@@ -105,6 +123,7 @@ async function main() {
     },
   });
 
+  // ---- Catalogos globales ----
   await prisma.currency.createMany({
     data: [
       { code: 'PEN', symbol: 'S/', name: 'Sol peruano' },
@@ -115,15 +134,20 @@ async function main() {
   const pen = await prisma.currency.findUnique({ where: { code: 'PEN' } });
   if (usd && pen) {
     await prisma.exchangeRate.create({
-      data: {
-        fromCurrencyId: usd.id,
-        toCurrencyId: pen.id,
-        rate: USD_TO_PEN,
-        date: new Date('2026-07-20'),
-      },
+      data: { fromCurrencyId: usd.id, toCurrencyId: pen.id, rate: USD_TO_PEN, date: new Date('2026-07-20') },
     });
   }
+  await prisma.paymentMethod.createMany({
+    data: [...new Set([...catalogs.tipo_pagos, ...catalogs.medios_pago])].map((name) => ({ name })),
+    skipDuplicates: true,
+  });
+  const bankNames = [...new Set([...PERU_BANKS, ...catalogs.medios_pago])];
+  await prisma.bank.createMany({
+    data: bankNames.map((name) => ({ name, country: 'PE' })),
+    skipDuplicates: true,
+  });
 
+  // ---- Workspaces ----
   const personal = await prisma.workspace.create({
     data: {
       name: 'Personal',
@@ -133,91 +157,76 @@ async function main() {
       currency: 'PEN',
     },
   });
+  const empleos = await prisma.workspace.create({
+    data: {
+      name: 'Ingresos Laborales',
+      type: 'EMPLOYMENT',
+      description: 'Empresas donde trabaja Milagros e ingresos por trabajos',
+      emoji: '💼',
+      currency: 'PEN',
+    },
+  });
   const mimotech = await prisma.workspace.create({
     data: {
       name: 'MIMOTECH',
       type: 'BUSINESS',
-      description: 'Ingresos, costos y pagos de MIMOTECH',
+      description: 'Costos, pagos de equipo y talentos tercerizados',
       emoji: '🚀',
       currency: 'PEN',
     },
   });
-  const mimotalents = await prisma.workspace.create({
-    data: {
-      name: 'Mimotalents',
-      type: 'TALENT_MANAGEMENT',
-      description: 'Gestion de talentos, contratos e ingresos',
-      emoji: '🎯',
-      currency: 'PEN',
-    },
-  });
-  for (const ws of [personal, mimotech, mimotalents]) {
+  for (const ws of [personal, empleos, mimotech]) {
     await prisma.workspaceMember.create({ data: { workspaceId: ws.id, profileId: profile.id, role: 'OWNER' } });
   }
 
-  await prisma.paymentMethod.createMany({
-    data: [...new Set([...catalogs.tipo_pagos, ...catalogs.medios_pago])].map((name) => ({ name })),
-    skipDuplicates: true,
-  });
-
+  // ---- Helpers por workspace ----
   const categoryIcon: Record<string, { emoji: string; color: string }> = {
     default: { emoji: '📁', color: 'bg-slate-100 text-slate-900' },
   };
-  function catMeta(name: string) {
-    return categoryIcon[name] ?? categoryIcon.default;
-  }
-
-  const catByWorkspace: Record<string, Record<string, string>> = {
-    [personal.id]: {},
-    [mimotech.id]: {},
-    [mimotalents.id]: {},
-  };
+  const catByWorkspace: Record<string, Record<string, string>> = {};
   async function ensureCategory(workspaceId: string, name: string): Promise<string> {
     const key = name.trim();
-    const existing = catByWorkspace[workspaceId]?.[key];
-    if (existing) return existing;
-    const meta = catMeta(key);
-    const c = await prisma.category.create({
-      data: { workspaceId, name: key, emoji: meta.emoji, color: meta.color },
-    });
+    catByWorkspace[workspaceId] ??= {};
     const map = catByWorkspace[workspaceId];
-    if (map) map[key] = c.id;
+    if (map[key]) return map[key];
+    const meta = categoryIcon[key] ?? categoryIcon.default;
+    const c = await prisma.category.create({ data: { workspaceId, name: key, emoji: meta.emoji, color: meta.color } });
+    map[key] = c.id;
     return c.id;
   }
-  for (const name of [...catalogs.categorias_ingreso, ...catalogs.categorias_gasto, ...catalogs.categorias_fijos]) {
-    await ensureCategory(personal.id, name);
-  }
 
-  const companyByName: Record<string, string> = {};
+  const companyByWs: Record<string, Record<string, string>> = {};
   async function ensureCompany(workspaceId: string, name: string | null | undefined): Promise<string | null> {
     if (!name) return null;
     const key = name.trim();
-    if (companyByName[key]) return companyByName[key];
+    companyByWs[workspaceId] ??= {};
+    const map = companyByWs[workspaceId];
+    if (map[key]) return map[key];
     const c = await prisma.company.create({ data: { workspaceId, name: key } });
-    companyByName[key] = c.id;
+    map[key] = c.id;
     return c.id;
   }
-  for (const name of catalogs.empresas) {
-    await ensureCompany(personal.id, name);
-  }
 
-  const personByName: Record<string, string> = {};
-  async function ensurePerson(workspaceId: string, name: string | null | undefined): Promise<string | null> {
+  const personByWs: Record<string, Record<string, string>> = {};
+  async function ensurePerson(
+    workspaceId: string,
+    name: string | null | undefined,
+    kind = 'TEAM',
+  ): Promise<string | null> {
     if (!name) return null;
     const key = name.trim();
-    if (personByName[key]) return personByName[key];
+    personByWs[workspaceId] ??= {};
+    const map = personByWs[workspaceId];
+    if (map[key]) return map[key];
     const initials = key
       .split(/\s+/)
       .map((p) => p[0])
       .join('')
       .slice(0, 2)
       .toUpperCase();
-    const p = await prisma.person.create({ data: { workspaceId, name: key, initials } });
-    personByName[key] = p.id;
+    const p = await prisma.person.create({ data: { workspaceId, name: key, initials, kind } });
+    map[key] = p.id;
     return p.id;
-  }
-  for (const name of catalogs.personas_mimotech) {
-    await ensurePerson(mimotech.id, name);
   }
 
   const appByName: Record<string, string> = {};
@@ -231,9 +240,6 @@ async function main() {
     appByName[key] = a.id;
     return a.id;
   }
-  for (const name of catalogs.suscripciones) {
-    if (name !== 'Todos') await ensureApplication(name);
-  }
 
   const projectByName: Record<string, string> = {};
   async function ensureProject(name: string | null | undefined): Promise<string | null> {
@@ -245,12 +251,12 @@ async function main() {
     return p.id;
   }
 
-  // ---- Personal: ingresos por trabajos ----
+  // ============================================================
+  // Ingresos Laborales (EMPLOYMENT): empresas + ingresos + contratos + renta
+  // ============================================================
   const ingresosTrabajos = load<{
     fecha: string;
-    anio: number | null;
     mes: string | null;
-    tipo: string | null;
     concepto: string | null;
     empresa: string | null;
     pago: string | null;
@@ -265,11 +271,11 @@ async function main() {
   for (const r of ingresosTrabajos) {
     const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
     const original = currency === 'USD' ? (r.totalDolar ?? r.totalSoles ?? 0) : (r.totalSoles ?? 0);
-    const companyId = await ensureCompany(personal.id, r.empresa);
-    const categoryId = await ensureCategory(personal.id, r.concepto ?? 'Sueldo');
+    const companyId = await ensureCompany(empleos.id, r.empresa);
+    const categoryId = await ensureCategory(empleos.id, r.concepto ?? 'Sueldo');
     await prisma.transaction.create({
       data: {
-        workspaceId: personal.id,
+        workspaceId: empleos.id,
         type: 'INCOME',
         concept: r.concepto ?? 'Ingreso',
         description: r.numeroCuenta ? redactSensitiveData(r.numeroCuenta) : null,
@@ -287,7 +293,6 @@ async function main() {
     incomeCount++;
   }
 
-  // ---- Personal: contratos (empresas por mes) ----
   const empresas = load<{ empresaOficial: string | null; fechaInicio: string | null; fechaFin: string | null }>(
     'ingresos_empresas',
   );
@@ -298,10 +303,10 @@ async function main() {
     const key = `${r.empresaOficial}-${r.fechaInicio}`;
     if (seenContracts.has(key)) continue;
     seenContracts.add(key);
-    const companyId = await ensureCompany(personal.id, r.empresaOficial);
+    const companyId = await ensureCompany(empleos.id, r.empresaOficial);
     await prisma.employmentContract.create({
       data: {
-        workspaceId: personal.id,
+        workspaceId: empleos.id,
         companyId,
         startDate: date(r.fechaInicio),
         endDate: r.fechaFin ? date(r.fechaFin) : null,
@@ -311,7 +316,25 @@ async function main() {
     contractCount++;
   }
 
-  // ---- Personal: egresos ----
+  const renta = load<{ anio: number; monto: number | null; estado: string | null; detalles: string | null }>(
+    'renta_anual',
+  );
+  for (const r of renta) {
+    await prisma.taxObligation.create({
+      data: {
+        workspaceId: empleos.id,
+        name: `Renta Anual ${r.anio}`,
+        dueDate: new Date(`${r.anio + 1}-06-30`),
+        amount: money(r.monto),
+        status: (r.estado ?? '').toLowerCase() === 'pagado' ? 'PAID' : 'PENDING',
+        notes: r.detalles ?? null,
+      },
+    });
+  }
+
+  // ============================================================
+  // Personal (PERSONAL): egresos + ahorros + cuentas
+  // ============================================================
   const egresos = load<{
     fecha: string;
     mes: string | null;
@@ -343,7 +366,6 @@ async function main() {
     expenseCount++;
   }
 
-  // ---- Personal: ahorros (cuentas + metas + entradas) ----
   const ahorros = load<{
     fecha: string;
     descripcion: string | null;
@@ -386,24 +408,9 @@ async function main() {
     savingEntryCount++;
   }
 
-  // ---- Personal: renta anual (obligaciones tributarias) ----
-  const renta = load<{ anio: number; monto: number | null; estado: string | null; detalles: string | null }>(
-    'renta_anual',
-  );
-  for (const r of renta) {
-    await prisma.taxObligation.create({
-      data: {
-        workspaceId: personal.id,
-        name: `Renta Anual ${r.anio}`,
-        dueDate: new Date(`${r.anio + 1}-06-30`),
-        amount: money(r.monto),
-        status: (r.estado ?? '').toLowerCase() === 'pagado' ? 'PAID' : 'PENDING',
-        notes: r.detalles ?? null,
-      },
-    });
-  }
-
-  // ---- MIMOTECH: costos ----
+  // ============================================================
+  // MIMOTECH (BUSINESS): costos + pagos equipo + apps + proyectos + talentos
+  // ============================================================
   const costos = load<{
     fecha: string;
     aplicacion: string | null;
@@ -442,7 +449,6 @@ async function main() {
     costCount++;
   }
 
-  // ---- MIMOTECH: pagos de equipo ----
   const pagos = load<{
     persona: string | null;
     fecha: string;
@@ -453,7 +459,7 @@ async function main() {
   }>('mimotech_pagos');
   let teamPayCount = 0;
   for (const r of pagos) {
-    const personId = await ensurePerson(mimotech.id, r.persona);
+    const personId = await ensurePerson(mimotech.id, r.persona, 'TEAM');
     await prisma.transaction.create({
       data: {
         workspaceId: mimotech.id,
@@ -472,7 +478,7 @@ async function main() {
     teamPayCount++;
   }
 
-  // ---- Mimotalents: perfiles ----
+  // ---- MIMOTECH: talentos tercerizados ----
   const talentsGeneral = load<{
     nombre: string;
     inicioConmigo: string | null;
@@ -488,13 +494,12 @@ async function main() {
       .join('\n');
     const t = await prisma.talentProfile.create({
       data: {
-        workspaceId: mimotalents.id,
+        workspaceId: mimotech.id,
         name: r.nombre,
         status: (r.estado ?? '').toLowerCase() === 'activo' ? 'ACTIVE' : 'INACTIVE',
         notes: notes || null,
       },
     });
-    // clave por primer nombre para cruzar con ingresos (que usan "Kathy Marquina", "Jack Jimenez", etc.)
     talentByName[r.nombre.split(/[\s(]/)[0]?.toLowerCase() ?? r.nombre.toLowerCase()] = t.id;
   }
   function matchTalent(name: string | null | undefined): string | null {
@@ -503,7 +508,6 @@ async function main() {
     return talentByName[first] ?? null;
   }
 
-  // ---- Mimotalents: ingresos (contratos + distribucion + transaccion) ----
   const talentIngresos = load<{
     nombre: string;
     fecha: string;
@@ -544,7 +548,7 @@ async function main() {
     }
     const tx = await prisma.transaction.create({
       data: {
-        workspaceId: mimotalents.id,
+        workspaceId: mimotech.id,
         type: 'INCOME',
         concept: `${r.nombre} - ${r.empresa ?? r.cargo ?? 'Ingreso'}`,
         date: date(r.fecha),
@@ -552,7 +556,7 @@ async function main() {
         currency: 'PEN',
         amountBase: money(r.sueldo),
         status: mapExcelStatus(r.estado),
-        tags: [r.cargo ?? ''].filter(Boolean),
+        tags: [r.cargo ?? '', 'TALENTO'].filter(Boolean),
       },
     });
     talentIncomeCount++;
@@ -569,7 +573,6 @@ async function main() {
     distCount++;
   }
 
-  // ---- Mimotalents: egresos (pagos hacia talentos / deudas) ----
   const talentEgresos = load<{
     nombre: string;
     fecha: string;
@@ -586,7 +589,7 @@ async function main() {
     const amount = r.cantidadE ?? r.cantidadD ?? 0;
     await prisma.transaction.create({
       data: {
-        workspaceId: mimotalents.id,
+        workspaceId: mimotech.id,
         type: 'EXPENSE',
         concept: `Pago ${r.nombre}`,
         description: r.descripcion ?? null,
@@ -595,17 +598,16 @@ async function main() {
         currency: 'PEN',
         amountBase: money(amount),
         status: mapExcelStatus(r.estado),
-        tags: [r.tipoPago ?? ''].filter(Boolean),
+        tags: [r.tipoPago ?? '', 'TALENTO'].filter(Boolean),
       },
     });
     talentExpenseCount++;
 
-    // "Falta Pagar" del Excel -> pendiente real por pagar hacia el talento
     if (r.faltaPagar && r.faltaPagar > 0) {
-      const personId = await ensurePerson(mimotalents.id, r.nombre);
+      const personId = await ensurePerson(mimotech.id, r.nombre, 'TALENT_REF');
       await prisma.pendingItem.create({
         data: {
-          workspaceId: mimotalents.id,
+          workspaceId: mimotech.id,
           kind: 'PAGAR',
           concept: `Falta pagar a ${r.nombre}`,
           amount: money(r.faltaPagar),
@@ -623,23 +625,21 @@ async function main() {
   console.log('Seed completado con datos reales.');
   console.table({
     profile: profile.email,
-    companies: Object.keys(companyByName).length,
-    people: Object.keys(personByName).length,
-    applications: Object.keys(appByName).length,
-    projects: Object.keys(projectByName).length,
-    personalIncome: incomeCount,
-    employmentContracts: contractCount,
-    personalExpense: expenseCount,
-    savingEntries: savingEntryCount,
-    taxObligations: renta.length,
-    mimotechCosts: costCount,
-    teamPayments: teamPayCount,
-    talents: talentsGeneral.length,
-    talentContracts: Object.keys(contractByKey).length,
-    talentIncome: talentIncomeCount,
-    talentDistributions: distCount,
-    talentExpenses: talentExpenseCount,
-    pendingItems: pendingCount,
+    'ws Personal (egresos)': expenseCount,
+    'ws Personal (savingEntries)': savingEntryCount,
+    'ws Empleos (ingresos)': incomeCount,
+    'ws Empleos (contratos)': contractCount,
+    'ws Empleos (renta)': renta.length,
+    'ws MIMOTECH (costos)': costCount,
+    'ws MIMOTECH (pagos equipo)': teamPayCount,
+    'ws MIMOTECH (talentos)': talentsGeneral.length,
+    'ws MIMOTECH (talent income)': talentIncomeCount,
+    'ws MIMOTECH (distribuciones)': distCount,
+    'ws MIMOTECH (talent egresos)': talentExpenseCount,
+    'ws MIMOTECH (pendientes)': pendingCount,
+    'ws MIMOTECH (apps)': Object.keys(appByName).length,
+    'ws MIMOTECH (proyectos)': Object.keys(projectByName).length,
+    banks: bankNames.length,
   });
 }
 

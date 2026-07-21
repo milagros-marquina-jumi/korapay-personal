@@ -14,6 +14,7 @@ export interface Workspace {
   id: string;
   name: string;
   type: string;
+  description?: string | null;
   emoji: string;
   color?: string | null;
   currency: string;
@@ -180,4 +181,66 @@ export interface Talent {
   status: string;
   notes?: string | null;
   contracts?: TalentContract[];
+}
+
+export interface CurrencyCatalog {
+  id: string;
+  code: string;
+  symbol: string;
+  name: string;
+}
+
+export interface PaymentMethodCatalog {
+  id: string;
+  name: string;
+}
+
+export interface BankCatalog {
+  id: string;
+  name: string;
+  country: string;
+}
+
+export interface ExchangeRateInfo {
+  from: string;
+  to: string;
+  rate: string;
+  date: string;
+}
+
+export interface EmploymentContract {
+  id: string;
+  companyId?: string | null;
+  position?: string | null;
+  type?: string | null;
+  startDate: string;
+  endDate?: string | null;
+  salary?: string | null;
+  currency: string;
+  status: string;
+}
+
+export interface TaxObligation {
+  id: string;
+  name: string;
+  dueDate: string;
+  amount: string;
+  status: string;
+  notes?: string | null;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string | null;
+  status: string;
+  emoji?: string | null;
+}
+
+export interface Application {
+  id: string;
+  name: string;
+  provider?: string | null;
+  category?: string | null;
+  url?: string | null;
 }

@@ -12,4 +12,12 @@ export const queryKeys = {
   pendingItems: (workspaceId: string) => ['pending-items', workspaceId] as const,
   talents: (workspaceId: string) => ['talents', workspaceId] as const,
   talent: (workspaceId: string, id: string) => ['talents', workspaceId, id] as const,
+  employmentContracts: (workspaceId: string) => ['employment-contracts', workspaceId] as const,
+  taxObligations: (workspaceId: string) => ['tax-obligations', workspaceId] as const,
+  projects: (workspaceId: string) => ['projects', workspaceId] as const,
+  applications: (workspaceId: string) => ['applications', workspaceId] as const,
+  currencies: () => ['currencies'] as const,
+  paymentMethods: () => ['payment-methods'] as const,
+  banks: () => ['banks'] as const,
+  exchangeRate: () => ['exchange-rate'] as const,
 } as const;

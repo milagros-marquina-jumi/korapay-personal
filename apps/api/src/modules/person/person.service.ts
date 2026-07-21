@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class PersonService {
@@ -17,6 +17,10 @@ export class PersonService {
     role?: string;
     kind?: string;
   }) {
+    const dup = await this.prisma.person.findFirst({
+      where: { workspaceId: data.workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
+    });
+    if (dup) throw new ConflictException('Ya existe una persona con ese nombre');
     return this.prisma.person.create({ data });
   }
   async update(id: string, workspaceId: string, data: Record<string, unknown>) {
@@ -24,6 +28,12 @@ export class PersonService {
       where: { id, workspaceId, deletedAt: null },
     });
     if (!person) throw new NotFoundException('Person not found');
+    if (typeof data.name === 'string') {
+      const dup = await this.prisma.person.findFirst({
+        where: { workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
+      });
+      if (dup) throw new ConflictException('Ya existe una persona con ese nombre');
+    }
     return this.prisma.person.update({ where: { id }, data: data as any });
   }
   async remove(id: string, workspaceId: string) {

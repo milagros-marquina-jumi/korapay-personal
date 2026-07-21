@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
 @Injectable()
@@ -12,13 +12,29 @@ export class CatalogService {
     });
   }
 
-  createApplication(data: { workspaceId: string; name: string; provider?: string; category?: string; url?: string }) {
+  async createApplication(data: {
+    workspaceId: string;
+    name: string;
+    provider?: string;
+    category?: string;
+    url?: string;
+  }) {
+    const dup = await this.prisma.application.findFirst({
+      where: { workspaceId: data.workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
+    });
+    if (dup) throw new ConflictException('Ya existe una aplicación con ese nombre');
     return this.prisma.application.create({ data });
   }
 
   async updateApplication(id: string, workspaceId: string, data: Record<string, unknown>) {
     const found = await this.prisma.application.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Application not found');
+    if (typeof data.name === 'string') {
+      const dup = await this.prisma.application.findFirst({
+        where: { workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
+      });
+      if (dup) throw new ConflictException('Ya existe una aplicación con ese nombre');
+    }
     return this.prisma.application.update({ where: { id }, data: data as never });
   }
 
@@ -35,13 +51,23 @@ export class CatalogService {
     });
   }
 
-  createProject(data: { workspaceId: string; name: string; description?: string; emoji?: string }) {
+  async createProject(data: { workspaceId: string; name: string; description?: string; emoji?: string }) {
+    const dup = await this.prisma.project.findFirst({
+      where: { workspaceId: data.workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
+    });
+    if (dup) throw new ConflictException('Ya existe un proyecto con ese nombre');
     return this.prisma.project.create({ data });
   }
 
   async updateProject(id: string, workspaceId: string, data: Record<string, unknown>) {
     const found = await this.prisma.project.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Project not found');
+    if (typeof data.name === 'string') {
+      const dup = await this.prisma.project.findFirst({
+        where: { workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
+      });
+      if (dup) throw new ConflictException('Ya existe un proyecto con ese nombre');
+    }
     return this.prisma.project.update({ where: { id }, data: data as never });
   }
 
@@ -71,13 +97,21 @@ export class CatalogService {
     return this.prisma.paymentMethod.findMany({ orderBy: { name: 'asc' } });
   }
 
-  createPaymentMethod(data: { name: string }) {
+  async createPaymentMethod(data: { name: string }) {
+    const dup = await this.prisma.paymentMethod.findFirst({
+      where: { name: { equals: data.name, mode: 'insensitive' } },
+    });
+    if (dup) throw new ConflictException('Ya existe un medio de pago con ese nombre');
     return this.prisma.paymentMethod.create({ data });
   }
 
   async updatePaymentMethod(id: string, data: { name: string }) {
     const found = await this.prisma.paymentMethod.findUnique({ where: { id } });
     if (!found) throw new NotFoundException('Payment method not found');
+    const dup = await this.prisma.paymentMethod.findFirst({
+      where: { name: { equals: data.name, mode: 'insensitive' }, id: { not: id } },
+    });
+    if (dup) throw new ConflictException('Ya existe un medio de pago con ese nombre');
     return this.prisma.paymentMethod.update({ where: { id }, data });
   }
 
@@ -91,7 +125,11 @@ export class CatalogService {
     return this.prisma.currency.findMany({ orderBy: { code: 'asc' } });
   }
 
-  createCurrency(data: { code: string; symbol: string; name: string }) {
+  async createCurrency(data: { code: string; symbol: string; name: string }) {
+    const dup = await this.prisma.currency.findFirst({
+      where: { code: { equals: data.code, mode: 'insensitive' } },
+    });
+    if (dup) throw new ConflictException('Ya existe una moneda con ese código');
     return this.prisma.currency.create({ data });
   }
 
@@ -105,13 +143,23 @@ export class CatalogService {
     return this.prisma.bank.findMany({ orderBy: { name: 'asc' } });
   }
 
-  createBank(data: { name: string; country?: string }) {
+  async createBank(data: { name: string; country?: string }) {
+    const dup = await this.prisma.bank.findFirst({
+      where: { name: { equals: data.name, mode: 'insensitive' } },
+    });
+    if (dup) throw new ConflictException('Ya existe un banco con ese nombre');
     return this.prisma.bank.create({ data: { name: data.name, country: data.country ?? 'PE' } });
   }
 
   async updateBank(id: string, data: { name?: string; country?: string }) {
     const found = await this.prisma.bank.findUnique({ where: { id } });
     if (!found) throw new NotFoundException('Bank not found');
+    if (typeof data.name === 'string') {
+      const dup = await this.prisma.bank.findFirst({
+        where: { name: { equals: data.name, mode: 'insensitive' }, id: { not: id } },
+      });
+      if (dup) throw new ConflictException('Ya existe un banco con ese nombre');
+    }
     return this.prisma.bank.update({ where: { id }, data });
   }
 

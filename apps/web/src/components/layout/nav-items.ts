@@ -11,6 +11,7 @@ import {
   Rocket,
   Settings,
   TrendingUp,
+  UserCircle,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -75,4 +76,7 @@ export function navForType(type: string | undefined): NavItem[] {
   return navByWorkspaceType[type ?? 'PERSONAL'] ?? PERSONAL;
 }
 
-export const footerNavItem: NavItem = { href: '/configuracion', label: 'Configuración', icon: Settings };
+export const footerNavItems: NavItem[] = [
+  { href: '/perfil', label: 'Mi perfil', icon: UserCircle },
+  { href: '/configuracion', label: 'Configuración', icon: Settings },
+];

@@ -1,3 +1,12 @@
+export interface Profile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  currency: string;
+  theme: string;
+}
+
 export interface Pagination {
   page: number;
   pageSize: number;

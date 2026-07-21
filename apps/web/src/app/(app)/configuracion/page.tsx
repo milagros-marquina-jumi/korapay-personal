@@ -5,7 +5,6 @@ import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
 import { PageHeader } from '@/components/layout/page-header';
 import { useWorkspace } from '@/components/providers/workspace-provider';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryKeys } from '@/lib/query-keys';
@@ -16,33 +15,15 @@ export default function ConfiguracionPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Configuración" description="Perfil, workspaces, tipo de cambio y catálogos" />
+      <PageHeader title="Configuración" description="Workspaces, tipo de cambio y catálogos" />
 
-      <Tabs defaultValue="perfil">
+      <Tabs defaultValue="workspaces">
         <TabsList>
-          <TabsTrigger value="perfil">Perfil</TabsTrigger>
           <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
           <TabsTrigger value="cambio">Tipo de cambio</TabsTrigger>
           <TabsTrigger value="globales">Catálogos globales</TabsTrigger>
           <TabsTrigger value="workspace">Catálogos del workspace</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="perfil" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Perfil</CardTitle>
-            </CardHeader>
-            <CardContent className="flex items-center gap-4">
-              <Avatar className="size-14">
-                <AvatarFallback className="bg-brand-soft text-lg font-semibold text-brand">MM</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">Milagros Marquina</p>
-                <p className="text-sm text-muted-foreground">demo@korapay.local</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         <TabsContent value="workspaces">
           <Card>

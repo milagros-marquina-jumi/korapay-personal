@@ -38,6 +38,10 @@ export class AuthGuard implements CanActivate {
       }
       this.cachedProfileId = profile.id;
     }
-    return { sub: this.cachedProfileId, email, name: 'Milagros Marquina' };
+    const current = await this.prisma.profile.findUnique({ where: { id: this.cachedProfileId } });
+    if (!current) {
+      throw new UnauthorizedException('Perfil no encontrado. Corre el seed: pnpm db:seed');
+    }
+    return { sub: current.id, email: current.email, name: current.name };
   }
 }

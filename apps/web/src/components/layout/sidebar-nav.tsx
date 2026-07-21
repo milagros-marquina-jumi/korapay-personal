@@ -6,7 +6,7 @@ import { Logo } from '@/components/layout/logo';
 import { WorkspaceSwitcher } from '@/components/layout/workspace-switcher';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { cn } from '@/lib/utils';
-import { footerNavItem, type NavItem, navForType } from './nav-items';
+import { footerNavItems, type NavItem, navForType } from './nav-items';
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -72,7 +72,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">{items.map(renderItem)}</nav>
 
-      <div className="border-t p-3">{renderLink(footerNavItem)}</div>
+      <div className="space-y-1 border-t p-3">{footerNavItems.map((item) => renderLink(item))}</div>
     </div>
   );
 }

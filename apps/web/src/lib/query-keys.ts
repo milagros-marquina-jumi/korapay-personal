@@ -1,4 +1,5 @@
 export const queryKeys = {
+  profile: () => ['profile'] as const,
   workspaces: () => ['workspaces'] as const,
   dashboard: (workspaceId: string) => ['dashboard', workspaceId] as const,
   transactions: (workspaceId: string, filters?: Record<string, unknown>) =>

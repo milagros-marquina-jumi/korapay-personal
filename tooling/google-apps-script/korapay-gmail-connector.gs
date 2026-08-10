@@ -61,6 +61,11 @@ function sendMessageToKoraPay_(message) {
     payload: JSON.stringify(payload),
   });
   const code = res.getResponseCode();
+  if (code < 200 || code >= 300) {
+    Logger.log(
+      'Fallo envio mensaje ' + message.getId() + ' (' + message.getSubject() + '): HTTP ' + code + ' ' + res.getContentText().slice(0, 300)
+    );
+  }
   return code >= 200 && code < 300;
 }
 
@@ -85,27 +90,43 @@ function syncKoraPayBankEmails() {
   const query =
     buildBankLabelQuery_() + ' -label:"' + CONFIG.processedLabel + '" newer_than:' + CONFIG.lookbackDays + 'd';
   const threads = GmailApp.search(query, 0, CONFIG.maxThreadsPerRun);
-  let ok = 0;
-  let failed = 0;
+  var ok = 0;
+  var failed = 0;
+  var totalMessages = 0;
+  var okMessages = 0;
   threads.forEach(function (thread) {
     try {
-      const messages = thread.getMessages();
-      let allOk = true;
+      var messages = thread.getMessages();
+      totalMessages += messages.length;
+      var threadOk = 0;
       messages.forEach(function (message) {
-        if (!sendMessageToKoraPay_(message)) allOk = false;
+        if (sendMessageToKoraPay_(message)) {
+          okMessages++;
+          threadOk++;
+        }
       });
-      if (allOk) {
+      if (threadOk > 0) {
         thread.addLabel(processed);
         ok++;
+        if (threadOk < messages.length) {
+          Logger.log(
+            'Hilo parcial (' + threadOk + '/' + messages.length + '): ' + thread.getFirstMessageSubject()
+          );
+        }
       } else {
         failed++;
+        Logger.log('Hilo fallido (0/' + messages.length + '): ' + thread.getFirstMessageSubject());
       }
     } catch (e) {
       failed++;
       Logger.log('Error en hilo: ' + e.message);
     }
   });
-  Logger.log('Sincronizacion terminada. Hilos procesados: ' + ok + ', con error: ' + failed);
+  Logger.log(
+    'Sincronizacion terminada. Hilos OK: ' + ok +
+    ', con error: ' + failed +
+    ', mensajes OK: ' + okMessages + '/' + totalMessages
+  );
 }
 
 function createKoraPayTrigger() {

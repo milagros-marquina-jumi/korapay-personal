@@ -586,8 +586,13 @@ async function main() {
     monto: number | null;
   }>('mimotech_pagos');
   let teamPayCount = 0;
+  const amountsByPerson: Record<string, number[]> = {};
   for (const r of pagos) {
     const personId = await ensurePerson(mimotech.id, r.persona, 'TEAM');
+    if (personId && r.monto != null) {
+      amountsByPerson[personId] ??= [];
+      amountsByPerson[personId].push(r.monto);
+    }
     await prisma.transaction.create({
       data: {
         workspaceId: mimotech.id,
@@ -604,6 +609,15 @@ async function main() {
       },
     });
     teamPayCount++;
+  }
+  // Salario de referencia por persona = monto de pago más frecuente (tarifa por periodo)
+  for (const [personId, amounts] of Object.entries(amountsByPerson)) {
+    const freq = new Map<number, number>();
+    for (const a of amounts) freq.set(a, (freq.get(a) ?? 0) + 1);
+    const mostCommon = [...freq.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    if (mostCommon != null) {
+      await prisma.person.update({ where: { id: personId }, data: { salary: money(mostCommon) } });
+    }
   }
 
   // ---- MIMOTECH: talentos tercerizados ----

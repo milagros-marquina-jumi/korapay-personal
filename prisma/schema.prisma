@@ -220,12 +220,14 @@ model Person {
   role        String?
   kind        String    @default("TEAM")
   status      String    @default("ACTIVE")
+  salary      Decimal?  @db.Decimal(18, 2)
   notes       String?
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
 
   @@index([workspaceId])
   @@map("people")
@@ -363,6 +365,7 @@ model Transaction {
   splits             TransactionSplit[]
   projects           Project[]       @relation("TransactionProjects")
   application        Application?    @relation(fields: [applicationId], references: [id])
+  person             Person?         @relation(fields: [personId], references: [id])
 
   @@index([workspaceId, date])
   @@index([workspaceId, type])

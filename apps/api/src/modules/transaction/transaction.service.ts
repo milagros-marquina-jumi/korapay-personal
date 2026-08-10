@@ -103,6 +103,7 @@ export class TransactionService {
           recurrenceRule: true,
           application: true,
           projects: { select: { id: true, name: true } },
+          person: { select: { id: true, name: true, role: true } },
         },
       }),
       this.prisma.transaction.count({ where }),
@@ -218,6 +219,7 @@ export class TransactionService {
         recurrenceRule: true,
         application: true,
         projects: { select: { id: true, name: true } },
+        person: { select: { id: true, name: true, role: true } },
       },
     });
     if (!tx) throw new NotFoundException('Transaction not found');
@@ -366,6 +368,7 @@ export class TransactionService {
     if (data.companyId !== undefined) updateData.companyId = data.companyId as string;
     if (data.accountId !== undefined) updateData.accountId = data.accountId as string;
     if (data.applicationId !== undefined) updateData.applicationId = data.applicationId as string;
+    if (data.personId !== undefined) updateData.personId = (data.personId as string) || null;
     if (data.notes !== undefined) updateData.notes = data.notes as string;
     if (Array.isArray(data.tags)) updateData.tags = data.tags as string[];
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;

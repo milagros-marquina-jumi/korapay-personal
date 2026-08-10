@@ -32,6 +32,15 @@ function sanitizeText(raw: string): string {
   return out.slice(0, 50000);
 }
 
+function buildDescription(subject: string, bankName: string): string {
+  const cleaned = subject
+    .replace(/^(?:notificaci[oó]n|aviso|alerta)\s*[:-]?\s*/i, '')
+    .replace(/\s*[-–—]\s*(?:BCP|BBVA|Interbank|Scotiabank).*$/i, '')
+    .trim();
+  if (cleaned.length >= 3 && cleaned.length <= 80) return cleaned;
+  return bankName;
+}
+
 @Injectable()
 export class EmailIngestionService {
   constructor(
@@ -132,7 +141,7 @@ export class EmailIngestionService {
         cardLast4: parsed.cardLast4 ?? null,
         merchantOriginal: parsed.merchant ?? null,
         merchantNormalized: merchantNormalized || null,
-        description: parsed.merchant ?? parsed.bankName,
+        description: parsed.merchant ?? buildDescription(input.subject, parsed.bankName),
         transactionType: parsed.transactionType,
         amount: parsed.amount,
         currency: parsed.currency,

@@ -29,7 +29,7 @@ import { IconAction } from '@/components/ui/icon-action';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
-import type { Account, Category, DetectedSummary, DetectedTransaction } from '@/lib/api.types';
+import type { Account, Category, DetectedSummary, DetectedTransaction, ExchangeRateInfo } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
@@ -215,6 +215,7 @@ export default function DetectadosPage() {
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
   const [confirming, setConfirming] = useState<DetectedTransaction | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [usdDetail, setUsdDetail] = useState<DetectedTransaction | null>(null);
 
   const filters = useMemo(
     () => ({
@@ -241,6 +242,14 @@ export default function DetectadosPage() {
     queryKey: queryKeys.detectedSummary(),
     queryFn: () => apiFetch<DetectedSummary>('/detected-transactions/summary'),
   });
+
+  const { data: exchangeRateInfo } = useQuery({
+    queryKey: queryKeys.exchangeRate(),
+    queryFn: () => apiFetch<ExchangeRateInfo | null>('/exchange-rate'),
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const exchangeRate = exchangeRateInfo ? Number(exchangeRateInfo.rate) : 1;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['detected-transactions'] });
@@ -324,11 +333,30 @@ export default function DetectadosPage() {
         accessorFn: (r) => Number(r.amount),
         sortingFn: 'basic',
         header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
-        cell: ({ row }) => (
-          <div className="text-right font-semibold tabular-nums text-destructive">
-            {formatMoney(row.original.amount, row.original.currency as 'PEN' | 'USD')}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const tx = row.original;
+          const isUsd = tx.currency === 'USD';
+          const amountPEN = isUsd ? (Number(tx.amount) * exchangeRate).toFixed(2) : tx.amount;
+          const amountEl = (
+            <span className="font-semibold tabular-nums text-destructive">-{formatMoney(amountPEN, 'PEN')}</span>
+          );
+          if (isUsd) {
+            return (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={() => setUsdDetail(tx)}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
+                  title="Ver conversion en dolares"
+                >
+                  {amountEl}
+                  <span className="rounded bg-brand/10 px-1 text-[10px] font-medium text-brand">USD</span>
+                </button>
+              </div>
+            );
+          }
+          return <div className="text-right">{amountEl}</div>;
+        },
       },
       {
         id: 'type',
@@ -507,6 +535,37 @@ export default function DetectadosPage() {
           <DialogFooter>
             <Button onClick={() => window.open('https://script.google.com', '_blank')}>Abrir Apps Script</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={usdDetail !== null} onOpenChange={(next) => !next && setUsdDetail(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Detalle en dolares</DialogTitle>
+            <DialogDescription>
+              {usdDetail?.merchantOriginal ?? usdDetail?.description ?? 'Movimiento detectado'}
+            </DialogDescription>
+          </DialogHeader>
+          {usdDetail && (
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Monto en dolares</span>
+                <span className="font-semibold tabular-nums">{formatMoney(usdDetail.amount, 'USD')}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">
+                  Tipo de cambio{exchangeRateInfo ? ` del ${formatDate(exchangeRateInfo.date)}` : ''}
+                </span>
+                <span className="font-medium tabular-nums">S/ {exchangeRate.toFixed(3)}</span>
+              </div>
+              <div className="flex items-center justify-between border-t pt-3">
+                <span className="font-medium">Total en soles</span>
+                <span className="font-semibold tabular-nums text-brand">
+                  {formatMoney((Number(usdDetail.amount) * exchangeRate).toFixed(2), 'PEN')}
+                </span>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

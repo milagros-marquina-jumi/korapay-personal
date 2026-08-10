@@ -170,6 +170,10 @@ export interface Person {
   phone?: string | null;
   initials?: string | null;
   role?: string | null;
+  kind?: string;
+  status?: string;
+  salary?: string | null;
+  notes?: string | null;
 }
 
 export interface Transaction {
@@ -198,6 +202,7 @@ export interface Transaction {
   category?: { name: string } | null;
   application?: { id: string; name: string } | null;
   projects?: { id: string; name: string }[];
+  person?: { id: string; name: string; role?: string | null } | null;
 }
 
 export interface RecurrenceRule {

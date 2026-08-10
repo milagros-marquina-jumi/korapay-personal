@@ -1,10 +1,10 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard } from '@korapay/ui';
-import { useQuery } from '@tanstack/react-query';
+import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Plus, Users, Wallet } from 'lucide-react';
+import { Pencil, Plus, Trash2, Users, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -13,10 +13,13 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageHeader } from '@/components/layout/page-header';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { PersonFormDialog, type PersonFormValues } from '@/components/team/person-form-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { IconAction } from '@/components/ui/icon-action';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Paginated, Person, Transaction } from '@/lib/api.types';
@@ -30,8 +33,6 @@ const STATUS_LABELS: Record<string, string> = {
   PARTIAL: 'Parcial',
   CANCELLED: 'Cancelado',
   PENDING_REVIEW: 'Revisión',
-  ACTIVE: 'Activo',
-  INACTIVE: 'Inactivo',
 };
 
 function initials(name: string) {
@@ -45,16 +46,21 @@ function initials(name: string) {
 
 function EquipoContent() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const ws = activeWorkspaceId ?? '';
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [personId, setPersonId] = useState<string>(FILTER_ALL);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [editingPerson, setEditingPerson] = useState<Person | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { type: 'TEAM_PAYMENT', all: true }),
+    queryKey: queryKeys.transactions(ws, { type: 'TEAM_PAYMENT', all: true }),
     queryFn: () =>
       apiFetch<Paginated<Transaction>>(
         `/transactions${buildQuery({
-          workspaceId: activeWorkspaceId ?? '',
+          workspaceId: ws,
           type: 'TEAM_PAYMENT',
           page: 1,
           pageSize: 500,
@@ -62,16 +68,45 @@ function EquipoContent() {
           sortOrder: 'desc',
         })}`,
       ),
-    enabled: !!activeWorkspaceId,
+    enabled: !!ws,
   });
 
   const { data: peopleData, isLoading: peopleLoading } = useQuery({
-    queryKey: queryKeys.people(activeWorkspaceId ?? ''),
-    queryFn: () => apiFetch<Person[]>(`/people?workspaceId=${activeWorkspaceId}&kind=TEAM`),
-    enabled: !!activeWorkspaceId,
+    queryKey: queryKeys.people(ws),
+    queryFn: () => apiFetch<Person[]>(`/people?workspaceId=${ws}&kind=TEAM`),
+    enabled: !!ws,
   });
 
   const team = peopleData ?? [];
+
+  const invalidatePeople = () => queryClient.invalidateQueries({ queryKey: queryKeys.people(ws) });
+  const invalidatePayments = () => {
+    queryClient.invalidateQueries({ queryKey: ['transactions', ws] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(ws) });
+  };
+
+  const removeTxMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/transactions/${id}?workspaceId=${ws}`, { method: 'DELETE' }),
+    onSuccess: invalidatePayments,
+  });
+
+  const createPersonMutation = useMutation({
+    mutationFn: (values: PersonFormValues) =>
+      apiFetch('/people', {
+        method: 'POST',
+        body: JSON.stringify({ workspaceId: ws, kind: 'TEAM', ...normalizePerson(values) }),
+      }),
+    onSuccess: invalidatePeople,
+  });
+  const updatePersonMutation = useMutation({
+    mutationFn: ({ id, values }: { id: string; values: PersonFormValues }) =>
+      apiFetch(`/people/${id}?workspaceId=${ws}`, { method: 'PATCH', body: JSON.stringify(normalizePerson(values)) }),
+    onSuccess: invalidatePeople,
+  });
+  const removePersonMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/people/${id}?workspaceId=${ws}`, { method: 'DELETE' }),
+    onSuccess: invalidatePeople,
+  });
 
   const statusOptions = useMemo(() => {
     const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
@@ -79,6 +114,7 @@ function EquipoContent() {
   }, [data?.data]);
 
   const personOptions = useMemo(() => (peopleData ?? []).map((p) => ({ value: p.id, label: p.name })), [peopleData]);
+  const personName = (id?: string | null) => peopleData?.find((p) => p.id === id)?.name;
 
   const rows = useMemo(() => {
     return (data?.data ?? []).filter((tx) => {
@@ -90,6 +126,16 @@ function EquipoContent() {
 
   const totalPagado = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
 
+  const totalByPerson = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tx of data?.data ?? []) {
+      const key = tx.person?.name ?? personName(tx.personId) ?? tx.concept;
+      map.set(key, (map.get(key) ?? 0) + Number(tx.amountBase));
+    }
+    return [...map.entries()].map(([name, total]) => ({ name, total })).sort((a, b) => b.total - a.total);
+  }, [data?.data, peopleData]);
+  const maxPerson = Math.max(1, ...totalByPerson.map((p) => p.total));
+
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
@@ -98,14 +144,23 @@ function EquipoContent() {
         cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
       },
       {
-        accessorKey: 'concept',
+        id: 'person',
         header: ({ column }) => <SortableHeader column={column} label="Persona" />,
-        cell: ({ row }) => <span className="font-medium">{row.original.concept}</span>,
+        accessorFn: (r) => r.person?.name ?? r.concept,
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.person?.name ?? personName(row.original.personId) ?? row.original.concept}
+          </span>
+        ),
       },
       {
         id: 'notes',
         header: 'Notas',
-        cell: ({ row }) => <span className="text-muted-foreground">{row.original.description ?? '-'}</span>,
+        cell: ({ row }) => (
+          <span className="max-w-[18rem] truncate text-muted-foreground" title={row.original.description ?? ''}>
+            {row.original.description ?? '-'}
+          </span>
+        ),
       },
       {
         id: 'amount',
@@ -114,12 +169,40 @@ function EquipoContent() {
         header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
         cell: ({ row }) => (
           <div className="text-right font-semibold tabular-nums text-destructive">
-            {formatMoney(row.original.amountOriginal, row.original.currency as 'PEN' | 'USD')}
+            {formatMoney(row.original.amountBase, 'PEN')}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Estado',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-0.5">
+            <IconAction icon={Pencil} label="Editar" onClick={() => setEditingTx(row.original)} />
+            <IconAction
+              icon={Trash2}
+              label="Eliminar"
+              destructive
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Eliminar pago',
+                  description: `Se eliminará el pago de "${row.original.person?.name ?? row.original.concept}". Esta acción no se puede deshacer.`,
+                  confirmLabel: 'Eliminar',
+                  destructive: true,
+                });
+                if (ok) removeTxMutation.mutate(row.original.id);
+              }}
+            />
           </div>
         ),
       },
     ],
-    [],
+    [confirm, removeTxMutation, peopleData],
   );
 
   return (
@@ -128,9 +211,9 @@ function EquipoContent() {
         title="Equipo directo"
         description="Pagos al equipo directo de MIMOTECH"
         action={
-          activeWorkspaceId && (
+          ws && (
             <TransactionFormDialog
-              workspaceId={activeWorkspaceId}
+              workspaceId={ws}
               defaultType="TEAM_PAYMENT"
               trigger={
                 <Button>
@@ -195,13 +278,47 @@ function EquipoContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Miembros del equipo</CardTitle>
+          <CardTitle className="text-base">Total pagado por persona</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {totalByPerson.length ? (
+            <div className="space-y-3">
+              {totalByPerson.map((p) => (
+                <div key={p.name} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="truncate font-medium">{p.name}</span>
+                    <span className="tabular-nums text-muted-foreground">{formatMoney(String(p.total), 'PEN')}</span>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-info" style={{ width: `${(p.total / maxPerson) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">Sin pagos registrados</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Miembros del equipo</CardTitle>
+          <PersonFormDialog
+            onSubmit={(v) => createPersonMutation.mutateAsync(v).then(() => undefined)}
+            isPending={createPersonMutation.isPending}
+            trigger={
+              <Button size="sm" variant="outline">
+                <Plus className="mr-1 size-4" /> Nuevo miembro
+              </Button>
+            }
+          />
         </CardHeader>
         <CardContent>
           {peopleLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
+                <Skeleton key={i} className="h-14 w-full" />
               ))}
             </div>
           ) : team.length ? (
@@ -211,9 +328,30 @@ function EquipoContent() {
                   <Avatar>
                     <AvatarFallback>{person.initials ?? initials(person.name)}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="text-sm font-medium">{person.name}</p>
-                    {person.role && <p className="text-xs text-muted-foreground">{person.role}</p>}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{person.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {[person.role, person.salary ? formatMoney(person.salary, 'PEN') : null]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <IconAction icon={Pencil} label="Editar" onClick={() => setEditingPerson(person)} />
+                    <IconAction
+                      icon={Trash2}
+                      label="Eliminar"
+                      destructive
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Eliminar miembro',
+                          description: `Se eliminará a "${person.name}". Los pagos existentes se conservan.`,
+                          confirmLabel: 'Eliminar',
+                          destructive: true,
+                        });
+                        if (ok) removePersonMutation.mutate(person.id);
+                      }}
+                    />
                   </div>
                 </div>
               ))}
@@ -223,8 +361,39 @@ function EquipoContent() {
           )}
         </CardContent>
       </Card>
+
+      {ws && editingTx && (
+        <TransactionFormDialog
+          workspaceId={ws}
+          defaultType="TEAM_PAYMENT"
+          transaction={editingTx}
+          open={!!editingTx}
+          onOpenChange={(next) => !next && setEditingTx(null)}
+        />
+      )}
+      {editingPerson && (
+        <PersonFormDialog
+          person={editingPerson}
+          open={!!editingPerson}
+          onOpenChange={(next) => !next && setEditingPerson(null)}
+          onSubmit={(v) => updatePersonMutation.mutateAsync({ id: editingPerson.id, values: v }).then(() => undefined)}
+          isPending={updatePersonMutation.isPending}
+        />
+      )}
     </div>
   );
+}
+
+function normalizePerson(values: PersonFormValues) {
+  return {
+    name: values.name,
+    role: values.role || undefined,
+    salary: values.salary || undefined,
+    status: values.status,
+    email: values.email || undefined,
+    phone: values.phone || undefined,
+    notes: values.notes || undefined,
+  };
 }
 
 export default function EquipoPage() {

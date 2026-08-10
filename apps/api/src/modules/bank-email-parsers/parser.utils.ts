@@ -44,7 +44,8 @@ export function classifyType(text: string): BankTransactionType {
   const t = text.toLowerCase();
   if (/rechaz|denegad|no procesad|declinad/.test(t)) return 'DECLINED_TRANSACTION';
   if (/revers|anulaci[oó]n|anulad/.test(t)) return 'REVERSAL';
-  if (/devoluci[oó]n|reembolso|refund/.test(t)) return 'REFUND';
+  if (/devoluci[oó]n(?!\s+de\s+(tu|su)\s+tarjeta)|reembolso|refund/i.test(t)) return 'REFUND';
+  if (/plin|yape/i.test(t)) return 'TRANSFER_SENT';
   if (/retiro|cajero|atm/.test(t)) return 'CASH_WITHDRAWAL';
   if (/transferencia (recibida|recibiste|abono)/.test(t) || /recibiste una transferencia/.test(t))
     return 'TRANSFER_RECEIVED';

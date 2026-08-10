@@ -32,6 +32,7 @@ import type {
   Category,
   Company,
   PaymentMethodCatalog,
+  Person,
   Project,
   Transaction,
 } from '@/lib/api.types';
@@ -61,6 +62,7 @@ const schema = z.object({
   companyId: z.string().optional(),
   applicationId: z.string().optional(),
   projectIds: z.array(z.string()).optional(),
+  personId: z.string().optional(),
   paymentTags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
@@ -146,6 +148,7 @@ export function TransactionFormDialog({
   const isRecurring = watch('isRecurring');
   const currentType = watch('type');
   const showBusinessFields = currentType === 'BUSINESS_COST';
+  const showTeamFields = currentType === 'TEAM_PAYMENT';
   const { data: applications } = useQuery({
     queryKey: queryKeys.applications(workspaceId),
     queryFn: () => apiFetch<Application[]>(`/applications?workspaceId=${workspaceId}`),
@@ -155,6 +158,11 @@ export function TransactionFormDialog({
     queryKey: queryKeys.projects(workspaceId),
     queryFn: () => apiFetch<Project[]>(`/projects?workspaceId=${workspaceId}`),
     enabled: open && showBusinessFields,
+  });
+  const { data: people } = useQuery({
+    queryKey: queryKeys.people(workspaceId),
+    queryFn: () => apiFetch<Person[]>(`/people?workspaceId=${workspaceId}&kind=TEAM`),
+    enabled: open && showTeamFields,
   });
 
   useEffect(() => {
@@ -170,6 +178,7 @@ export function TransactionFormDialog({
         companyId: transaction.companyId ?? undefined,
         applicationId: transaction.applicationId ?? undefined,
         projectIds: transaction.projects?.map((p) => p.id) ?? [],
+        personId: transaction.personId ?? undefined,
         paymentTags: transaction.tags ?? [],
         notes: transaction.notes ?? '',
         dueDate: transaction.dueDate ? transaction.dueDate.slice(0, 10) : '',
@@ -180,8 +189,9 @@ export function TransactionFormDialog({
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const { recurrenceCount, paymentTags, projectIds, ...rest } = values;
+      const { recurrenceCount, paymentTags, projectIds, personId, ...rest } = values;
       const isBusinessCost = rest.type === 'BUSINESS_COST';
+      const isTeamPayment = rest.type === 'TEAM_PAYMENT';
       if (editing && transaction) {
         const editPayload = {
           type: rest.type,
@@ -194,6 +204,7 @@ export function TransactionFormDialog({
           companyId: rest.companyId,
           applicationId: isBusinessCost ? (rest.applicationId ?? null) : undefined,
           projectIds: isBusinessCost ? (projectIds ?? []) : undefined,
+          personId: isTeamPayment ? (personId ?? null) : undefined,
           notes: rest.notes,
           dueDate: values.dueDate || undefined,
           tags: paymentTags?.length ? paymentTags : undefined,
@@ -208,6 +219,7 @@ export function TransactionFormDialog({
         workspaceId,
         applicationId: isBusinessCost ? rest.applicationId : undefined,
         projectIds: isBusinessCost && projectIds?.length ? projectIds : undefined,
+        personId: isTeamPayment ? personId : undefined,
         tags: paymentTags?.length ? paymentTags : undefined,
         recurrenceInterval: values.isRecurring ? 1 : undefined,
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
@@ -288,6 +300,23 @@ export function TransactionFormDialog({
               </Select>
             </div>
           </div>
+
+          {showTeamFields && (
+            <div className="space-y-2">
+              <Label>Persona (equipo)</Label>
+              <SearchSelect
+                placeholder="Selecciona a quién es el pago"
+                searchPlaceholder="Buscar persona..."
+                value={watch('personId') ?? ''}
+                onValueChange={(v) => {
+                  setValue('personId', v);
+                  const name = people?.find((p) => p.id === v)?.name;
+                  if (name) setValue('concept', `Pago ${name}`, { shouldValidate: true });
+                }}
+                options={(people ?? []).map((p) => ({ value: p.id, label: p.name }))}
+              />
+            </div>
+          )}
 
           <CollapsibleSection label="Ver más opciones">
             {showBusinessFields && (

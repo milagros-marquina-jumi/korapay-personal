@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsEmail, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsEmail, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class CreatePersonDto {
   @ApiProperty()
@@ -31,6 +31,21 @@ export class CreatePersonDto {
   @IsOptional()
   @IsIn(['TEAM', 'TALENT_REF'])
   kind?: string;
+
+  @ApiPropertyOptional({ example: '1200.00', description: 'Salario o tarifa de referencia' })
+  @IsOptional()
+  @IsNumberString()
+  salary?: string;
+
+  @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] })
+  @IsOptional()
+  @IsIn(['ACTIVE', 'INACTIVE'])
+  status?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 export class UpdatePersonDto extends PartialType(CreatePersonDto) {}

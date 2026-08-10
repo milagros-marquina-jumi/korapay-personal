@@ -16,6 +16,9 @@ export class PersonService {
     phone?: string;
     role?: string;
     kind?: string;
+    salary?: string;
+    status?: string;
+    notes?: string;
   }) {
     const dup = await this.prisma.person.findFirst({
       where: { workspaceId: data.workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },

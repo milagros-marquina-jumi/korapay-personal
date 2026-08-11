@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { buildCompanyProfitability } from './company-profitability';
 import { buildEmploymentBreakdown } from './employment-breakdown';
 
 @Injectable()
@@ -329,6 +330,7 @@ export class ReportsService {
       breakdown: buildEmploymentBreakdown(allTransactions),
       incomeByConcept: sortDesc(byConcept),
       incomeByCompany: sortDesc(byCompany),
+      companyProfitability: buildCompanyProfitability(transactions),
       incomeByMonth,
     };
   }

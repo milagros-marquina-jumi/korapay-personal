@@ -24,10 +24,17 @@ interface Props {
   transaction: Transaction | null;
   workspaceId: string | null;
   categoryName: (id?: string | null) => string;
+  categoryLabel?: string;
   onOpenChange: (open: boolean) => void;
 }
 
-export function TransactionDetailDialog({ transaction, workspaceId, categoryName, onOpenChange }: Readonly<Props>) {
+export function TransactionDetailDialog({
+  transaction,
+  workspaceId,
+  categoryName,
+  categoryLabel = 'Categoría',
+  onOpenChange,
+}: Readonly<Props>) {
   const gross = transaction?.amountGross;
   const showGross = gross && Number(gross) !== Number(transaction?.amountOriginal);
 
@@ -53,7 +60,7 @@ export function TransactionDetailDialog({ transaction, workspaceId, categoryName
               />
             )}
             <DetailRow label="Estado" value={statusLabel(transaction.status)} />
-            <DetailRow label="Categoría" value={categoryName(transaction.categoryId)} />
+            <DetailRow label={categoryLabel} value={categoryName(transaction.categoryId)} />
             {transaction.type === 'EXPENSE' && (
               <DetailRow label="Tipo de gasto" value={isFixedExpense(transaction.tags) ? 'Fijo' : 'No fijo'} />
             )}

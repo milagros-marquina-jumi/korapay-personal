@@ -12,8 +12,12 @@ import { INCOME_COLOR } from '@/components/charts/palette';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { CompaniesMonthDialog, type CompaniesMonthSelection } from '@/components/reports/companies-month-dialog';
 import { CompanyDurationTable } from '@/components/reports/company-duration-table';
+import { CompanyProfitabilityPanel } from '@/components/reports/company-profitability-panel';
 import { EmploymentBreakdownTab } from '@/components/reports/employment-breakdown-tab';
+import { MonthlySummaryPanel } from '@/components/reports/monthly-summary-panel';
+import { OwnCompanyToggle, useOwnCompanyVisibility } from '@/components/reports/own-company-toggle';
 import { DURATION_LIMITS, MONTH_SHORT } from '@/components/reports/report-constants';
+import { TrendDelta } from '@/components/reports/trend-delta';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -31,6 +35,8 @@ const YEAR_COMPARISON_SERIES = [
 
 const MONTH_SERIES = [{ key: 'total', name: 'Ingresos', color: INCOME_COLOR }];
 
+const OWN_COMPANY_CONCEPT = 'Empresas';
+
 export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
   const { data: allYears } = useQuery({
     queryKey: queryKeys.employmentReports(workspaceId, { years: true }),
@@ -40,6 +46,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   });
 
   const [year, setYear] = useDefaultYear(allYears);
+  const { show: showOwn, toggle: toggleOwn, isHidden } = useOwnCompanyVisibility();
   const [companiesDetail, setCompaniesDetail] = useState<CompaniesMonthSelection | null>(null);
   const [durationLimit, setDurationLimit] = useState<string>('5');
   const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
@@ -81,8 +88,13 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   }
 
   const allYearsView = year === FILTER_ALL;
-  const companyDonut = data.incomeByCompany.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
-  const conceptDonut = data.incomeByConcept.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+
+  const companyRows = data.incomeByCompany.filter((c) => !isHidden(c.name));
+  const conceptRows = data.incomeByConcept.filter((c) => !(showOwn ? false : c.name === OWN_COMPANY_CONCEPT));
+  const profitabilityRows = (data.companyProfitability ?? []).filter((c) => !isHidden(c.name));
+
+  const companyDonut = companyRows.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+  const conceptDonut = conceptRows.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
 
   const yearComparison = data.yearlyTotals.map((y) => ({
     label: String(y.year),
@@ -99,9 +111,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
 
   const currentYearRow = data.yearlyTotals.find((y) => y.year === selectedYear);
   const totalGeneral = data.yearlyTotals.reduce((s, y) => s + Number(y.total), 0);
-  const empresasActivas = allYearsView
-    ? new Set(data.incomeByCompany.map((c) => c.name)).size
-    : (currentYearRow?.companies ?? 0);
+  const empresasActivas = new Set(companyRows.map((c) => c.name)).size;
   const promedio = allYearsView
     ? data.yearlyTotals.reduce((s, y) => s + Number(y.average), 0) / (data.yearlyTotals.length || 1)
     : Number(currentYearRow?.average ?? 0);
@@ -109,23 +119,33 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const rentaRows = renta ?? [];
   const rentaPending = rentaRows.filter((r) => r.status !== 'PAID').reduce((s, r) => s + Number(r.amount), 0);
 
+  const amountHeatmap: HeatmapRow[] = (data.breakdown?.monthlyAll ?? []).map((r) => ({
+    key: String(r.year),
+    label: r.year,
+    values: r.months.map(Number),
+    total: Number(r.total),
+  }));
+
+  const visibleCompanies = (list?: { name: string; clients: string[] }[]) =>
+    (list ?? []).filter((c) => !isHidden(c.name));
+
   const heatmapRows: HeatmapRow[] = data.companiesPerMonth.map((r) => ({
     key: String(r.year),
     label: r.year,
-    values: r.months,
-    total: r.total,
+    values: r.monthDetail ? r.monthDetail.map((month) => visibleCompanies(month).length) : r.months,
+    total: r.totalDetail ? visibleCompanies(r.totalDetail).length : r.total,
   }));
 
   const openCompaniesDetail = (rowKey: string, monthIndex: number) => {
     const row = data.companiesPerMonth.find((r) => String(r.year) === rowKey);
     if (!row) return;
-    setCompaniesDetail({ year: rowKey, monthIndex, companies: row.monthDetail?.[monthIndex] ?? [] });
+    setCompaniesDetail({ year: rowKey, monthIndex, companies: visibleCompanies(row.monthDetail?.[monthIndex]) });
   };
 
   const openYearDetail = (rowKey: string) => {
     const row = data.companiesPerMonth.find((r) => String(r.year) === rowKey);
     if (!row) return;
-    setCompaniesDetail({ year: rowKey, monthIndex: null, companies: row.totalDetail ?? [] });
+    setCompaniesDetail({ year: rowKey, monthIndex: null, companies: visibleCompanies(row.totalDetail) });
   };
 
   return (
@@ -198,18 +218,51 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
                           </tr>
                         </thead>
                         <tbody>
-                          {data.yearlyTotals.map((y) => (
-                            <tr key={y.year} className="border-b last:border-0">
-                              <td className="px-3 py-2.5 font-semibold">{y.year}</td>
-                              <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-success">
-                                {formatMoney(y.total, 'PEN')}
-                              </td>
-                              <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(y.average, 'PEN')}</td>
-                              <td className="px-3 py-2.5 text-right tabular-nums">{y.companies}</td>
-                            </tr>
-                          ))}
+                          {data.yearlyTotals.map((y, index) => {
+                            const prev = data.yearlyTotals[index - 1];
+                            return (
+                              <tr key={y.year} className="border-b last:border-0">
+                                <td className="px-3 py-2.5 font-semibold">{y.year}</td>
+                                <td className="px-3 py-2.5">
+                                  <div className="flex items-center justify-end gap-3">
+                                    <span className="flex-1 text-right font-semibold tabular-nums text-success">
+                                      {formatMoney(y.total, 'PEN')}
+                                    </span>
+                                    <TrendDelta current={Number(y.total)} previous={prev && Number(prev.total)} />
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <div className="flex items-center justify-end gap-3">
+                                    <span className="flex-1 text-right tabular-nums">
+                                      {formatMoney(y.average, 'PEN')}
+                                    </span>
+                                    <TrendDelta current={Number(y.average)} previous={prev && Number(prev.average)} />
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2.5">
+                                  <div className="flex items-center justify-end gap-3">
+                                    <span className="flex-1 text-right tabular-nums">{y.companies}</span>
+                                    <TrendDelta current={y.companies} previous={prev?.companies} />
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+
+                  {allYearsView && amountHeatmap.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="mb-3 text-sm font-medium text-muted-foreground">Ingresos por año y mes</h4>
+                      <HeatmapTable
+                        rowHeader="Año"
+                        columns={MONTH_SHORT}
+                        rows={amountHeatmap}
+                        totalLabel="Total"
+                        minWidth="58rem"
+                      />
                     </div>
                   )}
                 </>
@@ -232,20 +285,26 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Ingresos por empresa</CardTitle>
-              {yearFilter}
+              <div className="flex items-center gap-2">
+                <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
+                {yearFilter}
+              </div>
             </CardHeader>
             <CardContent>
               {companyDonut.length ? (
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <CategoryDonut data={companyDonut} />
-                  <div className="divide-y">
-                    {data.incomeByCompany.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                        <span className="truncate">{c.name}</span>
-                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
-                      </div>
-                    ))}
+                <div className="space-y-6">
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <CategoryDonut data={companyDonut} />
+                    <div className="divide-y">
+                      {companyRows.map((c) => (
+                        <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                          <span className="truncate">{c.name}</span>
+                          <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                  <CompanyProfitabilityPanel rows={profitabilityRows} />
                 </div>
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
@@ -258,14 +317,17 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Ingresos por concepto</CardTitle>
-              {yearFilter}
+              <div className="flex items-center gap-2">
+                <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
+                {yearFilter}
+              </div>
             </CardHeader>
             <CardContent>
               {conceptDonut.length ? (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <CategoryDonut data={conceptDonut} />
                   <div className="divide-y">
-                    {data.incomeByConcept.map((c) => (
+                    {conceptRows.map((c) => (
                       <div key={c.name} className="flex items-center justify-between py-2 text-sm">
                         <span className="truncate">{c.name}</span>
                         <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
@@ -282,8 +344,9 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
 
         <TabsContent value="actividad" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Empresas activas por mes</CardTitle>
+              <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
             </CardHeader>
             <CardContent>
               {heatmapRows.length ? (
@@ -307,6 +370,16 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Resumen por mes</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Ingresos netos por empresa, agrupados por año y mes.</p>
+            </CardHeader>
+            <CardContent>
+              <MonthlySummaryPanel workspaceId={workspaceId} />
             </CardContent>
           </Card>
         </TabsContent>

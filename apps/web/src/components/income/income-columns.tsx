@@ -2,7 +2,7 @@
 
 import { formatMoney } from '@korapay/domain';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
 import { IconAction } from '@/components/ui/icon-action';
@@ -17,6 +17,8 @@ interface Options {
   catalogs: TagCatalogs;
   onEdit: (tx: Transaction) => void;
   onRemove: (tx: Transaction) => void;
+  onShowDetail: (tx: Transaction) => void;
+  onShowConversion: (tx: Transaction) => void;
   showDate?: boolean;
 }
 
@@ -26,6 +28,8 @@ export function buildIncomeColumns({
   catalogs,
   onEdit,
   onRemove,
+  onShowDetail,
+  onShowConversion,
   showDate = true,
 }: Options): ColumnDef<Transaction, unknown>[] {
   const columns: ColumnDef<Transaction, unknown>[] = [];
@@ -84,11 +88,15 @@ export function buildIncomeColumns({
       sortingFn: 'basic',
       header: ({ column }) => <SortableHeader column={column} label="Bruto" className="ml-auto" />,
       cell: ({ row }) => {
-        const gross = grossOf(row.original);
-        const discount = gross - Number(row.original.amountBase);
+        const tx = row.original;
+        const isUsd = tx.currency === 'USD';
+        const gross = isUsd ? Number(tx.amountOriginal) : grossOf(tx);
+        const discount = isUsd ? 0 : gross - Number(tx.amountBase);
         return (
           <div className="flex flex-col items-end">
-            <span className="tabular-nums text-muted-foreground">{formatMoney(String(gross), 'PEN')}</span>
+            <span className="tabular-nums text-muted-foreground">
+              {formatMoney(String(gross), isUsd ? 'USD' : 'PEN')}
+            </span>
             {discount > 0.005 && (
               <span className="text-xs tabular-nums text-muted-foreground/70">
                 -{formatMoney(String(discount), 'PEN')}
@@ -103,11 +111,24 @@ export function buildIncomeColumns({
       accessorFn: (r) => Number(r.amountBase),
       sortingFn: 'basic',
       header: ({ column }) => <SortableHeader column={column} label="Neto" className="ml-auto" />,
-      cell: ({ row }) => (
-        <div className="text-right font-semibold tabular-nums text-success">
-          +{formatMoney(row.original.amountBase, 'PEN')}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const tx = row.original;
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            <span className="font-semibold tabular-nums text-success">+{formatMoney(tx.amountBase, 'PEN')}</span>
+            {tx.currency === 'USD' && (
+              <button
+                type="button"
+                onClick={() => onShowConversion(tx)}
+                title="Ver conversión a soles"
+                className="rounded bg-info/15 px-1.5 py-0.5 text-[10px] font-semibold text-info hover:bg-info/25"
+              >
+                USD
+              </button>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'status',
@@ -122,6 +143,7 @@ export function buildIncomeColumns({
       header: '',
       cell: ({ row }) => (
         <div className="flex justify-end gap-0.5">
+          <IconAction icon={Eye} label="Ver detalle" onClick={() => onShowDetail(row.original)} />
           <IconAction icon={Pencil} label="Editar" onClick={() => onEdit(row.original)} />
           <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onRemove(row.original)} />
         </div>

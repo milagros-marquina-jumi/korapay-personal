@@ -54,6 +54,14 @@ function renderLabel(value: number | string) {
   return n ? compactAmount(n) : '';
 }
 
+function peakLabelOf(values: number[]) {
+  const peak = Math.max(...values.filter((v) => v > 0), 0);
+  return (value: number | string) => {
+    const n = Number(value);
+    return n > 0 && n === peak ? compactAmount(n) : '';
+  };
+}
+
 export function YearSeriesChart({
   series,
   categories,
@@ -93,7 +101,7 @@ export function YearSeriesChart({
           <CartesianGrid stroke={grid} vertical={false} />
           <XAxis dataKey="label" {...axisProps} tickLine={false} axisLine={{ stroke: grid }} />
           <YAxis {...axisProps} tickLine={false} axisLine={false} width={68} tickFormatter={compactAmount} />
-          <Tooltip {...tooltipProps} />
+          <Tooltip {...tooltipProps} trigger="hover" shared={false} cursor={{ stroke: grid, strokeWidth: 1 }} />
           <Legend {...legendProps} />
           {series.map((s, i) => (
             <Line
@@ -103,18 +111,17 @@ export function YearSeriesChart({
               name={String(s.year)}
               stroke={colorOf(i)}
               strokeWidth={2}
-              dot={{ r: 3 }}
+              dot={{ r: 3, strokeWidth: 2 }}
+              activeDot={{ r: 6, strokeWidth: 2 }}
               connectNulls
             >
-              {labelsVisible && (
-                <LabelList
-                  dataKey={String(s.year)}
-                  position="top"
-                  fontSize={10}
-                  fill={colorOf(i)}
-                  formatter={renderLabel}
-                />
-              )}
+              <LabelList
+                dataKey={String(s.year)}
+                position="top"
+                fontSize={10}
+                fill={colorOf(i)}
+                formatter={labelsVisible ? renderLabel : peakLabelOf(s.values)}
+              />
             </Line>
           ))}
         </LineChart>

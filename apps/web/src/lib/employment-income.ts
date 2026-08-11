@@ -27,8 +27,9 @@ export function accountNumber(notes?: string | null): string | null {
   return bare?.[0]?.trim() ?? notes.trim() ?? null;
 }
 
-// amountGross solo se guarda cuando hubo descuento; si falta, el bruto es el propio neto.
+// amountGross solo se guarda cuando hubo descuento y siempre en soles; si falta, el bruto es el neto.
 export function grossOf(tx: Transaction): number {
+  if (tx.currency === 'USD') return Number(tx.amountBase);
   return Number(tx.amountGross ?? tx.amountBase);
 }
 

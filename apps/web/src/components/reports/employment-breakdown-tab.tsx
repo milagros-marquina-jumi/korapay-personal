@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { type YearSeries, YearSeriesChart } from '@/components/charts/year-series-chart';
+import { QuarterRanking } from '@/components/reports/quarter-ranking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { EmploymentBreakdown } from '@/lib/api.types';
@@ -60,11 +61,14 @@ export function EmploymentBreakdownTab({ breakdown }: Readonly<Props>) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ingresos por trimestre</CardTitle>
+          <CardTitle>Ingresos netos por mes</CardTitle>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pasa el cursor sobre un punto para ver el monto de ese mes.
+          </p>
         </CardHeader>
         <CardContent>
-          {quarterly.length ? (
-            <YearSeriesChart series={toSeries(quarterly)} categories={QUARTERS} variant="bar" height={360} />
+          {monthly.length ? (
+            <YearSeriesChart series={toSeries(monthly)} categories={MONTH_SHORT} variant="line" height={400} />
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
           )}
@@ -73,11 +77,14 @@ export function EmploymentBreakdownTab({ breakdown }: Readonly<Props>) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ingresos netos por mes</CardTitle>
+          <CardTitle>Ingresos por trimestre</CardTitle>
         </CardHeader>
         <CardContent>
-          {monthly.length ? (
-            <YearSeriesChart series={toSeries(monthly)} categories={MONTH_SHORT} variant="line" height={380} />
+          {quarterly.length ? (
+            <div className="space-y-5">
+              <YearSeriesChart series={toSeries(quarterly)} categories={QUARTERS} variant="bar" height={360} />
+              <QuarterRanking rows={quarterly} />
+            </div>
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
           )}

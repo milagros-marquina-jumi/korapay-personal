@@ -174,6 +174,7 @@ export function LedgerSection({
       </div>
 
       <DataTableToolbar
+        sticky={false}
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar descripción..."

@@ -109,9 +109,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className={donutData.length ? 'lg:col-span-2' : 'lg:col-span-3'}>
           <CardHeader>
-            <CardTitle>Ingresos vs Egresos</CardTitle>
+            <CardTitle>{donutData.length ? 'Ingresos vs Egresos' : 'Evolución de ingresos'}</CardTitle>
           </CardHeader>
           <CardContent>
             {areaData.length ? (
@@ -121,18 +121,16 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Gastos por categoría</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {donutData.length ? (
+        {donutData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Gastos por categoría</CardTitle>
+            </CardHeader>
+            <CardContent>
               <CategoryDonut data={donutData} />
-            ) : (
-              <p className="py-12 text-center text-sm text-muted-foreground">Sin gastos registrados</p>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card>

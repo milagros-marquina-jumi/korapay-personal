@@ -17,6 +17,8 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { OwnCompanyToggle, useOwnCompanyVisibility } from '@/components/reports/own-company-toggle';
+import { TransactionDetailDialog, UsdConversionDialog } from '@/components/transactions/transaction-detail-dialog';
 import { Button } from '@/components/ui/button';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { BankCatalog, Company, Paginated, PaymentMethodCatalog, Transaction } from '@/lib/api.types';
@@ -39,6 +41,9 @@ function IngresosContent() {
   const [bank, setBank] = useState<string>(FILTER_ALL);
   const [month, setMonth] = useState<string>(FILTER_ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const { show: showOwn, toggle: toggleOwn, isHidden } = useOwnCompanyVisibility();
+  const [detail, setDetail] = useState<Transaction | null>(null);
+  const [usdDetail, setUsdDetail] = useState<Transaction | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { type: 'INCOME', all: true }),
@@ -125,10 +130,11 @@ function IngresosContent() {
       const d = new Date(tx.date);
       if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
       if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
+      if (isHidden(companyName(tx.companyId))) return false;
       if (term && !`${tx.concept} ${companyName(tx.companyId) ?? ''}`.toLowerCase().includes(term)) return false;
       return true;
     });
-  }, [data?.data, status, companyId, bank, year, month, search, companies, catalogs]);
+  }, [data?.data, status, companyId, bank, year, month, search, companies, catalogs, isHidden]);
 
   const total = useMemo(() => rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0), [rows]);
   const totalGross = useMemo(() => rows.reduce((sum, tx) => sum + grossOf(tx), 0), [rows]);
@@ -187,6 +193,8 @@ function IngresosContent() {
         catalogs,
         onEdit: setEditing,
         onRemove: removeIncome,
+        onShowDetail: setDetail,
+        onShowConversion: setUsdDetail,
         showDate: false,
       }),
     [activeWorkspaceId, companies, catalogs, confirm, removeMutation],
@@ -293,6 +301,7 @@ function IngresosContent() {
               placeholder="Banco"
               allLabel="Todo banco"
             />
+            <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
           </>
         }
       />
@@ -345,6 +354,16 @@ function IngresosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
+
+      <TransactionDetailDialog
+        transaction={detail}
+        workspaceId={activeWorkspaceId}
+        categoryLabel="Empresa"
+        categoryName={() => companyName(detail?.companyId) ?? detail?.category?.name ?? '—'}
+        onOpenChange={(next) => !next && setDetail(null)}
+      />
+
+      <UsdConversionDialog transaction={usdDetail} onOpenChange={(next) => !next && setUsdDetail(null)} />
     </PageShell>
   );
 }

@@ -21,6 +21,7 @@ interface Props {
   series: GroupedBarSeries[];
   height?: number;
   showLabels?: boolean;
+  layout?: 'horizontal' | 'vertical';
 }
 
 const MAX_LABEL_POINTS = 24;
@@ -30,32 +31,49 @@ function renderLabel(value: number | string) {
   return n ? compactAmount(n) : '';
 }
 
-export function GroupedBar({ data, series, height = 320, showLabels = true }: Readonly<Props>) {
+export function GroupedBar({ data, series, height = 320, showLabels = true, layout = 'horizontal' }: Readonly<Props>) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const axis = isDark ? '#a3a19a' : '#6b6960';
   const grid = isDark ? '#2c2c2a' : '#e1e0d9';
+  const isVertical = layout === 'vertical';
   const labelsVisible = showLabels && data.length * series.length <= MAX_LABEL_POINTS;
+  const tick = { fill: axis, fontSize: 12 };
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: labelsVisible ? 26 : 12, right: 16, bottom: 4, left: 8 }} barGap={4}>
-        <CartesianGrid stroke={grid} vertical={false} />
-        <XAxis
-          dataKey="label"
-          stroke={axis}
-          tick={{ fill: axis, fontSize: 12 }}
-          tickLine={false}
-          axisLine={{ stroke: grid }}
-        />
-        <YAxis
-          stroke={axis}
-          tick={{ fill: axis, fontSize: 12 }}
-          tickLine={false}
-          axisLine={false}
-          width={68}
-          tickFormatter={compactAmount}
-        />
+      <BarChart
+        data={data}
+        layout={layout}
+        margin={{ top: labelsVisible && !isVertical ? 26 : 12, right: isVertical ? 56 : 16, bottom: 4, left: 8 }}
+        barGap={4}
+      >
+        <CartesianGrid stroke={grid} vertical={isVertical} horizontal={!isVertical} />
+        {isVertical ? (
+          <XAxis
+            type="number"
+            stroke={axis}
+            tick={tick}
+            tickLine={false}
+            axisLine={{ stroke: grid }}
+            tickFormatter={compactAmount}
+          />
+        ) : (
+          <XAxis dataKey="label" stroke={axis} tick={tick} tickLine={false} axisLine={{ stroke: grid }} />
+        )}
+        {isVertical ? (
+          <YAxis
+            type="category"
+            dataKey="label"
+            stroke={axis}
+            tick={tick}
+            tickLine={false}
+            axisLine={false}
+            width={130}
+          />
+        ) : (
+          <YAxis stroke={axis} tick={tick} tickLine={false} axisLine={false} width={68} tickFormatter={compactAmount} />
+        )}
         <Tooltip
           cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
           formatter={(v: number, name: string) => [formatMoney(String(v), 'PEN'), name]}
@@ -71,9 +89,21 @@ export function GroupedBar({ data, series, height = 320, showLabels = true }: Re
         />
         <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
         {series.map((s) => (
-          <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[4, 4, 0, 0]}>
-            {labelsVisible && (
-              <LabelList dataKey={s.key} position="top" fontSize={10} fill={s.color} formatter={renderLabel} />
+          <Bar
+            key={s.key}
+            dataKey={s.key}
+            name={s.name}
+            fill={s.color}
+            radius={isVertical ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+          >
+            {(labelsVisible || isVertical) && (
+              <LabelList
+                dataKey={s.key}
+                position={isVertical ? 'right' : 'top'}
+                fontSize={10}
+                fill={s.color}
+                formatter={renderLabel}
+              />
             )}
           </Bar>
         ))}

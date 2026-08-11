@@ -2,6 +2,7 @@
 
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
+import { ScrollToTop } from '@/components/layout/scroll-to-top';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { useSidebarState } from '@/components/layout/use-sidebar-state';
@@ -54,6 +55,7 @@ export function AppShell({ children }: { readonly children: React.ReactNode }) {
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
+        <ScrollToTop />
       </div>
     </div>
   );

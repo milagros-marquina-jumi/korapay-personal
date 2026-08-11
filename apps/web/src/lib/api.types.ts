@@ -345,8 +345,21 @@ export interface EmploymentBreakdown {
   quarterlySalary: QuarterMatrixRow[];
 }
 
+export interface CompanyProfitability {
+  name: string;
+  total: string;
+  months: number;
+  payments: number;
+  monthlyAverage: string;
+  bestMonthAmount: string;
+  bestMonthLabel: string | null;
+  firstDate: string | null;
+  lastDate: string | null;
+}
+
 export interface EmploymentReports {
   breakdown: EmploymentBreakdown;
+  companyProfitability: CompanyProfitability[];
   years: number[];
   total: string;
   yearlyTotals: { year: number; total: string; average: string; months: number; companies: number }[];

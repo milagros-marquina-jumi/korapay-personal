@@ -6,27 +6,22 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageShell } from '@/components/layout/page-shell';
-import { WorkspaceGate } from '@/components/layout/workspace-gate';
-import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card } from '@/components/ui/card';
 import { apiFetch } from '@/lib/api';
 import type { MonthlySummary } from '@/lib/api.types';
 import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
 
-function ResumenMesContent() {
-  const { activeWorkspaceId } = useWorkspace();
+export function MonthlySummaryPanel({ workspaceId }: Readonly<{ workspaceId: string }>) {
   const [year, setYear] = useState(FILTER_ALL);
   const [search, setSearch] = useState('');
 
+  const yearParam = year !== FILTER_ALL ? `&year=${year}` : '';
+
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.monthlySummary(activeWorkspaceId ?? '', { year }),
-    queryFn: () =>
-      apiFetch<MonthlySummary>(
-        `/transactions/monthly-summary?workspaceId=${activeWorkspaceId}${year !== FILTER_ALL ? `&year=${year}` : ''}`,
-      ),
-    enabled: !!activeWorkspaceId,
+    queryKey: queryKeys.monthlySummary(workspaceId, { year }),
+    queryFn: () => apiFetch<MonthlySummary>(`/transactions/monthly-summary?workspaceId=${workspaceId}${yearParam}`),
+    enabled: !!workspaceId,
   });
 
   const yearOptions = useMemo(
@@ -44,8 +39,9 @@ function ResumenMesContent() {
   }, [data?.data, search]);
 
   return (
-    <PageShell title="Resumen por mes" description="Ingresos netos por empresa, agrupados por año y mes">
+    <div className="space-y-4">
       <DataTableToolbar
+        sticky={false}
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar empresa..."
@@ -65,9 +61,9 @@ function ResumenMesContent() {
         }
       />
 
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando...</p>
-      ) : periods.length ? (
+      {isLoading && <p className="text-sm text-muted-foreground">Cargando...</p>}
+
+      {!isLoading && periods.length > 0 && (
         <div className="space-y-4">
           {periods.map((period) => (
             <Card key={`${period.year}-${period.month}`} className="overflow-hidden">
@@ -102,17 +98,11 @@ function ResumenMesContent() {
             </Card>
           ))}
         </div>
-      ) : (
+      )}
+
+      {!isLoading && periods.length === 0 && (
         <EmptyState title="Sin ingresos" description="No hay ingresos registrados para el periodo seleccionado." />
       )}
-    </PageShell>
-  );
-}
-
-export default function ResumenMesPage() {
-  return (
-    <WorkspaceGate type="EMPLOYMENT">
-      <ResumenMesContent />
-    </WorkspaceGate>
+    </div>
   );
 }

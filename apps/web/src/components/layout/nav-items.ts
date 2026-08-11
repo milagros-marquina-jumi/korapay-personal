@@ -5,7 +5,6 @@ import {
   BarChart3,
   Boxes,
   Building2,
-  CalendarRange,
   FileText,
   LayoutDashboard,
   MailCheck,
@@ -43,13 +42,7 @@ const PERSONAL: NavItem[] = [
 
 const EMPLOYMENT: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  {
-    href: '/ingresos',
-    label: 'Ingresos',
-    icon: ArrowLeftRight,
-    linkable: true,
-    children: [{ href: '/ingresos/resumen-mes', label: 'Resumen por mes', icon: CalendarRange }],
-  },
+  { href: '/ingresos', label: 'Ingresos', icon: ArrowLeftRight },
   { href: '/contratos', label: 'Contratos', icon: FileText },
   { href: '/renta', label: 'Renta anual', icon: Banknote },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },

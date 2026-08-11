@@ -1,0 +1,226 @@
+'use client';
+
+import { formatMoney } from '@korapay/domain';
+import { KPICard } from '@korapay/ui';
+import { useQuery } from '@tanstack/react-query';
+import { Lock, TrendingUp } from 'lucide-react';
+import { CategoryDonut } from '@/components/charts/category-donut';
+import { HeatmapTable } from '@/components/charts/heatmap-table';
+import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { buildCategoryHeatmap, MONTH_SHORT } from '@/components/reports/report-constants';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { apiFetch } from '@/lib/api';
+import type { PersonalReports } from '@/lib/api.types';
+import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
+
+export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
+  const { data: allYears } = useQuery({
+    queryKey: queryKeys.personalReports(workspaceId, { years: true }),
+    queryFn: () => apiFetch<PersonalReports>(`/reports/personal?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+    select: (r) => r.years ?? [],
+  });
+
+  const [year, setYear] = useDefaultYear(allYears);
+  const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
+
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.personalReports(workspaceId, selectedYear ? { year: selectedYear } : {}),
+    queryFn: () =>
+      apiFetch<PersonalReports>(
+        `/reports/personal?workspaceId=${workspaceId}${selectedYear ? `&year=${selectedYear}` : ''}`,
+      ),
+    enabled: !!workspaceId,
+    placeholderData: (prev) => prev,
+  });
+
+  const yearFilter = (
+    <FilterSelect
+      value={year}
+      onValueChange={setYear}
+      options={(allYears ?? []).map((y) => ({ value: String(y), label: String(y) }))}
+      placeholder="Año"
+      allLabel="Todos los años"
+    />
+  );
+
+  if (isLoading || !data) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-72 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const allYearsView = year === FILTER_ALL;
+
+  const donutData = data.expenseByCategory.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+
+  const incomeExpenseData: MonthlyPoint[] = allYearsView
+    ? (data.yearlyTotals ?? []).map((y) => ({
+        label: String(y.year),
+        ingresos: Number(y.income),
+        egresos: Number(y.expense),
+      }))
+    : data.incomeVsExpense.slice(-12).map((m) => ({
+        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+        ingresos: Number(m.income),
+        egresos: Number(m.expense),
+      }));
+
+  const fixedVariableData: MonthlyPoint[] = allYearsView
+    ? (data.yearlyTotals ?? []).map((y) => ({
+        label: String(y.year),
+        ingresos: Number(y.fixed),
+        egresos: Number(y.variable),
+      }))
+    : data.monthlyFixedVsVariable.map((m) => ({
+        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+        ingresos: Number(m.fixed),
+        egresos: Number(m.variable),
+      }));
+
+  const categoryHeatmap = buildCategoryHeatmap(allYearsView ? data.yearlyByCategory : undefined);
+
+  const fixed = Number(data.fixedVsVariable.fixed);
+  const variable = Number(data.fixedVsVariable.variable);
+  const totalFixedVar = fixed + variable;
+  const fixedPct = totalFixedVar > 0 ? (fixed / totalFixedVar) * 100 : 0;
+
+  return (
+    <Tabs defaultValue="categoria">
+      <TabsList>
+        <TabsTrigger value="categoria">Gastos por categoría</TabsTrigger>
+        <TabsTrigger value="mes">Ingresos vs egresos</TabsTrigger>
+        <TabsTrigger value="fijo">Fijo vs no fijo</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="categoria" className="mt-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle>Gastos por categoría</CardTitle>
+            {yearFilter}
+          </CardHeader>
+          <CardContent>
+            {donutData.length ? (
+              <>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <CategoryDonut data={donutData} />
+                  <div className="divide-y">
+                    {data.expenseByCategory.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                        <span className="truncate">{c.name}</span>
+                        <span className="tabular-nums font-medium">{formatMoney(c.total, 'PEN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {allYearsView && data.yearlyTotals?.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="mb-3 text-sm font-medium text-muted-foreground">Egresos por año</h4>
+                    <MonthlyBar
+                      data={data.yearlyTotals.map((y) => ({
+                        label: String(y.year),
+                        ingresos: 0,
+                        egresos: Number(y.expense),
+                      }))}
+                    />
+                  </div>
+                )}
+                {allYearsView && categoryHeatmap && (
+                  <div className="mt-6">
+                    <h4 className="mb-3 text-sm font-medium text-muted-foreground">Categorías por año</h4>
+                    <HeatmapTable
+                      rowHeader="Año"
+                      columns={categoryHeatmap.columns}
+                      rows={categoryHeatmap.rows}
+                      minWidth="48rem"
+                    />
+                  </div>
+                )}
+                {!allYearsView && data.incomeVsExpense.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="mb-3 text-sm font-medium text-muted-foreground">Egresos por mes</h4>
+                    <MonthlyBar
+                      data={data.incomeVsExpense.map((m) => ({
+                        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+                        ingresos: 0,
+                        egresos: Number(m.expense),
+                      }))}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="py-12 text-center text-sm text-muted-foreground">Sin gastos registrados</p>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="mes" className="mt-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle>Ingresos vs egresos por {allYearsView ? 'año' : 'mes'}</CardTitle>
+            {yearFilter}
+          </CardHeader>
+          <CardContent>
+            {incomeExpenseData.length ? (
+              <MonthlyBar data={incomeExpenseData} />
+            ) : (
+              <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="fijo" className="mt-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle>Gasto fijo vs no fijo</CardTitle>
+            {yearFilter}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <KPICard
+                label="Gasto fijo"
+                value={formatMoney(data.fixedVsVariable.fixed, 'PEN')}
+                icon={Lock}
+                color="text-warning"
+              />
+              <KPICard
+                label="Gasto no fijo"
+                value={formatMoney(data.fixedVsVariable.variable, 'PEN')}
+                icon={TrendingUp}
+                color="text-info"
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Fijo {Math.round(fixedPct)}%</span>
+                <span>No fijo {Math.round(100 - fixedPct)}%</span>
+              </div>
+              <Progress value={fixedPct} />
+            </div>
+            {fixedVariableData.length > 0 && (
+              <MonthlyBar
+                data={fixedVariableData}
+                firstName="Fijo"
+                firstColor="#f59e0b"
+                secondName="No fijo"
+                secondColor="#3b82f6"
+              />
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+  );
+}

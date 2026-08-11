@@ -306,7 +306,47 @@ export interface PersonalReports {
   monthlyFixedVsVariable: { year: number; month: number; label: string; fixed: string; variable: string }[];
 }
 
+export interface CompanyDurationPeriod {
+  id: string;
+  startDate: string;
+  endDate: string | null;
+  position?: string | null;
+  type?: string | null;
+  active: boolean;
+  days: number;
+}
+
+export interface CompanyDuration {
+  name: string;
+  contracts: number;
+  totalDays: number;
+  active: boolean;
+  firstStart: string | null;
+  lastEnd: string | null;
+  periods: CompanyDurationPeriod[];
+}
+
+export interface MonthlyMatrixRow {
+  year: number;
+  months: string[];
+  total: string;
+}
+
+export interface QuarterMatrixRow {
+  year: number;
+  quarters: string[];
+  total: string;
+}
+
+export interface EmploymentBreakdown {
+  monthlyAll: MonthlyMatrixRow[];
+  monthlySalary: MonthlyMatrixRow[];
+  quarterlyAll: QuarterMatrixRow[];
+  quarterlySalary: QuarterMatrixRow[];
+}
+
 export interface EmploymentReports {
+  breakdown: EmploymentBreakdown;
   years: number[];
   total: string;
   yearlyTotals: { year: number; total: string; average: string; months: number; companies: number }[];
@@ -315,7 +355,9 @@ export interface EmploymentReports {
     months: number[];
     monthDetail: { name: string; clients: string[] }[][];
     total: number;
+    totalDetail: { name: string; clients: string[] }[];
   }[];
+  companyDurations: CompanyDuration[];
   incomeByConcept: { name: string; total: string }[];
   incomeByCompany: { name: string; total: string }[];
   incomeByMonth: { year: number; month: number; label: string; total: string }[];

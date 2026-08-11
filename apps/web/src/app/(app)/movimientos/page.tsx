@@ -4,12 +4,13 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { AlertTriangle, ChevronDown, ChevronRight, Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
@@ -19,20 +20,20 @@ import { TransactionFormDialog } from '@/components/forms/transaction-form-dialo
 import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { DueDateHint } from '@/components/transactions/due-date-hint';
+import { TransactionDetailDialog, UsdConversionDialog } from '@/components/transactions/transaction-detail-dialog';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IconAction } from '@/components/ui/icon-action';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Category, Paginated, Transaction } from '@/lib/api.types';
-import { RECURRENCE_LABELS, TRANSACTION_TYPE_LABELS } from '@/lib/labels';
 import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
+import { FIXED_TAG, VARIABLE_TAG } from '@/lib/transaction-tags';
 import { useDefaultYear } from '@/lib/use-default-year';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { useOpenMonth } from '@/lib/use-open-month';
-import { cn, formatDate, formatDateLong, formatMonthYear } from '@/lib/utils';
+import { formatMonthYear } from '@/lib/utils';
 
 export default function MovimientosPage() {
   const { activeWorkspaceId, activeWorkspace } = useWorkspace();
@@ -162,6 +163,23 @@ export default function MovimientosPage() {
       });
   }, [rows]);
 
+  const accordionGroups = useMemo(
+    () =>
+      monthGroups.map((g) => ({
+        key: g.key,
+        label: g.label,
+        items: g.items,
+        metrics: [
+          ...(g.income > 0
+            ? [{ label: 'Ingresos', value: formatMoney(String(g.income), 'PEN'), className: 'text-success' }]
+            : []),
+          { label: 'Egresos', value: formatMoney(String(g.expense), 'PEN'), className: 'text-destructive' },
+          { label: 'Neto', value: formatMoney(String(g.net), 'PEN') },
+        ],
+      })),
+    [monthGroups],
+  );
+
   const currentMonthKey = useMemo(() => {
     const now = new Date();
     return `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}`;
@@ -207,10 +225,10 @@ export default function MovimientosPage() {
             {row.original.isRecurring && (
               <RefreshCw className="size-3.5 shrink-0 text-brand" aria-label="Pago recurrente" />
             )}
-            {row.original.tags?.includes('Fijo') && (
+            {row.original.tags?.includes(FIXED_TAG) && (
               <span className="shrink-0 rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground">Fijo</span>
             )}
-            {row.original.tags?.includes('No Fijo') && (
+            {row.original.tags?.includes(VARIABLE_TAG) && (
               <span className="shrink-0 rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground">
                 No fijo
               </span>
@@ -422,171 +440,41 @@ export default function MovimientosPage() {
             </div>
           </div>
 
-          <div className="space-y-3">
-            {monthGroups.map((group) => {
-              const open = isMonthOpen(group.key);
-              return (
-                <Card key={group.key} className="overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => toggleMonth(group.key)}
-                    aria-expanded={open}
-                    className={cn(
-                      'flex w-full flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3.5 text-left transition-colors hover:bg-muted/50',
-                      open ? 'border-b bg-muted/40' : 'bg-card',
-                    )}
-                  >
-                    <ChevronDown
-                      className={cn(
-                        'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-spring',
-                        open && 'rotate-180',
-                      )}
-                    />
-                    <span className="text-sm font-semibold capitalize">{group.label}</span>
-                    {group.key === currentMonthKey && (
-                      <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-strong dark:text-brand">
-                        Mes actual
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {group.items.length} {group.items.length === 1 ? 'movimiento' : 'movimientos'}
-                    </span>
-                    <span className="ml-auto flex flex-wrap items-center justify-end gap-x-5 gap-y-1 text-xs">
-                      {group.income > 0 && (
-                        <span className="text-muted-foreground">
-                          Ingresos{' '}
-                          <span className="font-semibold tabular-nums text-success">
-                            {formatMoney(String(group.income), 'PEN')}
-                          </span>
-                        </span>
-                      )}
-                      <span className="text-muted-foreground">
-                        Egresos{' '}
-                        <span className="font-semibold tabular-nums text-destructive">
-                          {formatMoney(String(group.expense), 'PEN')}
-                        </span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        Neto <span className="font-semibold tabular-nums">{formatMoney(String(group.net), 'PEN')}</span>
-                      </span>
-                    </span>
-                  </button>
-
-                  {open && (
-                    <DataTable
-                      columns={columns}
-                      data={group.items}
-                      embedded
-                      rowClassName={(t) => highlightClass(t.id)}
-                      getRowCanExpand={(row) => !!row.original.isRecurring && !!row.original.recurrenceRule}
-                      renderExpanded={(t) =>
-                        activeWorkspaceId && t.recurrenceRule ? (
-                          <div className="px-4 py-3">
-                            <RecurrenceHistory workspaceId={activeWorkspaceId} ruleId={t.recurrenceRule.id} />
-                          </div>
-                        ) : null
-                      }
-                    />
-                  )}
-                </Card>
-              );
-            })}
-          </div>
+          <MonthAccordion
+            groups={accordionGroups}
+            currentMonthKey={currentMonthKey}
+            isOpen={isMonthOpen}
+            onToggle={toggleMonth}
+            countLabel={(n) => `${n} ${n === 1 ? 'movimiento' : 'movimientos'}`}
+          >
+            {(group) => (
+              <DataTable
+                columns={columns}
+                data={group.items}
+                embedded
+                rowClassName={(t) => highlightClass(t.id)}
+                getRowCanExpand={(row) => !!row.original.isRecurring && !!row.original.recurrenceRule}
+                renderExpanded={(t) =>
+                  activeWorkspaceId && t.recurrenceRule ? (
+                    <div className="px-4 py-3">
+                      <RecurrenceHistory workspaceId={activeWorkspaceId} ruleId={t.recurrenceRule.id} />
+                    </div>
+                  ) : null
+                }
+              />
+            )}
+          </MonthAccordion>
         </>
       )}
 
-      <Dialog open={detail !== null} onOpenChange={(next) => !next && setDetail(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{detail?.concept}</DialogTitle>
-            <DialogDescription>Detalle del movimiento</DialogDescription>
-          </DialogHeader>
-          {detail && (
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-              <DetailRow label="Fecha" value={formatDateLong(detail.date)} />
-              <DetailRow label="Tipo" value={TRANSACTION_TYPE_LABELS[detail.type] ?? detail.type} />
-              <DetailRow
-                label="Monto"
-                value={
-                  detail.currency === 'USD'
-                    ? `${formatMoney(detail.amountBase, 'PEN')} (${formatMoney(detail.amountOriginal, 'USD')})`
-                    : formatMoney(detail.amountBase, 'PEN')
-                }
-              />
-              {detail.amountGross && Number(detail.amountGross) !== Number(detail.amountOriginal) && (
-                <DetailRow
-                  label="Monto bruto"
-                  value={`${formatMoney(detail.amountGross, detail.currency as 'PEN' | 'USD')} (descuento ${formatMoney(
-                    String(Number(detail.amountGross) - Number(detail.amountOriginal)),
-                    detail.currency as 'PEN' | 'USD',
-                  )})`}
-                />
-              )}
-              <DetailRow label="Estado" value={statusLabel(detail.status)} />
-              <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
-              {detail.type === 'EXPENSE' && (
-                <DetailRow label="Tipo de gasto" value={detail.tags?.includes('Fijo') ? 'Fijo' : 'No fijo'} />
-              )}
-              <DetailRow
-                label="Medios de pago"
-                value={
-                  detail.tags?.filter(
-                    (t) =>
-                      !['Fijo', 'No Fijo'].includes(t) && !/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/.test(t),
-                  ).length
-                    ? detail.tags
-                        .filter(
-                          (t) =>
-                            !['Fijo', 'No Fijo'].includes(t) &&
-                            !/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/.test(t),
-                        )
-                        .join(', ')
-                    : '—'
-                }
-              />
-              <DetailRow label="Vencimiento" value={detail.dueDate ? formatDateLong(detail.dueDate) : '—'} />
-              <DetailRow
-                label="Recurrencia"
-                value={detail.isRecurring ? (RECURRENCE_LABELS[detail.recurrenceRule?.frequency ?? ''] ?? 'Sí') : 'No'}
-              />
-              {detail.isRecurring && detail.recurrenceRule && activeWorkspaceId && (
-                <RecurrenceHistory workspaceId={activeWorkspaceId} ruleId={detail.recurrenceRule.id} />
-              )}
-              <div className="col-span-2">
-                <dt className="text-xs text-muted-foreground">Notas</dt>
-                <dd className="mt-0.5 whitespace-pre-wrap">{detail.notes || '—'}</dd>
-              </div>
-            </dl>
-          )}
-        </DialogContent>
-      </Dialog>
+      <TransactionDetailDialog
+        transaction={detail}
+        workspaceId={activeWorkspaceId}
+        categoryName={categoryName}
+        onOpenChange={(next) => !next && setDetail(null)}
+      />
 
-      <Dialog open={usdDetail !== null} onOpenChange={(next) => !next && setUsdDetail(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Conversión a soles</DialogTitle>
-            <DialogDescription>{usdDetail?.concept}</DialogDescription>
-          </DialogHeader>
-          {usdDetail && (
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Monto en dólares</span>
-                <span className="font-semibold tabular-nums">{formatMoney(usdDetail.amountOriginal, 'USD')}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Tipo de cambio del {formatDate(usdDetail.date)}</span>
-                <span className="font-medium tabular-nums">S/ {Number(usdDetail.exchangeRate ?? 0).toFixed(3)}</span>
-              </div>
-              <div className="flex items-center justify-between border-t pt-3">
-                <span className="font-medium">Total en soles</span>
-                <span className="font-semibold tabular-nums text-brand">
-                  {formatMoney(usdDetail.amountBase, 'PEN')}
-                </span>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <UsdConversionDialog transaction={usdDetail} onOpenChange={(next) => !next && setUsdDetail(null)} />
 
       {activeWorkspaceId && editing && (
         <TransactionFormDialog
@@ -607,50 +495,5 @@ export default function MovimientosPage() {
         />
       )}
     </PageShell>
-  );
-}
-
-const DAY_MS = 86_400_000;
-
-function daysUntilDue(dueDate: string) {
-  const today = new Date();
-  const startOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const due = new Date(dueDate);
-  const startOfDue = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-  return Math.round((startOfDue - startOfToday) / DAY_MS);
-}
-
-function DueDateHint({ transaction }: Readonly<{ transaction: Transaction }>) {
-  if (!transaction.dueDate || transaction.status === 'PAID' || transaction.status === 'CANCELLED') return null;
-
-  const days = daysUntilDue(transaction.dueDate);
-  const vencido = days < 0;
-  if (!vencido && days > 7) return null;
-
-  let texto = `Vence en ${days} días`;
-  if (vencido) texto = days === -1 ? 'Venció ayer' : `Venció hace ${Math.abs(days)} días`;
-  else if (days === 0) texto = 'Vence hoy';
-  else if (days === 1) texto = 'Vence mañana';
-
-  return (
-    <span
-      title={`Fecha límite: ${formatDate(transaction.dueDate)}`}
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-        vencido || days === 0 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning',
-      )}
-    >
-      <AlertTriangle className="size-3" aria-hidden />
-      {texto}
-    </span>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-medium tabular-nums">{value}</dd>
-    </div>
   );
 }

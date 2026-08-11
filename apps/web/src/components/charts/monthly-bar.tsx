@@ -2,7 +2,7 @@
 
 import { formatMoney } from '@korapay/domain';
 import { useTheme } from 'next-themes';
-import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, LabelList, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { compactAmount, EXPENSE_COLOR, INCOME_COLOR } from './palette';
 
 export interface MonthlyPoint {
@@ -18,6 +18,14 @@ interface Props {
   firstColor?: string;
   secondName?: string;
   secondColor?: string;
+  showLabels?: boolean;
+}
+
+const MAX_LABELED_CATEGORIES = 14;
+
+function barLabel(value: number | string) {
+  const n = Number(value);
+  return n ? compactAmount(n) : '';
 }
 
 export function MonthlyBar({
@@ -27,15 +35,17 @@ export function MonthlyBar({
   firstColor = INCOME_COLOR,
   secondName = 'Egresos',
   secondColor = EXPENSE_COLOR,
+  showLabels = true,
 }: Readonly<Props>) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const axis = '#898781';
+  const labelsVisible = showLabels && data.length <= MAX_LABELED_CATEGORIES;
   const grid = isDark ? '#2c2c2a' : '#e1e0d9';
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 8 }} barGap={2}>
+      <BarChart data={data} margin={{ top: labelsVisible ? 22 : 8, right: 12, bottom: 0, left: 8 }} barGap={2}>
         <CartesianGrid stroke={grid} vertical={false} />
         <XAxis
           dataKey="label"
@@ -62,8 +72,16 @@ export function MonthlyBar({
           formatter={(value: number, name) => [formatMoney(String(value), 'PEN'), name]}
         />
         <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="ingresos" name={firstName} fill={firstColor} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="egresos" name={secondName} fill={secondColor} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="ingresos" name={firstName} fill={firstColor} radius={[4, 4, 0, 0]}>
+          {labelsVisible && (
+            <LabelList dataKey="ingresos" position="top" fontSize={10} fill={axis} formatter={barLabel} />
+          )}
+        </Bar>
+        <Bar dataKey="egresos" name={secondName} fill={secondColor} radius={[4, 4, 0, 0]}>
+          {labelsVisible && (
+            <LabelList dataKey="egresos" position="top" fontSize={10} fill={axis} formatter={barLabel} />
+          )}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );

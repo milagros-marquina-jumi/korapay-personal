@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { buildEmploymentBreakdown } from './employment-breakdown';
 
 @Injectable()
 export class ReportsService {
@@ -273,19 +274,24 @@ export class ReportsService {
       }),
     );
 
+    const detailOf = (ids: Iterable<string>) =>
+      [...ids]
+        .map((id) => companyLookup.get(id))
+        .filter((c): c is { name: string; clients: string[] } => !!c)
+        .map((c) => ({ name: c.name, clients: c.clients }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
     const companiesPerMonth = [...companiesByYear.entries()]
-      .map(([y, months]) => ({
-        year: y,
-        months: Array.from({ length: 12 }, (_, i) => months.get(i + 1)?.size ?? 0),
-        monthDetail: Array.from({ length: 12 }, (_, i) =>
-          [...(months.get(i + 1) ?? [])]
-            .map((id) => companyLookup.get(id))
-            .filter((c): c is { name: string; clients: string[] } => !!c)
-            .map((c) => ({ name: c.name, clients: c.clients }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-        ),
-        total: new Set([...months.values()].flatMap((s) => [...s])).size,
-      }))
+      .map(([y, months]) => {
+        const unique = new Set([...months.values()].flatMap((s) => [...s]));
+        return {
+          year: y,
+          months: Array.from({ length: 12 }, (_, i) => months.get(i + 1)?.size ?? 0),
+          monthDetail: Array.from({ length: 12 }, (_, i) => detailOf(months.get(i + 1) ?? [])),
+          total: unique.size,
+          totalDetail: detailOf(unique),
+        };
+      })
       .sort((a, b) => a.year - b.year);
 
     const byConcept = new Map<string, Decimal>();
@@ -319,10 +325,68 @@ export class ReportsService {
       total: total.toFixed(2),
       yearlyTotals,
       companiesPerMonth,
+      companyDurations: await this.companyDurations(workspaceId),
+      breakdown: buildEmploymentBreakdown(allTransactions),
       incomeByConcept: sortDesc(byConcept),
       incomeByCompany: sortDesc(byCompany),
       incomeByMonth,
     };
+  }
+
+  private static daysBetween(start: Date, end: Date) {
+    return Math.max(0, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+  }
+
+  private async companyDurations(workspaceId: string) {
+    const [contracts, companies] = await Promise.all([
+      this.prisma.employmentContract.findMany({
+        where: { workspaceId, deletedAt: null },
+        orderBy: { startDate: 'asc' },
+      }),
+      this.prisma.company.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+    ]);
+
+    const nameOf = new Map(companies.map((c) => [c.id, c.name]));
+    const grouped = new Map<string, typeof contracts>();
+    for (const c of contracts) {
+      const name = nameOf.get(c.companyId ?? '') ?? 'Sin empresa';
+      const bucket = grouped.get(name) ?? [];
+      bucket.push(c);
+      grouped.set(name, bucket);
+    }
+
+    const today = new Date();
+    return [...grouped.entries()]
+      .map(([name, rows]) => {
+        // Varios contratos de la misma empresa se suman: son reingresos, no periodos paralelos.
+        const periods = rows.map((r) => {
+          const end = r.endDate ?? today;
+          return {
+            id: r.id,
+            startDate: r.startDate.toISOString(),
+            endDate: r.endDate?.toISOString() ?? null,
+            position: r.position,
+            type: r.type,
+            active: !r.endDate,
+            days: ReportsService.daysBetween(r.startDate, end),
+          };
+        });
+        const first = rows[0];
+        const last = rows.at(-1);
+        return {
+          name,
+          contracts: periods.length,
+          totalDays: periods.reduce((s, p) => s + p.days, 0),
+          active: periods.some((p) => p.active),
+          firstStart: first ? first.startDate.toISOString() : null,
+          lastEnd: last?.endDate?.toISOString() ?? null,
+          periods,
+        };
+      })
+      .sort((a, b) => b.totalDays - a.totalDays);
   }
 
   async business(workspaceId: string, year?: number) {

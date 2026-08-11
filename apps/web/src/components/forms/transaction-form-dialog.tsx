@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -38,6 +38,7 @@ import type {
   Transaction,
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { buildTags, isFixedExpense, splitTags } from '@/lib/transaction-tags';
 
 const TYPE_OPTIONS = [
   { value: 'INCOME', label: 'Ingreso' },
@@ -64,7 +65,8 @@ const schema = z.object({
   applicationId: z.string().optional(),
   projectIds: z.array(z.string()).optional(),
   personId: z.string().optional(),
-  paymentTags: z.array(z.string()).optional(),
+  paymentMethod: z.string().optional(),
+  bank: z.string().optional(),
   isFixed: z.boolean().optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
@@ -120,6 +122,16 @@ export function TransactionFormDialog({
     queryFn: () => apiFetch<PaymentMethodCatalog[]>('/payment-methods'),
     enabled: open,
   });
+  // Medios de pago y bancos comparten el campo tags; se distinguen por su catalogo de origen.
+  const catalogs = useMemo(
+    () => ({
+      paymentMethods: new Set((paymentMethods ?? []).map((p) => p.name)),
+      banks: new Set((banks ?? []).map((b) => b.name)),
+    }),
+    [paymentMethods, banks],
+  );
+  const catalogsReady = !!paymentMethods && !!banks;
+
   const showCompany = workspaceType === 'EMPLOYMENT';
   const { data: companies } = useQuery({
     queryKey: queryKeys.companies(workspaceId),
@@ -183,14 +195,17 @@ export function TransactionFormDialog({
         applicationId: undefined,
         projectIds: [],
         personId: undefined,
-        paymentTags: [],
+        paymentMethod: '',
+        bank: '',
         isFixed: false,
         notes: '',
         dueDate: '',
         isRecurring: false,
       });
     }
-    if (open && transaction) {
+    // Los catalogos deciden si un tag es medio de pago o banco: sin ellos no se puede repartir.
+    if (open && transaction && catalogsReady) {
+      const split = splitTags(transaction.tags, catalogs);
       reset({
         type: (transaction.type as FormValues['type']) ?? defaultType,
         concept: transaction.concept,
@@ -203,20 +218,27 @@ export function TransactionFormDialog({
         applicationId: transaction.applicationId ?? undefined,
         projectIds: transaction.projects?.map((p) => p.id) ?? [],
         personId: transaction.personId ?? undefined,
-        paymentTags: (transaction.tags ?? []).filter((t: string) => !['Fijo', 'No Fijo'].includes(t)),
-        isFixed: transaction.tags?.includes('Fijo') ?? false,
+        paymentMethod: split.paymentMethod ?? '',
+        bank: split.bank ?? '',
+        isFixed: isFixedExpense(transaction.tags),
         notes: transaction.notes ?? '',
         dueDate: transaction.dueDate ? transaction.dueDate.slice(0, 10) : '',
         isRecurring: false,
       });
     }
-  }, [open, transaction, reset, defaultType]);
+  }, [open, transaction, reset, defaultType, catalogsReady, catalogs]);
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const { recurrenceCount, paymentTags, projectIds, personId, isFixed, ...rest } = values;
-      const fixedTag = rest.type === 'EXPENSE' ? (isFixed ? ['Fijo'] : ['No Fijo']) : [];
-      const finalTags = [...fixedTag, ...(paymentTags ?? [])];
+      const { recurrenceCount, paymentMethod, bank, projectIds, personId, isFixed, ...rest } = values;
+      const finalTags = buildTags({
+        isFixedExpense: isFixed ?? false,
+        applyExpenseType: rest.type === 'EXPENSE',
+        paymentMethod,
+        bank,
+        // Los tags ajenos a los catalogos (cargos, meses heredados) se conservan tal cual.
+        rest: splitTags(transaction?.tags, catalogs).rest,
+      });
       const isBusinessCost = rest.type === 'BUSINESS_COST';
       const isTeamPayment = rest.type === 'TEAM_PAYMENT';
       if (editing && transaction) {
@@ -345,33 +367,44 @@ export function TransactionFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Medios de pago / Banco</Label>
-              <MultiSelect
-                placeholder="Selecciona uno o varios"
-                searchPlaceholder="Buscar medio o banco..."
-                selected={watch('paymentTags') ?? []}
-                onChange={(vals) => setValue('paymentTags', vals)}
-                groups={[
-                  { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
-                  { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
-                ]}
+              <Label>Medio de pago</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar medio de pago..."
+                value={watch('paymentMethod') ?? ''}
+                onValueChange={(v) => setValue('paymentMethod', v)}
+                options={(paymentMethods ?? []).map((p) => ({ value: p.name, label: p.name }))}
+                clearable
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Estado</Label>
-            <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PENDING">Pendiente</SelectItem>
-                <SelectItem value="PAID">Pagado</SelectItem>
-                <SelectItem value="PARTIAL">Parcial</SelectItem>
-                <SelectItem value="OVERDUE">Vencido</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Banco</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar banco..."
+                value={watch('bank') ?? ''}
+                onValueChange={(v) => setValue('bank', v)}
+                options={(banks ?? []).map((b) => ({ value: b.name, label: b.name }))}
+                clearable
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Estado</Label>
+              <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pendiente</SelectItem>
+                  <SelectItem value="PAID">Pagado</SelectItem>
+                  <SelectItem value="PARTIAL">Parcial</SelectItem>
+                  <SelectItem value="OVERDUE">Vencido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {watch('type') === 'EXPENSE' && (
@@ -537,7 +570,7 @@ export function TransactionFormDialog({
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button type="submit" disabled={mutation.isPending || !catalogsReady}>
               {mutation.isPending ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogFooter>

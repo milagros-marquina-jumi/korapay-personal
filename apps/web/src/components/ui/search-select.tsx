@@ -23,6 +23,8 @@ interface SearchSelectProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
+  clearable?: boolean;
+  clearLabel?: string;
 }
 
 export function SearchSelect({
@@ -31,6 +33,8 @@ export function SearchSelect({
   onValueChange,
   placeholder = 'Selecciona',
   searchPlaceholder = 'Buscar...',
+  clearable = false,
+  clearLabel = 'Sin asignar',
 }: SearchSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -83,6 +87,18 @@ export function SearchSelect({
         <div className="max-h-64 overflow-y-auto py-1">
           {filtered.length === 0 && (
             <p className="px-3 py-6 text-center text-sm text-muted-foreground">Sin resultados</p>
+          )}
+          {clearable && value && !query && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                onValueChange('');
+                setOpen(false);
+              }}
+              className="text-muted-foreground"
+            >
+              {clearLabel}
+            </DropdownMenuItem>
           )}
           {filtered.map((option) => (
             <DropdownMenuItem

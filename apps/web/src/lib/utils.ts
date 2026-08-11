@@ -57,6 +57,45 @@ export function monthsBetween(from: string | Date, to?: string | Date | null): n
   return Math.max(0, months);
 }
 
+function formatYmd(years: number, months: number, days: number): string {
+  const parts = [
+    `${years} ${years === 1 ? 'año' : 'años'}`,
+    `${months} ${months === 1 ? 'mes' : 'meses'}`,
+    `${days} ${days === 1 ? 'día' : 'días'}`,
+  ];
+  return `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}`;
+}
+
+export function formatDurationRange(from: string | Date, to?: string | Date | null): string {
+  const start = new Date(from);
+  const end = to ? new Date(to) : new Date();
+  if (end < start) return formatYmd(0, 0, 0);
+
+  let years = end.getUTCFullYear() - start.getUTCFullYear();
+  let months = end.getUTCMonth() - start.getUTCMonth();
+  let days = end.getUTCDate() - start.getUTCDate();
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonth = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 0));
+    days += prevMonth.getUTCDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  return formatYmd(years, months, days);
+}
+
+export function formatDurationDays(days: number): string {
+  if (days <= 0) return formatYmd(0, 0, 0);
+  const years = Math.floor(days / 365);
+  const afterYears = days - years * 365;
+  const months = Math.floor(afterYears / 30);
+  const rest = afterYears - months * 30;
+  return formatYmd(years, months, rest);
+}
+
 export function formatDuration(from?: string | Date | null, to?: string | Date | null): string {
   if (!from) return '—';
   const total = monthsBetween(from, to);

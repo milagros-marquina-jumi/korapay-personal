@@ -2,7 +2,7 @@
 
 import { formatMoney } from '@korapay/domain';
 import { useQuery } from '@tanstack/react-query';
-import { HeatmapTable } from '@/components/charts';
+import { HeatmapTable } from '@/components/charts/heatmap-table';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';

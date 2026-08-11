@@ -22,6 +22,7 @@ interface Props {
   minWidth?: string;
   legend?: boolean;
   onCellClick?: (rowKey: string, columnIndex: number) => void;
+  onTotalClick?: (rowKey: string) => void;
 }
 
 const STEPS = [
@@ -54,6 +55,7 @@ export function HeatmapTable({
   minWidth = '62rem',
   legend = true,
   onCellClick,
+  onTotalClick,
 }: Readonly<Props>) {
   const all = rows.flatMap((r) => r.values.map(toNumber)).filter((v) => v > 0);
   const min = all.length ? Math.min(...all) : 0;
@@ -132,8 +134,24 @@ export function HeatmapTable({
                   );
                 })}
                 {row.total !== undefined && (
-                  <td className="sticky right-0 z-20 whitespace-nowrap bg-card px-3 py-2.5 text-right font-semibold tabular-nums text-brand-strong dark:text-brand">
-                    {format(toNumber(row.total))}
+                  <td
+                    className={cn(
+                      'sticky right-0 z-20 whitespace-nowrap bg-card text-right font-semibold tabular-nums text-brand-strong dark:text-brand',
+                      onTotalClick ? 'p-0' : 'px-3 py-2.5',
+                    )}
+                  >
+                    {onTotalClick ? (
+                      <button
+                        type="button"
+                        onClick={() => onTotalClick(row.key)}
+                        title="Ver detalle"
+                        className="w-full cursor-pointer px-3 py-2.5 text-right underline decoration-dotted decoration-1 underline-offset-2"
+                      >
+                        {format(toNumber(row.total))}
+                      </button>
+                    ) : (
+                      format(toNumber(row.total))
+                    )}
                   </td>
                 )}
               </tr>

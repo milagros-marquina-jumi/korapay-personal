@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/providers/confirm-provider';
@@ -39,6 +39,8 @@ interface Props {
   extraBody?: Record<string, unknown>;
   editable?: boolean;
   deletable?: boolean;
+  searchable?: boolean;
+  searchText?: (item: CatalogItem) => string;
 }
 
 export function CatalogManager({
@@ -50,6 +52,8 @@ export function CatalogManager({
   extraBody,
   editable = true,
   deletable = true,
+  searchable = false,
+  searchText,
 }: Props) {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
@@ -57,6 +61,7 @@ export function CatalogManager({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState('');
 
   const { data } = useQuery({
     queryKey,
@@ -64,13 +69,22 @@ export function CatalogManager({
       apiFetch<CatalogItem[]>(endpoint.startsWith('/') ? endpointWithQuery(endpoint, extraBody) : endpoint),
   });
 
-  const items = data
+  const sorted = data
     ? [...data].sort((a, b) => {
         const av = String(a.name ?? a.code ?? '').toLowerCase();
         const bv = String(b.name ?? b.code ?? '').toLowerCase();
         return av.localeCompare(bv, 'es');
       })
     : undefined;
+
+  const term = search.trim().toLowerCase();
+  const items =
+    term && sorted
+      ? sorted.filter((item) => {
+          const haystack = searchText?.(item) ?? String(item.name ?? item.code ?? '');
+          return haystack.toLowerCase().includes(term);
+        })
+      : sorted;
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
@@ -183,6 +197,28 @@ export function CatalogManager({
         </Dialog>
       </div>
 
+      {searchable && (
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Buscar ${title.toLowerCase()}...`}
+            className="border-transparent bg-muted/50 pl-9 shadow-none focus-visible:bg-card"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="divide-y rounded-lg border">
         {items?.length ? (
           items.map((item) => (
@@ -210,7 +246,9 @@ export function CatalogManager({
             </div>
           ))
         ) : (
-          <p className="px-3 py-6 text-center text-sm text-muted-foreground">Sin registros</p>
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            {term ? `Sin resultados para "${search.trim()}"` : 'Sin registros'}
+          </p>
         )}
       </div>
     </div>

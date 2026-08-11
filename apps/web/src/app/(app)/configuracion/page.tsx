@@ -34,6 +34,20 @@ function displayGlobalCompany(item: { [key: string]: unknown }) {
   );
 }
 
+function text(value: unknown) {
+  return typeof value === 'string' ? value : '';
+}
+
+function searchGlobalCompany(item: { [key: string]: unknown }) {
+  const clients = (item.clients ?? []) as { name: string }[];
+  return [text(item.name), text(item.ruc), ...clients.map((c) => c.name)].join(' ');
+}
+
+function searchGlobalClient(item: { [key: string]: unknown }) {
+  const company = item.globalCompany as { name: string } | null;
+  return [text(item.name), company?.name ?? ''].join(' ');
+}
+
 function displayGlobalClient(item: { [key: string]: unknown }) {
   const company = item.globalCompany as { name: string } | null;
   return (
@@ -150,6 +164,8 @@ export default function ConfiguracionPage() {
                   { name: 'ruc', label: 'RUC', placeholder: 'Opcional' },
                 ]}
                 display={displayGlobalCompany}
+                searchable
+                searchText={searchGlobalCompany}
               />
             </CardContent>
           </Card>
@@ -164,6 +180,8 @@ export default function ConfiguracionPage() {
                   { name: 'globalCompanyId', label: 'Empresa', options: companyOptions },
                 ]}
                 display={displayGlobalClient}
+                searchable
+                searchText={searchGlobalClient}
               />
             </CardContent>
           </Card>

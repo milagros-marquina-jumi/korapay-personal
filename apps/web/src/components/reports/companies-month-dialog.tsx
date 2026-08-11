@@ -6,7 +6,7 @@ import { MONTH_NAMES } from '@/lib/months';
 
 export interface CompaniesMonthSelection {
   year: string;
-  monthIndex: number;
+  monthIndex: number | null;
   companies: { name: string; clients: string[] }[];
 }
 
@@ -17,16 +17,22 @@ interface Props {
 
 export function CompaniesMonthDialog({ selection, onOpenChange }: Readonly<Props>) {
   const companies = selection?.companies ?? [];
+  let title = '';
+  if (selection) {
+    title =
+      selection.monthIndex === null
+        ? `Empresas en ${selection.year}`
+        : `${MONTH_NAMES[selection.monthIndex]} ${selection.year}`;
+  }
 
   return (
     <Dialog open={!!selection} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="capitalize">
-            {selection ? `${MONTH_NAMES[selection.monthIndex]} ${selection.year}` : ''}
-          </DialogTitle>
+          <DialogTitle className="capitalize">{title}</DialogTitle>
           <DialogDescription>
-            {companies.length} empresa{companies.length === 1 ? '' : 's'} con ingresos en el mes
+            {companies.length} empresa{companies.length === 1 ? '' : 's'}{' '}
+            {selection?.monthIndex === null ? 'distintas en el año' : 'con ingresos en el mes'}
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">

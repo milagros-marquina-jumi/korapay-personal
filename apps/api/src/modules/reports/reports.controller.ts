@@ -24,6 +24,12 @@ export class ReportsController {
     return this.reportsService.business(workspaceId, year);
   }
 
+  @Get('employment')
+  @ApiOperation({ summary: 'Employment reports: income by company, concept, year and companies per month' })
+  employmentReports(@Query() { workspaceId, year }: ReportsQueryDto) {
+    return this.reportsService.employment(workspaceId, year);
+  }
+
   @Get('saving-balances')
   @ApiOperation({ summary: 'Monthly saving balances by account' })
   savingBalances(@Query() { workspaceId, year }: ReportsQueryDto) {

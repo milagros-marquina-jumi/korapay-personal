@@ -25,6 +25,8 @@ export const queryKeys = {
   savingYearlyPivot: (workspaceId: string) => ['saving-yearly-pivot', workspaceId] as const,
   personalReports: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['personal-reports', workspaceId, filters ?? {}] as const,
+  employmentReports: (workspaceId: string, filters?: Record<string, unknown>) =>
+    ['employment-reports', workspaceId, filters ?? {}] as const,
   businessReports: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['business-reports', workspaceId, filters ?? {}] as const,
   debts: (workspaceId: string) => ['debts', workspaceId] as const,

@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { AlertTriangle, Ban, CheckCircle2, CopyCheck, Inbox, RefreshCw, Trash2, WalletCards } from 'lucide-react';
+import { AlertTriangle, Ban, CheckCircle2, Copy, CopyCheck, Inbox, RefreshCw, Trash2, WalletCards } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
@@ -181,9 +181,36 @@ export default function DetectadosPage() {
       {
         id: 'merchant',
         header: 'Comercio',
-        cell: ({ row }) => (
-          <span className="font-medium">{row.original.merchantOriginal ?? row.original.description}</span>
-        ),
+        cell: ({ row }) => {
+          const tx = row.original;
+          const subject = (tx.rawDataSanitized as Record<string, unknown> | null)?.subject as string | undefined;
+          const handleCopy = () => {
+            const date = new Date(tx.occurredAt);
+            const yyyy = date.getUTCFullYear();
+            const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(date.getUTCDate()).padStart(2, '0');
+            const nextDd = String(Number(dd) + 1).padStart(2, '0');
+            const text = subject
+              ? `subject:"${subject}" after:${yyyy}/${mm}/${dd} before:${yyyy}/${mm}/${nextDd}`
+              : `${tx.merchantOriginal ?? tx.description} | ${formatDate(tx.occurredAt)}`;
+            navigator.clipboard.writeText(text).then(() => toast.success('Busqueda Gmail copiada'));
+          };
+          return (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="font-medium" title={subject}>
+                {tx.merchantOriginal ?? tx.description}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="shrink-0 rounded p-0.5 text-muted-foreground/50 opacity-0 transition-opacity hover:bg-muted hover:text-muted-foreground group-hover:opacity-100"
+                title="Copiar para buscar en Gmail"
+              >
+                <Copy className="h-3 w-3" />
+              </button>
+            </span>
+          );
+        },
       },
       {
         id: 'amount',
@@ -205,7 +232,7 @@ export default function DetectadosPage() {
                   type="button"
                   onClick={() => setUsdDetail(tx)}
                   className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
-                  title="Ver conversion en dolares"
+                  title="Ver conversión en dólares"
                 >
                   {amountEl}
                   <span className="rounded bg-brand/10 px-1 text-[10px] font-medium text-brand">USD</span>
@@ -313,7 +340,7 @@ export default function DetectadosPage() {
             <span>
               Alta (&ge;80%): banco, monto, moneda, fecha, tarjeta y comercio detectados
               <br />
-              Media (55-79%): datos basicos, falta tarjeta o comercio
+              Media (55-79%): datos básicos, falta tarjeta o comercio
               <br />
               Baja (&lt;55%): solo monto detectado
             </span>
@@ -324,7 +351,7 @@ export default function DetectadosPage() {
       action={
         <div className="flex items-center gap-3">
           {lastSync && (
-            <span className="text-xs text-muted-foreground">Ultimo contacto: {formatDateTime(lastSync)}</span>
+            <span className="text-xs text-muted-foreground">Último contacto: {formatDateTime(lastSync)}</span>
           )}
           <Button variant="outline" onClick={() => setSyncOpen(true)}>
             <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
@@ -404,6 +431,7 @@ export default function DetectadosPage() {
         isLoading={isLoading}
         globalFilter={search}
         onGlobalFilterChange={setSearch}
+        rowClassName={() => 'group'}
         emptyState={
           <EmptyState
             title="Sin movimientos detectados"
@@ -417,15 +445,15 @@ export default function DetectadosPage() {
           <DialogHeader>
             <DialogTitle>Sincronizar correos</DialogTitle>
             <DialogDescription>
-              Los correos se sincronizan automaticamente cada 15 minutos desde Google Apps Script.
+              Los correos se sincronizan automáticamente cada 15 minutos desde Google Apps Script.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              La sincronizacion se ejecuta automaticamente cada 15 minutos desde Google Apps Script.
+              La sincronización se ejecuta automáticamente cada 15 minutos desde Google Apps Script.
             </p>
             <p className="text-muted-foreground">
-              Para forzar una sincronizacion manual: abre Apps Script, ejecuta{' '}
+              Para forzar una sincronización manual: abre Apps Script, ejecuta{' '}
               <code className="rounded bg-muted px-1 text-xs">syncKoraPayBankEmails</code> y luego presiona Refrescar
               lista.
             </p>
@@ -448,7 +476,7 @@ export default function DetectadosPage() {
       <Dialog open={usdDetail !== null} onOpenChange={(next) => !next && setUsdDetail(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Detalle en dolares</DialogTitle>
+            <DialogTitle>Detalle en dólares</DialogTitle>
             <DialogDescription>
               {usdDetail?.merchantOriginal ?? usdDetail?.description ?? 'Movimiento detectado'}
             </DialogDescription>
@@ -456,7 +484,7 @@ export default function DetectadosPage() {
           {usdDetail && (
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Monto en dolares</span>
+                <span className="text-muted-foreground">Monto en dólares</span>
                 <span className="font-semibold tabular-nums">{formatMoney(usdDetail.amount, 'USD')}</span>
               </div>
               <div className="flex items-center justify-between">

@@ -23,6 +23,7 @@ import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Company, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { formatMonthYear } from '@/lib/utils';
 
@@ -43,7 +44,6 @@ function IngresosContent() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [companyId, setCompanyId] = useState<string>(FILTER_ALL);
-  const [year, setYear] = useState<string>(FILTER_ALL);
   const [month, setMonth] = useState<string>(FILTER_ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
 
@@ -94,6 +94,8 @@ function IngresosContent() {
     const set = new Set((data?.data ?? []).map((tx) => new Date(tx.date).getUTCFullYear()));
     return [...set].sort((a, b) => b - a);
   }, [data?.data]);
+
+  const [year, setYear] = useDefaultYear(availableYears);
 
   const companyName = (id?: string | null) => companies?.find((c) => c.id === id)?.name;
 

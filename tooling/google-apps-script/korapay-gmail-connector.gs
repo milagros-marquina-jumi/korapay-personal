@@ -6,6 +6,7 @@ const CONFIG = {
   processedLabel: 'KoraPay/Procesado',
   maxThreadsPerRun: 100,
   lookbackDays: 30,
+  messageDelayMs: 600,
 };
 
 function getToken_() {
@@ -104,6 +105,7 @@ function syncKoraPayBankEmails() {
           okMessages++;
           threadOk++;
         }
+        Utilities.sleep(CONFIG.messageDelayMs);
       });
       if (threadOk > 0) {
         thread.addLabel(processed);

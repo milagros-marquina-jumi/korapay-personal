@@ -112,6 +112,7 @@ export class TransactionService {
       data: data.map((t) => ({
         ...t,
         amountOriginal: t.amountOriginal.toString(),
+        amountGross: t.amountGross?.toString() ?? null,
         amountBase: t.amountBase.toString(),
         exchangeRate: t.exchangeRate?.toString() ?? null,
       })),
@@ -204,6 +205,7 @@ export class TransactionService {
     return rows.map((t) => ({
       ...t,
       amountOriginal: t.amountOriginal.toString(),
+      amountGross: t.amountGross?.toString() ?? null,
       amountBase: t.amountBase.toString(),
       exchangeRate: t.exchangeRate?.toString() ?? null,
     }));
@@ -226,6 +228,7 @@ export class TransactionService {
     return {
       ...tx,
       amountOriginal: tx.amountOriginal.toString(),
+      amountGross: tx.amountGross?.toString() ?? null,
       amountBase: tx.amountBase.toString(),
       exchangeRate: tx.exchangeRate?.toString() ?? null,
     };

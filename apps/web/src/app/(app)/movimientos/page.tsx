@@ -513,6 +513,15 @@ export default function MovimientosPage() {
                     : formatMoney(detail.amountBase, 'PEN')
                 }
               />
+              {detail.amountGross && Number(detail.amountGross) !== Number(detail.amountOriginal) && (
+                <DetailRow
+                  label="Monto bruto"
+                  value={`${formatMoney(detail.amountGross, detail.currency as 'PEN' | 'USD')} (descuento ${formatMoney(
+                    String(Number(detail.amountGross) - Number(detail.amountOriginal)),
+                    detail.currency as 'PEN' | 'USD',
+                  )})`}
+                />
+              )}
               <DetailRow label="Estado" value={statusLabel(detail.status)} />
               <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
               {detail.type === 'EXPENSE' && (

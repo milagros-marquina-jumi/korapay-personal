@@ -27,26 +27,47 @@ export function parseAmount(raw: string): string {
   return Number.isFinite(value) ? value.toFixed(2) : '0';
 }
 
-export function detectCurrency(text: string): 'PEN' | 'USD' {
-  if (/US\$|USD|\bd[oó]lares?\b|\$\s?\d/i.test(text) && !/S\/|soles/i.test(text)) return 'USD';
-  if (/US\$|USD|\bd[oó]lares?\b/i.test(text)) return 'USD';
-  return 'PEN';
+export function isNonTransactional(text: string): boolean {
+  const t = text.toLowerCase();
+  if (/tu c[oó]digo de verificaci[oó]n es|c[oó]digo de verificaci[oó]n:?\s*\d|otp:?\s*\d/i.test(t)) return true;
+  if (/estado de cuenta disponible|estado de tarjeta disponible|resumen mensual disponible/i.test(t)) return true;
+  if (/promoci[oó]n exclusiva|oferta exclusiva|beneficio exclusivo|aumento de l[ií]nea de cr[eé]dito/i.test(t))
+    return true;
+  if (/cambi(?:aste|o) tu contrase[añ]a|actualizaci[oó]n de datos de contacto/i.test(t)) return true;
+  if (/tu tarjeta est[aá] por vencer|renovaci[oó]n autom[aá]tica de tarjeta/i.test(t)) return true;
+  return false;
+}
+
+export function detectCurrency(text: string): 'PEN' | 'USD' | undefined {
+  if (/US\$|USD|\bd[oó]lares?\b|\$\s?\d/i.test(text)) return 'USD';
+  if (/S\/\.?|PEN|\bsol(?:es)?\b/i.test(text)) return 'PEN';
+  return undefined;
 }
 
 export function extractCardLast4(text: string): string | undefined {
-  const m = text.match(/(?:terminada en|final(?:izada)? en|termina en|\*{2,}|x{2,})\s*(\d{4})/i);
+  const m = text.match(/(?:terminada en|final(?:izada)? en|termina en|\*+|x{2,})\s*(\d{4})/i);
   if (m) return m[1];
-  const generic = text.match(/\b\d{4}\b(?=\s*$|\s*[).,])/);
+  const generic = text.match(/(?<!S\/\s*|US\$\s*|\$\s*|PEN\s*)\b\d{4}\b(?=\s*$|\s*[).,])/);
   return generic ? generic[0] : undefined;
 }
 
 export function classifyType(text: string): BankTransactionType {
   const t = text.toLowerCase();
-  if (/rechaz|denegad|no procesad|declinad/.test(t)) return 'DECLINED_TRANSACTION';
+  if (
+    /rechaz|denegad|no procesad|declinad|no se pudo realizar|saldo insuficiente|fondos insuficientes|problemas para realizar el pago|error al realizar el pago/.test(
+      t,
+    )
+  )
+    return 'DECLINED_TRANSACTION';
   if (/revers|anulaci[oó]n|anulad/.test(t)) return 'REVERSAL';
   if (/devoluci[oó]n(?!\s+de\s+(tu|su)\s+tarjeta)|reembolso|refund/i.test(t)) return 'REFUND';
-  if (/plin|yape/i.test(t)) return 'TRANSFER_SENT';
+  if (/\byape\b|\bplin\b/i.test(t)) {
+    if (/recibiste|recibido|te enviaron|te transfirieron|te hicieron|recibiste un|recibio|abono/i.test(t))
+      return 'TRANSFER_RECEIVED';
+    return 'TRANSFER_SENT';
+  }
   if (/\bretiro\b|cajero\s*autom[aá]tico|\batm\b/i.test(t)) return 'CASH_WITHDRAWAL';
+  if (/pago\s+(?:de|a)\s+tarjetas?\s+propia/i.test(t)) return 'TRANSFER_SENT';
   if (/transferencia (recibida|recibiste|abono)/.test(t) || /recibiste una transferencia/.test(t))
     return 'TRANSFER_RECEIVED';
   if (/transferencia|enviaste|transferiste/.test(t)) return 'TRANSFER_SENT';

@@ -326,6 +326,7 @@ model Transaction {
   description       String?
   date              DateTime  @db.Date
   amountOriginal    Decimal   @map("amount_original") @db.Decimal(18, 2)
+  amountGross       Decimal?  @map("amount_gross") @db.Decimal(18, 2)
   currency          String    @default("PEN")
   exchangeRate      Decimal?  @map("exchange_rate") @db.Decimal(18, 6)
   amountBase        Decimal   @map("amount_base") @db.Decimal(18, 2)

@@ -208,6 +208,97 @@ export class ReportsService {
     };
   }
 
+  async employment(workspaceId: string, year?: number) {
+    const [transactions, allTransactions] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where: { workspaceId, deletedAt: null, type: 'INCOME', ...this.yearFilter(year) },
+        include: { company: { select: { name: true } } },
+        orderBy: { date: 'asc' },
+      }),
+      this.prisma.transaction.findMany({
+        where: { workspaceId, deletedAt: null, type: 'INCOME' },
+        select: { date: true, amountBase: true, concept: true, companyId: true },
+      }),
+    ]);
+
+    const years = [...new Set(allTransactions.map((t) => t.date.getUTCFullYear()))].sort((a, b) => b - a);
+
+    const yearAgg = new Map<number, { total: Decimal; months: Set<number>; companies: Set<string> }>();
+    for (const t of allTransactions) {
+      const y = t.date.getUTCFullYear();
+      if (!yearAgg.has(y)) yearAgg.set(y, { total: new Decimal(0), months: new Set(), companies: new Set() });
+      const bucket = yearAgg.get(y);
+      if (!bucket) continue;
+      bucket.total = bucket.total.add(new Decimal(t.amountBase));
+      bucket.months.add(t.date.getUTCMonth() + 1);
+      if (t.companyId) bucket.companies.add(t.companyId);
+    }
+    const yearlyTotals = [...yearAgg.entries()]
+      .map(([y, v]) => ({
+        year: y,
+        total: v.total.toFixed(2),
+        average: v.months.size ? v.total.div(v.months.size).toFixed(2) : '0.00',
+        months: v.months.size,
+        companies: v.companies.size,
+      }))
+      .sort((a, b) => a.year - b.year);
+
+    const companiesByYear = new Map<number, Map<number, Set<string>>>();
+    for (const t of allTransactions) {
+      if (!t.companyId) continue;
+      const y = t.date.getUTCFullYear();
+      const m = t.date.getUTCMonth() + 1;
+      if (!companiesByYear.has(y)) companiesByYear.set(y, new Map());
+      const months = companiesByYear.get(y);
+      if (!months) continue;
+      if (!months.has(m)) months.set(m, new Set());
+      months.get(m)?.add(t.companyId);
+    }
+    const companiesPerMonth = [...companiesByYear.entries()]
+      .map(([y, months]) => ({
+        year: y,
+        months: Array.from({ length: 12 }, (_, i) => months.get(i + 1)?.size ?? 0),
+        total: new Set([...months.values()].flatMap((s) => [...s])).size,
+      }))
+      .sort((a, b) => a.year - b.year);
+
+    const byConcept = new Map<string, Decimal>();
+    const byCompany = new Map<string, Decimal>();
+    const monthly = new Map<string, Decimal>();
+    for (const t of transactions) {
+      const amount = new Decimal(t.amountBase);
+      byConcept.set(t.concept, (byConcept.get(t.concept) ?? new Decimal(0)).add(amount));
+      const company = t.company?.name ?? 'Sin empresa';
+      byCompany.set(company, (byCompany.get(company) ?? new Decimal(0)).add(amount));
+      const key = `${t.date.getUTCFullYear()}-${t.date.getUTCMonth() + 1}`;
+      monthly.set(key, (monthly.get(key) ?? new Decimal(0)).add(amount));
+    }
+
+    const sortDesc = (map: Map<string, Decimal>) =>
+      [...map.entries()]
+        .map(([name, total]) => ({ name, total: total.toFixed(2) }))
+        .sort((a, b) => Number(b.total) - Number(a.total));
+
+    const incomeByMonth = [...monthly.entries()]
+      .map(([key, total]) => {
+        const [y = 0, m = 1] = key.split('-').map(Number);
+        return { year: y, month: m, label: `${MONTH_NAMES[m - 1]} ${y}`, total: total.toFixed(2) };
+      })
+      .sort((a, b) => a.year - b.year || a.month - b.month);
+
+    const total = transactions.reduce((s, t) => s.add(new Decimal(t.amountBase)), new Decimal(0));
+
+    return {
+      years,
+      total: total.toFixed(2),
+      yearlyTotals,
+      companiesPerMonth,
+      incomeByConcept: sortDesc(byConcept),
+      incomeByCompany: sortDesc(byCompany),
+      incomeByMonth,
+    };
+  }
+
   async business(workspaceId: string, year?: number) {
     const [transactions, applications, people, ledger] = await Promise.all([
       this.prisma.transaction.findMany({

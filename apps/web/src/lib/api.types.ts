@@ -183,6 +183,7 @@ export interface Transaction {
   description?: string | null;
   date: string;
   amountOriginal: string;
+  amountGross?: string | null;
   currency: string;
   amountBase: string;
   exchangeRate?: string | null;
@@ -303,6 +304,16 @@ export interface PersonalReports {
   savingsEvolution: { year: number; month: number; label: string; total: string }[];
   fixedVsVariable: { fixed: string; variable: string };
   monthlyFixedVsVariable: { year: number; month: number; label: string; fixed: string; variable: string }[];
+}
+
+export interface EmploymentReports {
+  years: number[];
+  total: string;
+  yearlyTotals: { year: number; total: string; average: string; months: number; companies: number }[];
+  companiesPerMonth: { year: number; months: number[]; total: number }[];
+  incomeByConcept: { name: string; total: string }[];
+  incomeByCompany: { name: string; total: string }[];
+  incomeByMonth: { year: number; month: number; label: string; total: string }[];
 }
 
 export interface BusinessReports {

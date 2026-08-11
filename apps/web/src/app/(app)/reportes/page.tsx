@@ -13,7 +13,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { CategoryDonut, HeatmapTable, MonthlyBar, type MonthlyPoint } from '@/components/charts';
+import { CategoryDonut, type HeatmapRow, HeatmapTable, MonthlyBar, type MonthlyPoint } from '@/components/charts';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -22,7 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
-import type { BusinessReports, MonthlySummary, PersonalReports, TaxObligation } from '@/lib/api.types';
+import type { BusinessReports, EmploymentReports, PersonalReports, TaxObligation } from '@/lib/api.types';
 import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
@@ -382,19 +382,44 @@ function BusinessReportsView({ workspaceId }: { workspaceId: string }) {
   );
 }
 
-function EmploymentReportsView({ workspaceId }: { workspaceId: string }) {
-  const { data: summary, isLoading } = useQuery({
-    queryKey: queryKeys.monthlySummary(workspaceId, { type: 'INCOME' }),
-    queryFn: () => apiFetch<MonthlySummary>(`/transactions/monthly-summary?workspaceId=${workspaceId}`),
+function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
+  const { data: allYears } = useQuery({
+    queryKey: queryKeys.employmentReports(workspaceId, { years: true }),
+    queryFn: () => apiFetch<EmploymentReports>(`/reports/employment?workspaceId=${workspaceId}`),
     enabled: !!workspaceId,
+    select: (r) => r.years ?? [],
   });
+
+  const [year, setYear] = useDefaultYear(allYears);
+  const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
+
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.employmentReports(workspaceId, selectedYear ? { year: selectedYear } : {}),
+    queryFn: () =>
+      apiFetch<EmploymentReports>(
+        `/reports/employment?workspaceId=${workspaceId}${selectedYear ? `&year=${selectedYear}` : ''}`,
+      ),
+    enabled: !!workspaceId,
+    placeholderData: (prev) => prev,
+  });
+
   const { data: renta } = useQuery({
     queryKey: queryKeys.taxObligations(workspaceId),
     queryFn: () => apiFetch<TaxObligation[]>(`/tax-obligations?workspaceId=${workspaceId}`),
     enabled: !!workspaceId,
   });
 
-  if (isLoading || !summary) {
+  const yearFilter = (
+    <FilterSelect
+      value={year}
+      onValueChange={setYear}
+      options={(allYears ?? []).map((y) => ({ value: String(y), label: String(y) }))}
+      placeholder="Año"
+      allLabel="Todos los años"
+    />
+  );
+
+  if (isLoading || !data) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -404,79 +429,116 @@ function EmploymentReportsView({ workspaceId }: { workspaceId: string }) {
     );
   }
 
-  const byCompany = new Map<string, number>();
-  let totalIncome = 0;
-  const barData: MonthlyPoint[] = [];
-  for (const period of summary.data) {
-    barData.push({
-      label: `${MONTH_SHORT[period.month - 1]} ${String(period.year).slice(2)}`,
-      ingresos: Number(period.totalNet),
-      egresos: 0,
-    });
-    for (const c of period.companies) {
-      byCompany.set(c.name, (byCompany.get(c.name) ?? 0) + Number(c.net));
-      totalIncome += Number(c.net);
-    }
-  }
-  const companyDonut = [...byCompany.entries()]
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
-  const bars = barData.slice(0, 12).reverse();
+  const allYearsView = year === FILTER_ALL;
+  const companyDonut = data.incomeByCompany.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+  const conceptDonut = data.incomeByConcept.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+
+  const timeSeries: MonthlyPoint[] = allYearsView
+    ? data.yearlyTotals.map((y) => ({ label: String(y.year), ingresos: Number(y.total), egresos: 0 }))
+    : data.incomeByMonth.map((m) => ({
+        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+        ingresos: Number(m.total),
+        egresos: 0,
+      }));
+
+  const currentYearRow = data.yearlyTotals.find((y) => y.year === selectedYear);
+  const totalGeneral = data.yearlyTotals.reduce((s, y) => s + Number(y.total), 0);
+  const empresasActivas = allYearsView
+    ? new Set(data.incomeByCompany.map((c) => c.name)).size
+    : (currentYearRow?.companies ?? 0);
+  const promedio = allYearsView
+    ? data.yearlyTotals.reduce((s, y) => s + Number(y.average), 0) / (data.yearlyTotals.length || 1)
+    : Number(currentYearRow?.average ?? 0);
 
   const rentaRows = renta ?? [];
-  const rentaPaid = rentaRows.filter((r) => r.status === 'PAID').reduce((s, r) => s + Number(r.amount), 0);
   const rentaPending = rentaRows.filter((r) => r.status !== 'PAID').reduce((s, r) => s + Number(r.amount), 0);
+
+  const heatmapRows: HeatmapRow[] = data.companiesPerMonth.map((r) => ({
+    key: String(r.year),
+    label: r.year,
+    values: r.months,
+    total: r.total,
+  }));
 
   return (
     <div className="space-y-6">
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          label="Ingresos totales"
-          value={formatMoney(String(totalIncome), 'PEN')}
+          label={allYearsView ? 'Ingresos totales' : `Ingresos ${selectedYear}`}
+          value={formatMoney(allYearsView ? String(totalGeneral) : data.total, 'PEN')}
           icon={ArrowUpRight}
           color="text-success"
+          tooltip="Suma de los montos netos recibidos, ya descontada la planilla"
         />
-        <KPICard label="Empresas" value={String(byCompany.size)} icon={Landmark} color="text-brand" />
         <KPICard
-          label="Renta pagada"
-          value={formatMoney(String(rentaPaid), 'PEN')}
-          icon={ArrowDownRight}
+          label="Promedio mensual"
+          value={formatMoney(String(promedio), 'PEN')}
+          icon={TrendingUp}
           color="text-info"
+          tooltip="Total dividido entre los meses con ingresos registrados"
+        />
+        <KPICard
+          label="Empresas"
+          value={String(empresasActivas)}
+          icon={Users}
+          color="text-brand"
+          tooltip="Empresas distintas que te pagaron en el periodo"
         />
         <KPICard
           label="Renta pendiente"
           value={formatMoney(String(rentaPending), 'PEN')}
-          icon={AlertTriangle}
+          icon={Landmark}
           color="text-warning"
+          tooltip="Obligaciones de renta anual aún no pagadas"
         />
       </div>
 
-      <Tabs defaultValue="empresa">
+      <Tabs defaultValue="evolucion">
         <TabsList>
-          <TabsTrigger value="empresa">Ingresos por empresa</TabsTrigger>
-          <TabsTrigger value="mes">Ingresos por mes</TabsTrigger>
-          <TabsTrigger value="renta">Renta</TabsTrigger>
+          <TabsTrigger value="evolucion">Evolución</TabsTrigger>
+          <TabsTrigger value="empresa">Por empresa</TabsTrigger>
+          <TabsTrigger value="concepto">Por concepto</TabsTrigger>
+          <TabsTrigger value="actividad">Empresas por mes</TabsTrigger>
+          <TabsTrigger value="renta">Renta anual</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="empresa" className="mt-4">
+        <TabsContent value="evolucion" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Ingresos por empresa</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>Ingresos por {allYearsView ? 'año' : 'mes'}</CardTitle>
+              {yearFilter}
             </CardHeader>
             <CardContent>
-              {companyDonut.length ? (
-                <div className="grid gap-6 lg:grid-cols-2">
-                  <CategoryDonut data={companyDonut} />
-                  <div className="divide-y">
-                    {companyDonut.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                        <span className="truncate">{c.name}</span>
-                        <span className="font-medium tabular-nums">{formatMoney(String(c.value), 'PEN')}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {timeSeries.length ? (
+                <>
+                  <MonthlyBar data={timeSeries} firstName="Ingresos" />
+                  {allYearsView && (
+                    <div className="mt-6 overflow-x-auto rounded-lg border">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/40 text-left">
+                            <th className="px-3 py-2.5 font-medium">Año</th>
+                            <th className="px-3 py-2.5 text-right font-medium">Total</th>
+                            <th className="px-3 py-2.5 text-right font-medium">Promedio mensual</th>
+                            <th className="px-3 py-2.5 text-right font-medium">Empresas</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.yearlyTotals.map((y) => (
+                            <tr key={y.year} className="border-b last:border-0">
+                              <td className="px-3 py-2.5 font-semibold">{y.year}</td>
+                              <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-success">
+                                {formatMoney(y.total, 'PEN')}
+                              </td>
+                              <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(y.average, 'PEN')}</td>
+                              <td className="px-3 py-2.5 text-right tabular-nums">{y.companies}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin ingresos registrados</p>
               )}
@@ -484,16 +546,76 @@ function EmploymentReportsView({ workspaceId }: { workspaceId: string }) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="mes" className="mt-4">
+        <TabsContent value="empresa" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Ingresos por mes</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>Ingresos por empresa</CardTitle>
+              {yearFilter}
             </CardHeader>
             <CardContent>
-              {bars.length ? (
-                <MonthlyBar data={bars} />
+              {companyDonut.length ? (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <CategoryDonut data={companyDonut} />
+                  <div className="divide-y">
+                    {data.incomeByCompany.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                        <span className="truncate">{c.name}</span>
+                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               ) : (
-                <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="concepto" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
+              <CardTitle>Ingresos por concepto</CardTitle>
+              {yearFilter}
+            </CardHeader>
+            <CardContent>
+              {conceptDonut.length ? (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <CategoryDonut data={conceptDonut} />
+                  <div className="divide-y">
+                    {data.incomeByConcept.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                        <span className="truncate">{c.name}</span>
+                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="actividad" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Empresas activas por mes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {heatmapRows.length ? (
+                <HeatmapTable
+                  rowHeader="Año"
+                  columns={MONTH_SHORT}
+                  rows={heatmapRows}
+                  totalLabel="Únicas"
+                  format={(v) => (v === 0 ? '—' : String(v))}
+                  minWidth="46rem"
+                  legend={false}
+                />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
               )}
             </CardContent>
           </Card>
@@ -506,19 +628,32 @@ function EmploymentReportsView({ workspaceId }: { workspaceId: string }) {
             </CardHeader>
             <CardContent>
               {rentaRows.length ? (
-                <div className="divide-y">
-                  {rentaRows.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between py-2 text-sm">
-                      <span className="truncate">{r.name}</span>
-                      <div className="flex items-center gap-3">
-                        <StatusBadge status={r.status} />
-                        <span className="w-28 text-right font-medium tabular-nums">{formatMoney(r.amount, 'PEN')}</span>
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto rounded-lg border">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/40 text-left">
+                        <th className="px-3 py-2.5 font-medium">Año</th>
+                        <th className="px-3 py-2.5 font-medium">Concepto</th>
+                        <th className="px-3 py-2.5 text-right font-medium">Monto</th>
+                        <th className="px-3 py-2.5 font-medium">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rentaRows.map((r) => (
+                        <tr key={r.id} className="border-b last:border-0">
+                          <td className="px-3 py-2.5 font-semibold">{r.year}</td>
+                          <td className="px-3 py-2.5">{r.name}</td>
+                          <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(r.amount, 'PEN')}</td>
+                          <td className="px-3 py-2.5">
+                            <StatusBadge status={r.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
-                <p className="py-12 text-center text-sm text-muted-foreground">Sin obligaciones de renta</p>
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin obligaciones registradas</p>
               )}
             </CardContent>
           </Card>

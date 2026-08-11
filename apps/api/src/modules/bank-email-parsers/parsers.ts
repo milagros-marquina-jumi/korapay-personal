@@ -1,8 +1,15 @@
 import type { BankEmailParser, IncomingBankEmail, ParsedBankTransaction } from './parser.types';
-import { classifyType, computeConfidence, detectCurrency, extractCardLast4, parseAmount } from './parser.utils';
+import {
+  classifyType,
+  computeConfidence,
+  detectCurrency,
+  extractCardLast4,
+  isNonTransactional,
+  parseAmount,
+} from './parser.utils';
 
 function extractAmount(text: string): string | undefined {
-  const m = text.match(/(?:S\/|US\$|USD|\$|PEN)\s*([\d.,]+\d)/i);
+  const m = text.match(/(?:S\/|US\$|\$|USD|PEN)\s*([\d.,]+\d)/i);
   if (m?.[1]) return parseAmount(m[1]);
   const alt = text.match(/(?:por|importe|monto)[:\s]+(?:S\/|US\$|\$)?\s*([\d.,]+\d)/i);
   return alt?.[1] ? parseAmount(alt[1]) : undefined;
@@ -10,12 +17,12 @@ function extractAmount(text: string): string | undefined {
 
 function extractMerchant(text: string): string | undefined {
   const patterns = [
-    /(?:pago autom[aá]tico exitoso de tu servicio|pago de tu servicio)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,60})/i,
+    /(?:pago autom[aá]tico exitoso de tu servicio|pago de tu servicio)\s+([A-Z0-9][A-Za-z0-9 ,.&*'-]{2,60})/i,
     /(?:constancia pago de|constancia de pago de)\s+(tarjetas propias|tarjeta de cr[eé]dito)/i,
-    /(?:nombre del comercio|comercio)\s*[:]?\s*([A-Z0-9][A-Za-z0-9 .&*'-]{2,60})/i,
-    /(?:consumo|compra)\s+(?:de|con tu|en).+?(?:en)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,60})/i,
-    /(?:en el comercio|en)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,40})/,
-    /(?:realizaste una compra en|compra en)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,40})/i,
+    /(?:nombre del comercio|comercio)\s*[:]?\s*([A-Z0-9][A-Za-z0-9 ,.&*'-]{2,60})/i,
+    /(?:consumo|compra)\s+(?:de|con tu|en).+?(?:en)\s+([A-Z0-9][A-Za-z0-9 ,.&*'-]{2,60})/i,
+    /(?:en el comercio|en)\s+([A-Z0-9][A-Za-z0-9 ,.&*'-]{2,40})/,
+    /(?:realizaste una compra en|compra en)\s+([A-Z0-9][A-Za-z0-9 ,.&*'-]{2,40})/i,
     /(?:enviaste|envio|envió)\s+(?:un pago de\s+)?(?:\$|USD|S\/)\s*[\d.,]+\s*(?:USD\s*)?(?:a|por)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{3,60})/i,
     /(?:pago de|por el pago de)\s+(intereses(?:\s+y\/o\s+comisiones)?|comisiones)/i,
   ];
@@ -36,10 +43,19 @@ function extractReference(text: string): string | undefined {
 }
 
 function extractRecipient(text: string): string | undefined {
-  const m = text.match(/(?:destinatario|beneficiario)\s*:?\s*([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ*\s.-]{3,60})(?:\n|$)/i);
-  if (m?.[1]) return m[1].trim();
-  const alt = text.match(/a favor de\s+([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ*\s.-]{3,60})/i);
-  return alt?.[1]?.trim() ?? undefined;
+  const patterns = [
+    /(?:destinatario|beneficiario|enviado a|nombre del beneficiario)\s*:?\s*([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ*\s.-]{3,60})(?:\n|\*\*\*\*|\d{4}|$)/i,
+    /a favor de\s+([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ*\s.-]{3,60})/i,
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m?.[1])
+      return m[1]
+        .trim()
+        .replace(/\s*\*+\s*$/, '')
+        .trim();
+  }
+  return undefined;
 }
 
 function extractDestinationMethod(text: string): string | undefined {
@@ -55,9 +71,11 @@ function extractDestinationMethod(text: string): string | undefined {
 
 function baseParse(input: IncomingBankEmail, bankCode: string, bankName: string): ParsedBankTransaction | null {
   const text = `${input.subject}\n${input.textBody}`;
+  if (isNonTransactional(text)) return null;
   const amount = extractAmount(text);
   if (!amount || amount === '0') return null;
-  const currency = detectCurrency(text);
+  const currency = detectCurrency(text) ?? 'PEN';
+  const currencyKnown = detectCurrency(text) !== undefined;
   const cardLast4 = extractCardLast4(text);
   const merchant = extractMerchant(text) ?? extractRecipient(text);
   const recipient = extractRecipient(text);
@@ -70,7 +88,7 @@ function baseParse(input: IncomingBankEmail, bankCode: string, bankName: string)
   const confidence = computeConfidence({
     bank: true,
     amount: true,
-    currency: true,
+    currency: currencyKnown,
     date: true,
     cardLast4: !!cardLast4,
     merchant: !!merchant,

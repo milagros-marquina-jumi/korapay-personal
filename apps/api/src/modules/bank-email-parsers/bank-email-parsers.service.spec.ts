@@ -125,6 +125,185 @@ Por tu seguridad, BBVA te informa: Nunca solicitaremos tus datos confidenciales 
     expect(r?.parsed.merchant).toBe('PedidosYa*Plus');
   });
 
+  it('extracts merchant with comma (GITHUB, INC.)', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BBVA <procesos@bbva.com.pe>',
+        subject: 'Has realizado un consumo con tu tarjeta BBVA',
+        textBody: `Hola, MILAGROS
+Has realizado el siguiente consumo:
+Comercio: GITHUB, INC.
+Monto: 39.00
+Moneda: USD
+Fecha: 05/08/2026
+Hora: 14:57:25
+Este se cargara a tu tarjeta terminada en *3556`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bbva');
+    expect(r?.parsed.transactionType).toBe('CARD_PURCHASE');
+    expect(r?.parsed.merchant).toBe('GITHUB, INC.');
+  });
+
+  it('parses Interbank Constancia de Pago (debit card purchase)', () => {
+    const r = svc.parse(
+      email({
+        sender: 'Interbank Servicio al Cliente <servicioalcliente@netinterbank.com.pe>',
+        subject: 'Constancia de Pago',
+        textBody: `Hola MILAGROS, te enviamos tu Constancia de Pago
+Codigo de operacion 9101093481
+Fecha y hora 17 Jun 2026 10:50 PM
+Medio de pago Debito Clasica 421355******0334
+Comercio CULQI QR*TERRAZA 360
+Moneda y monto S/ 113.80
+En Interbank, nunca te pediremos: Tu clave, numero de tarjeta y/o cuenta, codigo CVV, codigo de seguridad para concretar transacciones ni la devolucion de tu tarjeta`,
+      }),
+    );
+    expect(r?.parserKey).toBe('interbank');
+    expect(r?.parsed.amount).toBe('113.80');
+    expect(r?.parsed.currency).toBe('PEN');
+    expect(r?.parsed.cardLast4).toBe('0334');
+    expect(r?.parsed.transactionType).toBe('CARD_PURCHASE');
+    expect(r?.parsed.merchant).toBe('CULQI QR*TERRAZA 360');
+  });
+
+  it('extracts BCP refund with merchant and classifies as REFUND', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BCP Notificaciones <notificaciones@notificacionesbcp.com.pe>',
+        subject: 'Realizamos una devolucion de una operacion a tu Tarjeta de Debito BCP',
+        textBody: `Hola Milagros Julisa,
+Se ha devuelto el monto de S/ 30.00 a tu cuenta BCP.
+Monto Total devuelto S/ 30.00
+Numero de Tarjeta ************7387
+Nombre del Comercio PLIN-RENE RIVAS
+Numero de operacion 844719
+El BCP nunca te solicitara datos confidenciales por correo, tales como tu clave secreta de cajero de 4 digitos, clave de internet de 6 digitos`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bcp');
+    expect(r?.parsed.amount).toBe('30.00');
+    expect(r?.parsed.cardLast4).toBe('7387');
+    expect(r?.parsed.transactionType).toBe('REFUND');
+    expect(r?.parsed.merchant).toBe('PLIN-RENE RIVAS');
+  });
+
+  it('extracts BCP transfer recipient via "Enviado a"', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BCP Notificaciones <notificaciones@notificacionesbcp.com.pe>',
+        subject: 'Constancia de Transferencia a Terceros BCP',
+        textBody: `Hola Milagros Julisa,
+Realizaste una transferencia de S/ 30.00 desde tu Clasica.
+Monto transferido S/ 30.00
+Enviado a Rivas Valenzuela Rene O. **** 4063
+Desde Clasica **** 8010
+El BCP nunca te solicitara datos confidenciales por correo, tales como tu clave secreta de cajero`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bcp');
+    expect(r?.parsed.amount).toBe('30.00');
+    expect(r?.parsed.cardLast4).toBe('4063');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.recipient).toContain('Rivas Valenzuela');
+  });
+
+  it('extracts BBVA transfer recipient via "Nombre del beneficiario"', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BBVA <procesos@bbva.com.pe>',
+        subject: 'BBVA - Constancia Transf. Interbancaria',
+        textBody: `Hola, Milagros
+Has realizado con exito la operacion: Transferencia interbancaria
+Importe transferido S/ 4000.00
+Cuenta de origen Contiahorro
+Cuenta de destino * 4943
+Banco de destino INTERBANK
+Nombre del beneficiario Jack Alexander Jimenez Huerta
+Recuerda que, por ningun medio de comunicacion ni por ningun motivo, te pediremos tus datos confidenciales, tales como clave de cajero`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bbva');
+    expect(r?.parsed.amount).toBe('4000.00');
+    expect(r?.parsed.cardLast4).toBe('4943');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.recipient).toContain('Jack Alexander');
+  });
+
+  it('classifies BBVA Pago de Tarjetas propias as TRANSFER_SENT', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BBVA <procesos@bbva.com.pe>',
+        subject: 'BBVA - Constancia Pago de Tarjetas propias',
+        textBody: `Hola MILAGROS,
+Pago de Tarjetas propias
+Importe pagado S/ 500.00
+Cuenta de origen Cuenta Simple Soles
+Cuenta de destino Tarjeta de Credito *4239`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bbva');
+    expect(r?.parsed.amount).toBe('500.00');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.merchant).toBe('Tarjetas propias');
+  });
+
+  it('classifies failed automatic payment as DECLINED_TRANSACTION', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BCP Notificaciones <notificaciones@notificacionesbcp.com.pe>',
+        subject: 'Hay problemas para realizar el pago automatico de tu servicio MOVISTAR-INTEGRATEL PERU',
+        textBody: `Hola Milagros Julisa,
+Ocurrio un error al realizar el Pago Automatico de tu servicio favorito.
+No se pudo realizar el pago por S/ 24.00, debido a que no cuentas con saldo suficiente.
+Servicio 3 MOVISTAR MOVIL
+Empresa MOVISTAR-INTEGRATEL PERU
+N* de cuenta o tarjeta **** 8010
+El BCP nunca te solicitara datos confidenciales, tales como tu clave secreta de cajero`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bcp');
+    expect(r?.parsed.amount).toBe('24.00');
+    expect(r?.parsed.transactionType).toBe('DECLINED_TRANSACTION');
+  });
+
+  it('classifies Yape received as TRANSFER_RECEIVED', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BCP <notificaciones@bcp.com.pe>',
+        subject: 'Recibiste un Yape',
+        textBody: `Hola Milagros,
+Recibiste un Yape de S/ 50.00 de Juan Perez
+Numero de operacion 123456`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bcp');
+    expect(r?.parsed.amount).toBe('50.00');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_RECEIVED');
+  });
+
+  it('returns null for non-transactional email (OTP)', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BCP <notificaciones@bcp.com.pe>',
+        subject: 'Tu codigo de verificacion es 123456',
+        textBody: 'Usa este codigo para confirmar tu identidad: 123456',
+      }),
+    );
+    expect(r).toBeNull();
+  });
+
+  it('returns null for non-transactional email (estado de cuenta)', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BBVA <procesos@bbva.com.pe>',
+        subject: 'Tu estado de cuenta esta disponible',
+        textBody: 'MILAGROS JULISA, tu estado de cuenta disponible para consulta.',
+      }),
+    );
+    expect(r).toBeNull();
+  });
+
   it('routes unknown sender to generic parser with lower confidence', () => {
     const r = svc.parse(email({ sender: 'Banco X <x@x.com>', textBody: 'Compra por S/ 10.00' }));
     expect(r?.parserKey).toBe('generic');

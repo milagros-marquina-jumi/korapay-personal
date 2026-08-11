@@ -29,8 +29,8 @@ export function DataTableToolbar({
     <div
       className={cn(
         sticky && [
-          'sticky top-(--toolbar-offset) z-10',
-          '-mx-4 px-4 pb-3 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8',
+          'sticky top-(--toolbar-offset,9rem) z-10',
+          '-mx-4 -mt-4 px-4 pb-4 pt-4 md:-mx-6 md:px-6 lg:-mx-8 lg:px-8',
           'bg-background/85 backdrop-blur-xl',
         ],
       )}

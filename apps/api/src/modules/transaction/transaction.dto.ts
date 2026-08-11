@@ -56,6 +56,11 @@ export class CreateTransactionDto {
   @IsNumberString()
   amount!: string;
 
+  @ApiPropertyOptional({ example: '1500.00', description: 'Monto antes de descuentos. Solo si difiere del neto.' })
+  @IsOptional()
+  @IsNumberString()
+  amountGross?: string;
+
   @ApiPropertyOptional({ enum: ['PEN', 'USD'], default: 'PEN' })
   @IsOptional()
   @IsIn(['PEN', 'USD'])

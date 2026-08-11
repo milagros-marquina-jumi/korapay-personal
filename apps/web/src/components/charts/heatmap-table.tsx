@@ -1,5 +1,6 @@
 'use client';
 
+import { formatMoney } from '@korapay/domain';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +41,7 @@ function toNumber(value: string | number | null | undefined) {
 }
 
 function defaultFormat(value: number) {
-  return value.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return formatMoney(String(value), 'PEN');
 }
 
 export function HeatmapTable({
@@ -82,21 +83,21 @@ export function HeatmapTable({
         <table className="w-full text-xs" style={{ minWidth }}>
           <thead>
             <tr className="border-b bg-muted/50 text-left">
-              <th className="sticky left-0 z-20 bg-muted/50 px-3 py-2.5 font-medium">{rowHeader}</th>
+              <th className="sticky left-0 z-10 bg-muted/50 px-3 py-2.5 font-medium">{rowHeader}</th>
               {columns.map((c) => (
                 <th key={c} className="px-2 py-2.5 text-right font-medium">
                   {c}
                 </th>
               ))}
               {grandTotal !== undefined && (
-                <th className="sticky right-0 z-20 bg-muted/50 px-3 py-2.5 text-right font-semibold">{totalLabel}</th>
+                <th className="sticky right-0 z-10 bg-muted/50 px-3 py-2.5 text-right font-semibold">{totalLabel}</th>
               )}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.key} className="border-b last:border-0">
-                <td className="sticky left-0 z-20 bg-card px-3 py-2.5 font-semibold">{row.label}</td>
+                <td className="sticky left-0 z-10 bg-card px-3 py-2.5 font-semibold">{row.label}</td>
                 {row.values.map((value, i) => {
                   const num = toNumber(value);
                   const step = intensity(num);
@@ -136,7 +137,7 @@ export function HeatmapTable({
                 {row.total !== undefined && (
                   <td
                     className={cn(
-                      'sticky right-0 z-20 whitespace-nowrap bg-card text-right font-semibold tabular-nums text-brand-strong dark:text-brand',
+                      'sticky right-0 z-10 whitespace-nowrap bg-card text-right font-semibold tabular-nums text-brand-strong dark:text-brand',
                       onTotalClick ? 'p-0' : 'px-3 py-2.5',
                     )}
                   >
@@ -158,14 +159,14 @@ export function HeatmapTable({
             ))}
             {columnTotals && (
               <tr className="border-t-2 bg-muted/40 font-medium">
-                <td className="sticky left-0 z-20 bg-muted/40 px-3 py-2.5 font-semibold">{totalLabel}</td>
+                <td className="sticky left-0 z-10 bg-muted/40 px-3 py-2.5 font-semibold">{totalLabel}</td>
                 {columnTotals.map((value, i) => (
                   <td key={columns[i] ?? String(i)} className="whitespace-nowrap px-2 py-2.5 text-right tabular-nums">
                     {toNumber(value) === 0 ? emptyCell : format(toNumber(value))}
                   </td>
                 ))}
                 {grandTotal !== undefined && (
-                  <td className="sticky right-0 z-20 whitespace-nowrap bg-muted/40 px-3 py-2.5 text-right font-bold tabular-nums text-brand-strong dark:text-brand">
+                  <td className="sticky right-0 z-10 whitespace-nowrap bg-muted/40 px-3 py-2.5 text-right font-bold tabular-nums text-brand-strong dark:text-brand">
                     {format(toNumber(grandTotal))}
                   </td>
                 )}

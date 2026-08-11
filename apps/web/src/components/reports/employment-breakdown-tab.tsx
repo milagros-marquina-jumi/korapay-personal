@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
 import { type YearSeries, YearSeriesChart } from '@/components/charts/year-series-chart';
 import { QuarterRanking } from '@/components/reports/quarter-ranking';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,6 +28,15 @@ function toSeries(rows: { year: number; months?: string[]; quarters?: string[] }
   return rows.map((r) => ({
     year: r.year,
     values: (r.months ?? r.quarters ?? []).map(Number),
+  }));
+}
+
+function toHeatmap(rows: { year: number; months?: string[]; quarters?: string[]; total: string }[]): HeatmapRow[] {
+  return rows.map((r) => ({
+    key: String(r.year),
+    label: r.year,
+    values: (r.months ?? r.quarters ?? []).map(Number),
+    total: Number(r.total),
   }));
 }
 
@@ -68,7 +78,16 @@ export function EmploymentBreakdownTab({ breakdown }: Readonly<Props>) {
         </CardHeader>
         <CardContent>
           {monthly.length ? (
-            <YearSeriesChart series={toSeries(monthly)} categories={MONTH_SHORT} variant="line" height={400} />
+            <div className="space-y-5">
+              <YearSeriesChart series={toSeries(monthly)} categories={MONTH_SHORT} variant="line" height={400} />
+              <HeatmapTable
+                rowHeader="Año"
+                columns={MONTH_SHORT}
+                rows={toHeatmap(monthly)}
+                totalLabel="Total"
+                minWidth="58rem"
+              />
+            </div>
           ) : (
             <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
           )}
@@ -83,6 +102,13 @@ export function EmploymentBreakdownTab({ breakdown }: Readonly<Props>) {
           {quarterly.length ? (
             <div className="space-y-5">
               <YearSeriesChart series={toSeries(quarterly)} categories={QUARTERS} variant="bar" height={360} />
+              <HeatmapTable
+                rowHeader="Año"
+                columns={QUARTERS}
+                rows={toHeatmap(quarterly)}
+                totalLabel="Total"
+                minWidth="34rem"
+              />
               <QuarterRanking rows={quarterly} />
             </div>
           ) : (

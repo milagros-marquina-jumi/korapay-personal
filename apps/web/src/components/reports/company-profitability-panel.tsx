@@ -2,18 +2,9 @@
 
 import { formatMoney } from '@korapay/domain';
 import { useState } from 'react';
-import { GroupedBar } from '@/components/charts/grouped-bar';
-import { INCOME_COLOR } from '@/components/charts/palette';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { CompanyProfitability } from '@/lib/api.types';
 import { cn } from '@/lib/utils';
-
-const AVERAGE_COLOR = '#eda100';
-
-const SERIES = [
-  { key: 'promedio', name: 'Promedio por mes', color: AVERAGE_COLOR },
-  { key: 'mejor', name: 'Mejor mes', color: INCOME_COLOR },
-];
 
 const LIMIT_OPTIONS = [
   { value: '8', label: 'Top 8' },
@@ -34,11 +25,6 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
   if (!rows.length) return <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>;
 
   const visible = limit === 'all' ? rows : rows.slice(0, Number(limit));
-  const chartData = visible.map((r) => ({
-    label: r.name,
-    promedio: Number(r.monthlyAverage),
-    mejor: Number(r.bestMonthAmount),
-  }));
   const best = rows[0];
   const topAverage = Number(best?.monthlyAverage ?? 0);
 
@@ -124,11 +110,6 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
             })}
           </tbody>
         </table>
-      </div>
-
-      <div>
-        <h4 className="mb-3 text-sm font-medium text-muted-foreground">Cuánto pagaba cada empresa al mes</h4>
-        <GroupedBar data={chartData} series={SERIES} height={Math.max(320, chartData.length * 42)} layout="vertical" />
       </div>
     </div>
   );

@@ -35,6 +35,8 @@ const YEAR_COMPARISON_SERIES = [
 
 const MONTH_SERIES = [{ key: 'total', name: 'Ingresos', color: INCOME_COLOR }];
 
+const COMPANY_SERIES = [{ key: 'total', name: 'Total recibido', color: INCOME_COLOR }];
+
 const OWN_COMPANY_CONCEPT = 'Empresas';
 
 export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
@@ -93,7 +95,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const conceptRows = data.incomeByConcept.filter((c) => !(showOwn ? false : c.name === OWN_COMPANY_CONCEPT));
   const profitabilityRows = (data.companyProfitability ?? []).filter((c) => !isHidden(c.name));
 
-  const companyDonut = companyRows.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
+  const companyBars = companyRows.slice(0, 12).map((c) => ({ label: c.name, total: Number(c.total) }));
   const conceptDonut = conceptRows.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
 
   const yearComparison = data.yearlyTotals.map((y) => ({
@@ -291,19 +293,14 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
               </div>
             </CardHeader>
             <CardContent>
-              {companyDonut.length ? (
+              {companyRows.length ? (
                 <div className="space-y-6">
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <CategoryDonut data={companyDonut} />
-                    <div className="divide-y">
-                      {companyRows.map((c) => (
-                        <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                          <span className="truncate">{c.name}</span>
-                          <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <GroupedBar
+                    data={companyBars}
+                    series={COMPANY_SERIES}
+                    layout="vertical"
+                    height={Math.max(280, companyBars.length * 38)}
+                  />
                   <CompanyProfitabilityPanel rows={profitabilityRows} />
                 </div>
               ) : (

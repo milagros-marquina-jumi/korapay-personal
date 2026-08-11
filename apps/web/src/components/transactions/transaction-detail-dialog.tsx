@@ -6,6 +6,7 @@ import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { DetailRow } from '@/components/transactions/due-date-hint';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Transaction } from '@/lib/api.types';
+import { accountNumber, looksLikeAccount } from '@/lib/employment-income';
 import { RECURRENCE_LABELS, TRANSACTION_TYPE_LABELS } from '@/lib/labels';
 import { isFixedExpense, meaningfulTags } from '@/lib/transaction-tags';
 import { formatDate, formatDateLong } from '@/lib/utils';
@@ -38,6 +39,10 @@ export function TransactionDetailDialog({
   const gross = transaction?.amountGross;
   const showGross = gross && Number(gross) !== Number(transaction?.amountOriginal);
 
+  const notes = transaction?.notes ?? '';
+  const account = looksLikeAccount(notes) ? accountNumber(notes) : null;
+  const freeNotes = account ? '' : notes;
+
   return (
     <Dialog open={transaction !== null} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -64,7 +69,8 @@ export function TransactionDetailDialog({
             {transaction.type === 'EXPENSE' && (
               <DetailRow label="Tipo de gasto" value={isFixedExpense(transaction.tags) ? 'Fijo' : 'No fijo'} />
             )}
-            <DetailRow label="Medios de pago" value={paymentMethods(transaction.tags)} />
+            <DetailRow label="Forma de pago" value={paymentMethods(transaction.tags)} />
+            {account && <DetailRow label="Número de cuenta" value={account} />}
             <DetailRow label="Vencimiento" value={transaction.dueDate ? formatDateLong(transaction.dueDate) : '—'} />
             <DetailRow
               label="Recurrencia"
@@ -79,7 +85,7 @@ export function TransactionDetailDialog({
             )}
             <div className="col-span-2">
               <dt className="text-xs text-muted-foreground">Notas</dt>
-              <dd className="mt-0.5 whitespace-pre-wrap">{transaction.notes || '—'}</dd>
+              <dd className="mt-0.5 whitespace-pre-wrap">{freeNotes || '—'}</dd>
             </div>
           </dl>
         )}

@@ -57,6 +57,11 @@ const schema = z.object({
   type: z.enum(['INCOME', 'EXPENSE', 'SAVING', 'BUSINESS_COST', 'TEAM_PAYMENT']),
   concept: z.string().min(1, 'Requerido'),
   amount: z.string().regex(/^\d{1,10}(\.\d{1,3})?$/, 'Máx. 10 enteros y 3 decimales'),
+  amountGross: z
+    .string()
+    .regex(/^\d{1,10}(\.\d{1,3})?$/, 'Máx. 10 enteros y 3 decimales')
+    .optional()
+    .or(z.literal('')),
   currency: z.enum(['PEN', 'USD']),
   date: z.string().min(1, 'Requerido'),
   status: z.enum(['PAID', 'PENDING', 'OVERDUE', 'PARTIAL']),
@@ -152,6 +157,7 @@ export function TransactionFormDialog({
       type: defaultType,
       concept: '',
       amount: '',
+      amountGross: '',
       currency: 'PEN',
       date: new Date().toISOString().slice(0, 10),
       status: 'PENDING',
@@ -187,6 +193,7 @@ export function TransactionFormDialog({
         type: defaultType,
         concept: '',
         amount: '',
+        amountGross: '',
         currency: 'PEN',
         date: new Date().toISOString().slice(0, 10),
         status: 'PENDING',
@@ -210,6 +217,7 @@ export function TransactionFormDialog({
         type: (transaction.type as FormValues['type']) ?? defaultType,
         concept: transaction.concept,
         amount: Number(transaction.amountOriginal).toString(),
+        amountGross: transaction.amountGross ? Number(transaction.amountGross).toString() : '',
         currency: (transaction.currency as 'PEN' | 'USD') ?? 'PEN',
         date: transaction.date.slice(0, 10),
         status: (transaction.status as FormValues['status']) ?? 'PENDING',
@@ -246,6 +254,7 @@ export function TransactionFormDialog({
           type: rest.type,
           concept: rest.concept,
           amount: rest.amount,
+          amountGross: rest.amountGross || null,
           currency: rest.currency,
           date: rest.date,
           status: rest.status,
@@ -266,6 +275,7 @@ export function TransactionFormDialog({
       const payload = {
         ...rest,
         workspaceId,
+        amountGross: rest.amountGross || undefined,
         applicationId: isBusinessCost ? rest.applicationId : undefined,
         projectIds: isBusinessCost && projectIds?.length ? projectIds : undefined,
         personId: isTeamPayment ? personId : undefined,
@@ -338,24 +348,58 @@ export function TransactionFormDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-[1fr_10rem] gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="concept">Concepto</Label>
+            <Input
+              id="concept"
+              list="concept-suggestions"
+              placeholder="Ej. Sueldo, Gratificación, CTS..."
+              {...register('concept')}
+            />
+            <datalist id="concept-suggestions">
+              {(categories ?? []).map((c) => (
+                <option key={c.id} value={c.name} />
+              ))}
+            </datalist>
+            {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="concept">Concepto</Label>
-              <Input id="concept" placeholder="Ej. Pago de alquiler, sueldo, compra..." {...register('concept')} />
-              {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
+              <Label htmlFor="amountGross">Monto bruto</Label>
+              <MoneyInput
+                id="amountGross"
+                value={watch('amountGross') ?? ''}
+                onValueChange={(raw) => setValue('amountGross', raw)}
+              />
+              <p className="text-xs text-muted-foreground">Antes de descuentos. Vacío si no hubo.</p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="amount">Monto</Label>
+              <Label htmlFor="amount">Monto neto</Label>
               <MoneyInput
                 id="amount"
                 value={watch('amount') ?? ''}
                 onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
               />
+              <p className="text-xs text-muted-foreground">Lo que realmente recibiste.</p>
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
+            {showCompany && (
+              <div className="space-y-1.5">
+                <Label>Empresa</Label>
+                <SearchSelect
+                  placeholder="Selecciona empresa"
+                  searchPlaceholder="Buscar empresa..."
+                  value={watch('companyId') ?? ''}
+                  onValueChange={(v) => setValue('companyId', v)}
+                  options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                  clearable
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label>Categoría</Label>
               <SearchSelect
@@ -364,8 +408,12 @@ export function TransactionFormDialog({
                 value={watch('categoryId') ?? ''}
                 onValueChange={(v) => setValue('categoryId', v)}
                 options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                clearable
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Medio de pago</Label>
               <SearchSelect
@@ -377,9 +425,6 @@ export function TransactionFormDialog({
                 clearable
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Banco</Label>
               <SearchSelect
@@ -391,20 +436,21 @@ export function TransactionFormDialog({
                 clearable
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Estado</Label>
-              <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PENDING">Pendiente</SelectItem>
-                  <SelectItem value="PAID">Pagado</SelectItem>
-                  <SelectItem value="PARTIAL">Parcial</SelectItem>
-                  <SelectItem value="OVERDUE">Vencido</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Estado</Label>
+            <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENDING">Pendiente</SelectItem>
+                <SelectItem value="PAID">Pagado</SelectItem>
+                <SelectItem value="PARTIAL">Parcial</SelectItem>
+                <SelectItem value="OVERDUE">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {watch('type') === 'EXPENSE' && (
@@ -478,22 +524,14 @@ export function TransactionFormDialog({
               </div>
             )}
 
-            {showCompany && (
-              <div className="space-y-1.5">
-                <Label>Empresa</Label>
-                <SearchSelect
-                  placeholder="Opcional"
-                  searchPlaceholder="Buscar empresa..."
-                  value={watch('companyId') ?? ''}
-                  onValueChange={(v) => setValue('companyId', v)}
-                  options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
-                />
-              </div>
-            )}
-
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>
-              <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
+              <Textarea
+                id="notes"
+                rows={2}
+                placeholder="Detalle opcional: número de cuenta, acuerdo, referencia..."
+                {...register('notes')}
+              />
             </div>
 
             {showDueDate && (

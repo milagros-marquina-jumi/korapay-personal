@@ -55,29 +55,28 @@ export function buildIncomeColumns({
     {
       id: 'company',
       header: 'Empresa',
-      cell: ({ row }) => {
-        const payment = splitTags(row.original.tags, catalogs).paymentMethod;
-        return (
-          <div className="flex flex-col">
-            <span>{companyName(row.original.companyId) ?? row.original.category?.name ?? '-'}</span>
-            {payment && <span className="text-xs text-muted-foreground">{payment}</span>}
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <span className="font-medium">{companyName(row.original.companyId) ?? row.original.category?.name ?? '-'}</span>
+      ),
     },
     {
-      id: 'bank',
-      header: 'Banco',
+      id: 'payment',
+      header: 'Forma de pago',
       cell: ({ row }) => {
-        const bank = splitTags(row.original.tags, catalogs).bank;
+        const { paymentMethod, bank } = splitTags(row.original.tags, catalogs);
         const account = accountNumber(row.original.notes);
-        if (!bank && !account) return <span className="text-muted-foreground">-</span>;
+        if (!paymentMethod && !bank) return <span className="text-muted-foreground">-</span>;
         return (
-          <div className="flex flex-col" title={row.original.notes ?? undefined}>
-            <span className="text-sm">{bank ?? '-'}</span>
-            {account && (
-              <span className="max-w-[11rem] truncate text-xs tabular-nums text-muted-foreground">{account}</span>
-            )}
+          <div className="flex flex-col gap-0.5" title={account ? `Cuenta ${account}` : undefined}>
+            <div className="flex items-center gap-1.5">
+              {paymentMethod && <span className="text-sm">{paymentMethod}</span>}
+              {bank && (
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {bank}
+                </span>
+              )}
+            </div>
+            {account && <span className="max-w-48 truncate text-xs tabular-nums text-muted-foreground">{account}</span>}
           </div>
         );
       },

@@ -17,14 +17,20 @@ export interface MonthSummary {
   paid: number;
 }
 
-// Las notas traen el numero de cuenta con etiquetas del banco y a veces tambien el CCI.
+// La migracion dejo numeros de cuenta dentro de notes; el resto son notas escritas por el usuario.
+export function looksLikeAccount(notes?: string | null): boolean {
+  if (!notes) return false;
+  return /\d[\d\s-]{5,}/.test(notes);
+}
+
+// Las notas de cuenta traen etiquetas del banco y a veces tambien el CCI.
 export function accountNumber(notes?: string | null): string | null {
-  if (!notes) return null;
+  if (!looksLikeAccount(notes) || !notes) return null;
   const labeled =
     /n[úu]mero de cuenta\s*:\s*([\d][\d\s-]*)/i.exec(notes) ?? /cuenta[^:]*:\s*([\d][\d\s-]*)/i.exec(notes);
   if (labeled?.[1]) return labeled[1].trim();
   const bare = /[\d][\d\s-]{6,}/.exec(notes);
-  return bare?.[0]?.trim() ?? notes.trim() ?? null;
+  return bare?.[0]?.trim() ?? null;
 }
 
 // amountGross solo se guarda cuando hubo descuento y siempre en soles; si falta, el bruto es el neto.

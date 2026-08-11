@@ -233,6 +233,14 @@ export class TransactionService {
       exchangeRate: tx.exchangeRate?.toString() ?? null,
     };
   }
+  // El bruto se persiste siempre en soles y solo cuando difiere del neto.
+  private grossInBase(gross: string | undefined, net: string, currency: string, rate: string) {
+    if (!gross) return null;
+    const value = currency === 'PEN' ? new Decimal(gross) : new Decimal(gross).mul(new Decimal(rate));
+    const netBase = currency === 'PEN' ? new Decimal(net) : new Decimal(net).mul(new Decimal(rate));
+    return value.equals(netBase) ? null : value.toFixed(2);
+  }
+
   async create(data: {
     workspaceId: string;
     type: string;
@@ -240,6 +248,7 @@ export class TransactionService {
     description?: string;
     date: string;
     amount: string;
+    amountGross?: string;
     currency?: string;
     exchangeRate?: string;
     categoryId?: string;
@@ -280,6 +289,7 @@ export class TransactionService {
       currency,
       exchangeRate: currency !== 'PEN' ? exchangeRate : null,
       amountBase,
+      amountGross: this.grossInBase(data.amountGross, data.amount, currency, exchangeRate),
       categoryId: data.categoryId,
       accountId: data.accountId,
       personId: data.personId,
@@ -365,6 +375,12 @@ export class TransactionService {
         currency === 'PEN'
           ? (data.amount as string)
           : new Decimal(data.amount as string).mul(new Decimal(rate ?? '1')).toFixed(2);
+    }
+    if (data.amountGross !== undefined) {
+      const currency = (data.currency as string) ?? existing.currency ?? 'PEN';
+      const net = (data.amount as string) ?? existing.amountOriginal.toString();
+      const rate = (data.exchangeRate as string) ?? existing.exchangeRate?.toString() ?? '1';
+      updateData.amountGross = this.grossInBase((data.amountGross as string) || undefined, net, currency, rate);
     }
     if (data.status) updateData.status = data.status as string;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId as string;

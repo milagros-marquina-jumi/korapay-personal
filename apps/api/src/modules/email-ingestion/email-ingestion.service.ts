@@ -141,7 +141,7 @@ export class EmailIngestionService {
         cardLast4: parsed.cardLast4 ?? null,
         merchantOriginal: parsed.merchant ?? null,
         merchantNormalized: merchantNormalized || null,
-        description: parsed.merchant ?? buildDescription(input.subject, parsed.bankName),
+        description: parsed.merchant ?? parsed.recipient ?? buildDescription(input.subject, parsed.bankName),
         transactionType: parsed.transactionType,
         amount: parsed.amount,
         currency: parsed.currency,

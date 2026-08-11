@@ -31,13 +31,33 @@ function extractReference(text: string): string | undefined {
   return m?.[1] ?? undefined;
 }
 
+function extractRecipient(text: string): string | undefined {
+  const m = text.match(/(?:destinatario|beneficiario)\s*:?\s*([A-Za-zÁÉÍÓÚÑáéíóúñ\s.-]{3,60})(?:\n|$)/i);
+  if (m?.[1]) return m[1].trim();
+  const alt = text.match(/a favor de\s+([A-Za-zÁÉÍÓÚÑáéíóúñ\s.-]{3,60})/i);
+  return alt?.[1]?.trim() ?? undefined;
+}
+
+function extractDestinationMethod(text: string): string | undefined {
+  const m = text.match(/(?:destino|m[eé]todo)\s*:?\s*(Yape|Plin|Pliq|Transferencia)/i);
+  if (m?.[1]) {
+    const raw = m[1].toLowerCase();
+    if (raw === 'yape') return 'Yape';
+    if (raw === 'plin' || raw === 'pliq') return 'Plin';
+    return m[1];
+  }
+  return undefined;
+}
+
 function baseParse(input: IncomingBankEmail, bankCode: string, bankName: string): ParsedBankTransaction | null {
   const text = `${input.subject}\n${input.textBody}`;
   const amount = extractAmount(text);
   if (!amount || amount === '0') return null;
   const currency = detectCurrency(text);
   const cardLast4 = extractCardLast4(text);
-  const merchant = extractMerchant(text);
+  const merchant = extractMerchant(text) ?? extractRecipient(text);
+  const recipient = extractRecipient(text);
+  const destinationMethod = extractDestinationMethod(text);
   const externalReference = extractReference(text);
   const transactionType = classifyType(text);
   const installmentsMatch = text.match(/en\s+(\d+)\s+cuotas/i);
@@ -65,6 +85,8 @@ function baseParse(input: IncomingBankEmail, bankCode: string, bankName: string)
     installments,
     transactionType,
     confidence,
+    recipient,
+    destinationMethod,
   };
 }
 

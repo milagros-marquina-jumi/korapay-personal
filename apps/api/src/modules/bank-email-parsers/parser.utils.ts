@@ -112,5 +112,7 @@ export function sanitizeRaw(parsed: ParsedBankTransaction, subject: string): Rec
     externalReference: parsed.externalReference ?? null,
     installments: parsed.installments ?? null,
     subject: subject.slice(0, 160),
+    recipient: parsed.recipient ?? null,
+    destinationMethod: parsed.destinationMethod ?? null,
   };
 }

@@ -30,6 +30,8 @@ export interface ParsedBankTransaction {
   installments?: number;
   transactionType: BankTransactionType;
   confidence: number;
+  recipient?: string;
+  destinationMethod?: string;
 }
 
 export interface BankEmailParser {

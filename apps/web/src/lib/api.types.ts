@@ -310,7 +310,12 @@ export interface EmploymentReports {
   years: number[];
   total: string;
   yearlyTotals: { year: number; total: string; average: string; months: number; companies: number }[];
-  companiesPerMonth: { year: number; months: number[]; total: number }[];
+  companiesPerMonth: {
+    year: number;
+    months: number[];
+    monthDetail: { name: string; clients: string[] }[][];
+    total: number;
+  }[];
   incomeByConcept: { name: string; total: string }[];
   incomeByCompany: { name: string; total: string }[];
   incomeByMonth: { year: number; month: number; label: string; total: string }[];
@@ -584,6 +589,7 @@ export interface EmploymentContract {
   salary?: string | null;
   currency: string;
   status: string;
+  notes?: string | null;
 }
 
 export interface TaxObligationInstallment {

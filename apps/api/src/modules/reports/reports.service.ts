@@ -254,10 +254,36 @@ export class ReportsService {
       if (!months.has(m)) months.set(m, new Set());
       months.get(m)?.add(t.companyId);
     }
+    const companyRows = await this.prisma.company.findMany({
+      where: { workspaceId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        clients: { where: { deletedAt: null }, select: { name: true } },
+        globalCompany: {
+          select: { clients: { where: { deletedAt: null }, select: { name: true }, orderBy: { name: 'asc' } } },
+        },
+      },
+    });
+    const companyLookup = new Map(
+      companyRows.map((c) => {
+        const own = c.clients.map((cl) => cl.name);
+        const global = c.globalCompany?.clients.map((cl) => cl.name) ?? [];
+        return [c.id, { name: c.name, clients: own.length ? own : global }];
+      }),
+    );
+
     const companiesPerMonth = [...companiesByYear.entries()]
       .map(([y, months]) => ({
         year: y,
         months: Array.from({ length: 12 }, (_, i) => months.get(i + 1)?.size ?? 0),
+        monthDetail: Array.from({ length: 12 }, (_, i) =>
+          [...(months.get(i + 1) ?? [])]
+            .map((id) => companyLookup.get(id))
+            .filter((c): c is { name: string; clients: string[] } => !!c)
+            .map((c) => ({ name: c.name, clients: c.clients }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        ),
         total: new Set([...months.values()].flatMap((s) => [...s])).size,
       }))
       .sort((a, b) => a.year - b.year);

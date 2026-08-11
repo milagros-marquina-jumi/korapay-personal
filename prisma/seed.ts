@@ -382,12 +382,16 @@ async function main() {
   for (const r of empresas) {
     if (!r.empresaOficial) continue;
     const empresa = r.empresaOficial.trim();
+    const empresasField = r.empresas?.trim() ?? '';
+
     companyPeriods[empresa] ??= { ini: [], fin: [] };
     if (r.fechaInicio) companyPeriods[empresa].ini.push(r.fechaInicio);
     if (r.fechaFin) companyPeriods[empresa].fin.push(r.fechaFin);
-    if (r.empresas && r.empresas.trim() !== empresa) {
+
+    const isContractVariant = empresasField !== empresa && empresasField.startsWith(empresa);
+    if (!isContractVariant && empresasField && empresasField !== empresa) {
       companyClients[empresa] ??= new Set();
-      companyClients[empresa].add(r.empresas.trim());
+      companyClients[empresa].add(empresasField);
     }
     if (!r.fechaInicio) continue;
     const key = `${empresa}-${r.fechaInicio}`;
@@ -398,6 +402,7 @@ async function main() {
       data: {
         workspaceId: empleos.id,
         companyId,
+        position: isContractVariant ? empresasField : null,
         type: dominantPago(empresa),
         startDate: date(r.fechaInicio),
         endDate: r.fechaFin ? date(r.fechaFin) : null,
@@ -537,6 +542,16 @@ async function main() {
     savingBalanceCount++;
   }
 
+  function extractPaymentMethod(cardInfo: string | null): string {
+    if (!cardInfo) return '';
+    const t = cardInfo.toLowerCase();
+    if (t.includes('visa')) return 'Visa';
+    if (t.includes('mastercard')) return 'Mastercard';
+    if (t.includes('credit card') || t.includes('crédito')) return 'T. Crédito';
+    if (t.includes('débito') || t.includes('debit')) return 'T. Débito';
+    return '';
+  }
+
   // ============================================================
   // MIMOTECH (BUSINESS): costos + pagos equipo + apps + proyectos + talentos
   // ============================================================
@@ -557,6 +572,7 @@ async function main() {
     const currency = r.moneda === 'USD' ? 'USD' : 'PEN';
     const applicationId = await ensureApplication(r.aplicacion);
     const projectIds = await ensureProjects(r.proyecto);
+    const medio = extractPaymentMethod(r.numeroTarjetaCuenta);
     await prisma.transaction.create({
       data: {
         workspaceId: mimotech.id,
@@ -573,7 +589,7 @@ async function main() {
         projects: projectIds.length ? { connect: projectIds.map((id) => ({ id })) } : undefined,
         status: mapExcelStatus(r.estado),
         notes: r.numeroTarjetaCuenta ? redactSensitiveData(r.numeroTarjetaCuenta) : null,
-        tags: [r.banco ?? ''].filter(Boolean),
+        tags: [r.banco ?? '', medio].filter(Boolean),
       },
     });
     costCount++;

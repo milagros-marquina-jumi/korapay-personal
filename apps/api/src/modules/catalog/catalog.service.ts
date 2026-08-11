@@ -185,7 +185,13 @@ export class CatalogService {
   }
 
   globalCompanies() {
-    return this.prisma.globalCompany.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
+    return this.prisma.globalCompany.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: 'asc' },
+      include: {
+        clients: { where: { deletedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true } },
+      },
+    });
   }
 
   async createGlobalCompany(data: { name: string; ruc?: string }) {
@@ -215,18 +221,25 @@ export class CatalogService {
   }
 
   globalClients() {
-    return this.prisma.globalClient.findMany({ where: { deletedAt: null }, orderBy: { name: 'asc' } });
+    return this.prisma.globalClient.findMany({
+      where: { deletedAt: null },
+      orderBy: { name: 'asc' },
+      include: { globalCompany: { select: { id: true, name: true } } },
+    });
   }
 
-  async createGlobalClient(data: { name: string }) {
+  async createGlobalClient(data: { name: string; globalCompanyId?: string }) {
     const dup = await this.prisma.globalClient.findFirst({
       where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
     });
     if (dup) throw new ConflictException('Ya existe un cliente con ese nombre');
-    return this.prisma.globalClient.create({ data: { name: data.name } });
+    return this.prisma.globalClient.create({
+      data: { name: data.name, globalCompanyId: data.globalCompanyId || null },
+      include: { globalCompany: { select: { id: true, name: true } } },
+    });
   }
 
-  async updateGlobalClient(id: string, data: { name?: string }) {
+  async updateGlobalClient(id: string, data: { name?: string; globalCompanyId?: string | null }) {
     const found = await this.prisma.globalClient.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Cliente no encontrado');
     if (typeof data.name === 'string') {
@@ -235,7 +248,14 @@ export class CatalogService {
       });
       if (dup) throw new ConflictException('Ya existe un cliente con ese nombre');
     }
-    return this.prisma.globalClient.update({ where: { id }, data });
+    const updateData: Record<string, unknown> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.globalCompanyId !== undefined) updateData.globalCompanyId = data.globalCompanyId || null;
+    return this.prisma.globalClient.update({
+      where: { id },
+      data: updateData as never,
+      include: { globalCompany: { select: { id: true, name: true } } },
+    });
   }
 
   async removeGlobalClient(id: string) {

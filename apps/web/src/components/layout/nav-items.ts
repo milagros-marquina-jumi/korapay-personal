@@ -50,7 +50,6 @@ const EMPLOYMENT: NavItem[] = [
     linkable: true,
     children: [{ href: '/ingresos/resumen-mes', label: 'Resumen por mes', icon: CalendarRange }],
   },
-  { href: '/empresas', label: 'Empresas', icon: Building2 },
   { href: '/contratos', label: 'Contratos', icon: FileText },
   { href: '/renta', label: 'Renta anual', icon: Banknote },
   { href: '/reportes', label: 'Reportes', icon: BarChart3 },

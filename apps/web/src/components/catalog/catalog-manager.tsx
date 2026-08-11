@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { cn } from '@/lib/utils';
@@ -19,7 +20,10 @@ export interface CatalogField {
   label: string;
   required?: boolean;
   placeholder?: string;
+  options?: { value: string; label: string }[];
 }
+
+const NONE = '__none__';
 
 interface CatalogItem {
   id: string;
@@ -141,13 +145,32 @@ export function CatalogManager({
               {fields.map((f) => (
                 <div key={f.name} className="space-y-2">
                   <Label htmlFor={f.name}>{f.label}</Label>
-                  <Input
-                    id={f.name}
-                    value={values[f.name] ?? ''}
-                    placeholder={f.placeholder}
-                    required={f.required}
-                    onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
-                  />
+                  {f.options ? (
+                    <Select
+                      value={values[f.name] || NONE}
+                      onValueChange={(value) => setValues((v) => ({ ...v, [f.name]: value === NONE ? '' : value }))}
+                    >
+                      <SelectTrigger id={f.name}>
+                        <SelectValue placeholder={f.placeholder ?? 'Selecciona'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!f.required && <SelectItem value={NONE}>Sin asignar</SelectItem>}
+                        {f.options.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id={f.name}
+                      value={values[f.name] ?? ''}
+                      placeholder={f.placeholder}
+                      required={f.required}
+                      onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
+                    />
+                  )}
                 </div>
               ))}
               <DialogFooter>

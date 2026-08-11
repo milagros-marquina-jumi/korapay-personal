@@ -21,6 +21,7 @@ interface Props {
   emptyCell?: string;
   minWidth?: string;
   legend?: boolean;
+  onCellClick?: (rowKey: string, columnIndex: number) => void;
 }
 
 const STEPS = [
@@ -52,6 +53,7 @@ export function HeatmapTable({
   emptyCell = '—',
   minWidth = '62rem',
   legend = true,
+  onCellClick,
 }: Readonly<Props>) {
   const all = rows.flatMap((r) => r.values.map(toNumber)).filter((v) => v > 0);
   const min = all.length ? Math.min(...all) : 0;
@@ -100,18 +102,32 @@ export function HeatmapTable({
                   let title: string | undefined;
                   if (extreme.max) title = 'Monto mayor';
                   else if (extreme.min) title = 'Monto menor';
+                  const clickable = !!onCellClick && num > 0;
+                  const content = num === 0 ? emptyCell : format(num);
                   return (
                     <td
                       key={columns[i] ?? String(i)}
                       title={title}
                       className={cn(
-                        'relative whitespace-nowrap px-2 py-2.5 text-right tabular-nums transition-colors',
+                        'relative whitespace-nowrap text-right tabular-nums transition-colors',
+                        clickable ? 'p-0' : 'px-2 py-2.5',
                         step.cell,
                         extreme.max && 'ring-1 ring-inset ring-brand',
                         extreme.min && 'ring-1 ring-inset ring-border',
                       )}
                     >
-                      {num === 0 ? emptyCell : format(num)}
+                      {clickable ? (
+                        <button
+                          type="button"
+                          onClick={() => onCellClick(row.key, i)}
+                          title="Ver detalle"
+                          className="w-full cursor-pointer px-2 py-2.5 text-right tabular-nums underline decoration-dotted decoration-1 underline-offset-2 hover:text-brand-strong dark:hover:text-brand"
+                        >
+                          {content}
+                        </button>
+                      ) : (
+                        content
+                      )}
                     </td>
                   );
                 })}

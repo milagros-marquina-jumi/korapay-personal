@@ -7,7 +7,10 @@ export class CompanyService {
     const companies = await this.prisma.company.findMany({
       where: { workspaceId, deletedAt: null },
       orderBy: { name: 'asc' },
-      include: { _count: { select: { clients: { where: { deletedAt: null } } } } },
+      include: {
+        _count: { select: { clients: { where: { deletedAt: null } } } },
+        globalCompany: { select: { id: true, name: true, ruc: true } },
+      },
     });
     return companies.map((c) => {
       const { _count, ...rest } = c;
@@ -17,6 +20,7 @@ export class CompanyService {
   async create(data: {
     workspaceId: string;
     name: string;
+    globalCompanyId?: string;
     ruc?: string;
     industry?: string;
     startDate?: string;
@@ -29,6 +33,7 @@ export class CompanyService {
     return this.prisma.company.create({
       data: {
         workspaceId: data.workspaceId,
+        globalCompanyId: data.globalCompanyId || null,
         name: data.name,
         ruc: data.ruc,
         industry: data.industry,
@@ -52,6 +57,7 @@ export class CompanyService {
     for (const key of ['name', 'ruc', 'industry'] as const) {
       if (data[key] !== undefined) updateData[key] = data[key];
     }
+    if (data.globalCompanyId !== undefined) updateData.globalCompanyId = data.globalCompanyId || null;
     if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate as string) : null;
     if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
     return this.prisma.company.update({ where: { id }, data: updateData as never });

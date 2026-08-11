@@ -15,6 +15,11 @@ export class CreateCompanyDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  globalCompanyId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   ruc?: string;
 
   @ApiPropertyOptional()

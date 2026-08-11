@@ -13,10 +13,12 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { useState } from 'react';
 import { CategoryDonut, type HeatmapRow, HeatmapTable, MonthlyBar, type MonthlyPoint } from '@/components/charts';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { CompaniesMonthDialog, type CompaniesMonthSelection } from '@/components/reports/companies-month-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -580,6 +582,7 @@ function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }
   });
 
   const [year, setYear] = useDefaultYear(allYears);
+  const [companiesDetail, setCompaniesDetail] = useState<CompaniesMonthSelection | null>(null);
   const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
 
   const { data, isLoading } = useQuery({
@@ -648,6 +651,12 @@ function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }
     values: r.months,
     total: r.total,
   }));
+
+  const openCompaniesDetail = (rowKey: string, monthIndex: number) => {
+    const row = data.companiesPerMonth.find((r) => String(r.year) === rowKey);
+    if (!row) return;
+    setCompaniesDetail({ year: rowKey, monthIndex, companies: row.monthDetail?.[monthIndex] ?? [] });
+  };
 
   return (
     <div className="space-y-6">
@@ -794,15 +803,21 @@ function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }
             </CardHeader>
             <CardContent>
               {heatmapRows.length ? (
-                <HeatmapTable
-                  rowHeader="Año"
-                  columns={MONTH_SHORT}
-                  rows={heatmapRows}
-                  totalLabel="Únicas"
-                  format={(v) => (v === 0 ? '—' : String(v))}
-                  minWidth="46rem"
-                  legend={false}
-                />
+                <>
+                  <HeatmapTable
+                    rowHeader="Año"
+                    columns={MONTH_SHORT}
+                    rows={heatmapRows}
+                    totalLabel="Únicas"
+                    format={(v) => (v === 0 ? '—' : String(v))}
+                    minWidth="46rem"
+                    legend={false}
+                    onCellClick={openCompaniesDetail}
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Haz clic en un número para ver las empresas y sus clientes.
+                  </p>
+                </>
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>
               )}
@@ -824,6 +839,7 @@ function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }
                         <th className="px-3 py-2.5 font-medium">Año</th>
                         <th className="px-3 py-2.5 font-medium">Concepto</th>
                         <th className="px-3 py-2.5 text-right font-medium">Monto</th>
+                        <th className="px-3 py-2.5 text-center font-medium">Cuotas</th>
                         <th className="px-3 py-2.5 font-medium">Estado</th>
                       </tr>
                     </thead>
@@ -833,6 +849,15 @@ function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }
                           <td className="px-3 py-2.5 font-semibold">{r.year}</td>
                           <td className="px-3 py-2.5">{r.name}</td>
                           <td className="px-3 py-2.5 text-right tabular-nums">{formatMoney(r.amount, 'PEN')}</td>
+                          <td className="px-3 py-2.5 text-center tabular-nums">
+                            {r.installments ? (
+                              <span className={r.paidInstallments === r.installments ? 'text-success' : undefined}>
+                                {r.paidInstallments ?? 0}/{r.installments}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </td>
                           <td className="px-3 py-2.5">
                             <StatusBadge status={r.status} />
                           </td>
@@ -848,6 +873,8 @@ function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }
           </Card>
         </TabsContent>
       </Tabs>
+
+      <CompaniesMonthDialog selection={companiesDetail} onOpenChange={(o) => !o && setCompaniesDetail(null)} />
     </div>
   );
 }

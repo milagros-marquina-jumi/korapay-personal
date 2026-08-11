@@ -8,12 +8,14 @@ import {
   CreateBankDto,
   CreateCurrencyDto,
   CreateEmploymentContractDto,
+  CreateGlobalClientDto,
   CreateGlobalCompanyDto,
   CreateProjectDto,
   NamedCatalogDto,
   UpdateApplicationDto,
   UpdateBankDto,
   UpdateEmploymentContractDto,
+  UpdateGlobalClientDto,
   UpdateGlobalCompanyDto,
   UpdateProjectDto,
 } from './catalog.dto';
@@ -181,12 +183,12 @@ export class CatalogController {
   }
 
   @Post('global-clients')
-  createGlobalClient(@Body() body: NamedCatalogDto) {
+  createGlobalClient(@Body() body: CreateGlobalClientDto) {
     return this.catalogService.createGlobalClient(body);
   }
 
   @Patch('global-clients/:id')
-  updateGlobalClient(@Param('id') id: string, @Body() body: NamedCatalogDto) {
+  updateGlobalClient(@Param('id') id: string, @Body() body: UpdateGlobalClientDto) {
     return this.catalogService.updateGlobalClient(id, body);
   }
 

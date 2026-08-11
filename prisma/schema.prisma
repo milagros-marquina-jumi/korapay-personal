@@ -197,15 +197,22 @@ model GlobalCompany {
   createdAt DateTime  @default(now()) @map("created_at")
   deletedAt DateTime? @map("deleted_at")
 
+  clients   GlobalClient[]
+  companies Company[]
+
   @@map("global_companies")
 }
 
 model GlobalClient {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  createdAt DateTime  @default(now()) @map("created_at")
-  deletedAt DateTime? @map("deleted_at")
+  id              String    @id @default(uuid())
+  name            String    @unique
+  globalCompanyId String?   @map("global_company_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  deletedAt       DateTime? @map("deleted_at")
 
+  globalCompany GlobalCompany? @relation(fields: [globalCompanyId], references: [id], onDelete: SetNull)
+
+  @@index([globalCompanyId])
   @@map("global_clients")
 }
 
@@ -234,23 +241,26 @@ model Person {
 }
 
 model Company {
-  id          String    @id @default(uuid())
-  workspaceId String    @map("workspace_id")
-  name        String
-  ruc         String?
-  industry    String?
-  startDate   DateTime? @map("start_date") @db.Date
-  endDate     DateTime? @map("end_date") @db.Date
-  notes       String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  id              String    @id @default(uuid())
+  workspaceId     String    @map("workspace_id")
+  globalCompanyId String?   @map("global_company_id")
+  name            String
+  ruc             String?
+  industry        String?
+  startDate       DateTime? @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
 
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  clients      Client[]
-  transactions Transaction[]
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  globalCompany GlobalCompany? @relation(fields: [globalCompanyId], references: [id], onDelete: SetNull)
+  clients       Client[]
+  transactions  Transaction[]
 
   @@index([workspaceId])
+  @@index([globalCompanyId])
   @@map("companies")
 }
 

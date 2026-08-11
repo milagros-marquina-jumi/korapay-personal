@@ -75,6 +75,20 @@ export class CreateGlobalCompanyDto {
 
 export class UpdateGlobalCompanyDto extends PartialType(CreateGlobalCompanyDto) {}
 
+export class CreateGlobalClientDto {
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  globalCompanyId?: string;
+}
+
+export class UpdateGlobalClientDto extends PartialType(CreateGlobalClientDto) {}
+
 export class CreateBankDto {
   @ApiProperty()
   @IsString()

@@ -90,6 +90,7 @@ export function ContractFormDialog({
         type: contract.type ?? '',
         salary: contract.salary ? Number(contract.salary).toString() : '',
         currency: (contract.currency as 'PEN' | 'USD') ?? 'PEN',
+        notes: contract.notes ?? '',
       });
     }
   }, [open, contract, reset]);
@@ -135,6 +136,17 @@ export function ContractFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="space-y-2">
+            <Label>Empresa</Label>
+            <SearchSelect
+              placeholder="Selecciona empresa"
+              searchPlaceholder="Buscar empresa..."
+              value={watch('companyId') ?? ''}
+              onValueChange={(v) => setValue('companyId', v)}
+              options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="position">Cargo</Label>
             <Input id="position" placeholder="Ej. Desarrollador Fullstack" {...register('position')} />
           </div>
@@ -148,40 +160,15 @@ export function ContractFormDialog({
             <div className="space-y-2">
               <Label htmlFor="endDate">Fin</Label>
               <Input id="endDate" type="date" {...register('endDate')} />
+              <p className="text-xs text-muted-foreground">Vacío si el contrato sigue activo</p>
             </div>
           </div>
 
-          <CollapsibleSection label="Ver más opciones">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Empresa</Label>
-              <SearchSelect
-                placeholder="Opcional"
-                searchPlaceholder="Buscar empresa..."
-                value={watch('companyId') ?? ''}
-                onValueChange={(v) => setValue('companyId', v)}
-                options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
-              />
+              <Label htmlFor="salary">Salario</Label>
+              <Input id="salary" inputMode="decimal" placeholder="0.00" {...register('salary')} />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="salary">Salario</Label>
-                <Input id="salary" inputMode="decimal" placeholder="0.00" {...register('salary')} />
-              </div>
-              <div className="space-y-2">
-                <Label>Moneda</Label>
-                <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PEN">Soles (S/)</SelectItem>
-                    <SelectItem value="USD">Dólares ($)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label>Tipo de pago</Label>
               <Select value={watch('type') ?? ''} onValueChange={(v) => setValue('type', v)}>
@@ -192,6 +179,21 @@ export function ContractFormDialog({
                   <SelectItem value="Planilla">Planilla</SelectItem>
                   <SelectItem value="RxH">RxH</SelectItem>
                   <SelectItem value="Transferencia">Transferencia</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <CollapsibleSection label="Ver más opciones">
+            <div className="space-y-2">
+              <Label>Moneda</Label>
+              <Select value={watch('currency')} onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PEN">Soles (S/)</SelectItem>
+                  <SelectItem value="USD">Dólares ($)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

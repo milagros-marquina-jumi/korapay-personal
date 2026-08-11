@@ -27,6 +27,33 @@ import { useDefaultYear } from '@/lib/use-default-year';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { formatMonthYear } from '@/lib/utils';
 
+const PAYMENT_TYPES = new Set(['Planilla', 'RxH', 'Transferencia', 'Recibo por honorarios']);
+
+interface MonthSummary {
+  key: string;
+  net: number;
+  gross: number;
+  count: number;
+  paid: number;
+}
+
+function bankFromTags(tags: string[]): string | null {
+  return tags.find((t) => !PAYMENT_TYPES.has(t)) ?? null;
+}
+
+function paymentTypeFromTags(tags: string[]): string | null {
+  return tags.find((t) => PAYMENT_TYPES.has(t)) ?? null;
+}
+
+function accountNumber(notes?: string | null): string | null {
+  if (!notes) return null;
+  const labeled =
+    /n[úu]mero de cuenta\s*:\s*([\d][\d\s-]*)/i.exec(notes) ?? /cuenta[^:]*:\s*([\d][\d\s-]*)/i.exec(notes);
+  if (labeled?.[1]) return labeled[1].trim();
+  const bare = /[\d][\d\s-]{6,}/.exec(notes);
+  return bare?.[0]?.trim() ?? notes.trim() ?? null;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   PAID: 'Pagado',
   PENDING: 'Pendiente',
@@ -44,6 +71,7 @@ function IngresosContent() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [companyId, setCompanyId] = useState<string>(FILTER_ALL);
+  const [bank, setBank] = useState<string>(FILTER_ALL);
   const [month, setMonth] = useState<string>(FILTER_ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
 
@@ -90,6 +118,11 @@ function IngresosContent() {
 
   const companyOptions = useMemo(() => (companies ?? []).map((c) => ({ value: c.id, label: c.name })), [companies]);
 
+  const bankOptions = useMemo(() => {
+    const set = new Set((data?.data ?? []).map((tx) => bankFromTags(tx.tags)).filter(Boolean) as string[]);
+    return [...set].sort((a, b) => a.localeCompare(b, 'es')).map((value) => ({ value, label: value }));
+  }, [data?.data]);
+
   const availableYears = useMemo(() => {
     const set = new Set((data?.data ?? []).map((tx) => new Date(tx.date).getUTCFullYear()));
     return [...set].sort((a, b) => b - a);
@@ -99,19 +132,45 @@ function IngresosContent() {
 
   const companyName = (id?: string | null) => companies?.find((c) => c.id === id)?.name;
 
+  const grossOf = (tx: Transaction) => Number(tx.amountGross ?? tx.amountBase);
+
+  const selectMonth = (key: string) => {
+    const [y, m] = key.split('-');
+    if (!y || !m) return;
+    setYear(y);
+    setMonth(String(Number(m)));
+  };
+
   const rows = useMemo(() => {
     return (data?.data ?? []).filter((tx) => {
       if (status !== FILTER_ALL && tx.status !== status) return false;
       if (companyId !== FILTER_ALL && tx.companyId !== companyId) return false;
+      if (bank !== FILTER_ALL && bankFromTags(tx.tags) !== bank) return false;
       const d = new Date(tx.date);
       if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
       if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
       return true;
     });
-  }, [data?.data, status, companyId, year, month]);
+  }, [data?.data, status, companyId, bank, year, month]);
 
   const total = useMemo(() => rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0), [rows]);
+  const totalGross = useMemo(() => rows.reduce((sum, tx) => sum + grossOf(tx), 0), [rows]);
   const totalAll = useMemo(() => (data?.data ?? []).reduce((sum, tx) => sum + Number(tx.amountBase), 0), [data?.data]);
+
+  const monthlyBreakdown = useMemo(() => {
+    const map = new Map<string, MonthSummary>();
+    for (const tx of rows) {
+      const d = new Date(tx.date);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+      const entry = map.get(key) ?? { key, net: 0, gross: 0, count: 0, paid: 0 };
+      entry.net += Number(tx.amountBase);
+      entry.gross += grossOf(tx);
+      entry.count += 1;
+      if (tx.status === 'PAID') entry.paid += 1;
+      map.set(key, entry);
+    }
+    return [...map.values()].sort((a, b) => b.key.localeCompare(a.key));
+  }, [rows]);
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
@@ -132,17 +191,58 @@ function IngresosContent() {
       {
         id: 'company',
         header: 'Empresa',
-        cell: ({ row }) => (
-          <span className="text-muted-foreground">
-            {companyName(row.original.companyId) ?? row.original.category?.name ?? '-'}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const payment = paymentTypeFromTags(row.original.tags);
+          return (
+            <div className="flex flex-col">
+              <span>{companyName(row.original.companyId) ?? row.original.category?.name ?? '-'}</span>
+              {payment && <span className="text-xs text-muted-foreground">{payment}</span>}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'bank',
+        header: 'Banco',
+        cell: ({ row }) => {
+          const bank = bankFromTags(row.original.tags);
+          const account = accountNumber(row.original.notes);
+          if (!bank && !account) return <span className="text-muted-foreground">-</span>;
+          return (
+            <div className="flex flex-col" title={row.original.notes ?? undefined}>
+              <span className="text-sm">{bank ?? '-'}</span>
+              {account && (
+                <span className="max-w-[11rem] truncate text-xs tabular-nums text-muted-foreground">{account}</span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: 'amountGross',
+        accessorFn: (r) => Number(r.amountGross ?? r.amountBase),
+        sortingFn: 'basic',
+        header: ({ column }) => <SortableHeader column={column} label="Bruto" className="ml-auto" />,
+        cell: ({ row }) => {
+          const gross = grossOf(row.original);
+          const discount = gross - Number(row.original.amountBase);
+          return (
+            <div className="flex flex-col items-end">
+              <span className="tabular-nums text-muted-foreground">{formatMoney(String(gross), 'PEN')}</span>
+              {discount > 0.005 && (
+                <span className="text-xs tabular-nums text-muted-foreground/70">
+                  -{formatMoney(String(discount), 'PEN')}
+                </span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: 'amount',
         accessorFn: (r) => Number(r.amountBase),
         sortingFn: 'basic',
-        header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
+        header: ({ column }) => <SortableHeader column={column} label="Neto" className="ml-auto" />,
         cell: ({ row }) => (
           <div className="text-right font-semibold tabular-nums text-success">
             +{formatMoney(row.original.amountBase, 'PEN')}
@@ -216,6 +316,7 @@ function IngresosContent() {
           search !== '' ||
           status !== FILTER_ALL ||
           companyId !== FILTER_ALL ||
+          bank !== FILTER_ALL ||
           year !== FILTER_ALL ||
           month !== FILTER_ALL
         }
@@ -223,6 +324,7 @@ function IngresosContent() {
           setSearch('');
           setStatus(FILTER_ALL);
           setCompanyId(FILTER_ALL);
+          setBank(FILTER_ALL);
           setYear(FILTER_ALL);
           setMonth(FILTER_ALL);
         }}
@@ -249,9 +351,44 @@ function IngresosContent() {
               placeholder="Empresa"
               allLabel="Toda empresa"
             />
+            <FilterSelect
+              value={bank}
+              onValueChange={setBank}
+              options={bankOptions}
+              placeholder="Banco"
+              allLabel="Todo banco"
+            />
           </>
         }
       />
+
+      {monthlyBreakdown.length > 1 && (
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {monthlyBreakdown.map((m) => (
+            <button
+              key={m.key}
+              type="button"
+              onClick={() => selectMonth(m.key)}
+              className="rounded-lg border bg-card px-3 py-2 text-left transition-colors hover:border-brand hover:bg-sidebar-accent"
+            >
+              <div className="flex items-baseline justify-between">
+                <span className="text-xs font-medium capitalize text-muted-foreground">
+                  {formatMonthYear(`${m.key}-01T00:00:00.000Z`)}
+                </span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {m.paid}/{m.count} pagado{m.count === 1 ? '' : 's'}
+                </span>
+              </div>
+              <div className="mt-1 font-semibold tabular-nums text-success">{formatMoney(String(m.net), 'PEN')}</div>
+              {m.gross > 0 && (
+                <div className="text-xs tabular-nums text-muted-foreground">
+                  Bruto {formatMoney(String(m.gross), 'PEN')}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       <DataTable
         columns={columns}
@@ -266,8 +403,14 @@ function IngresosContent() {
               {rows.length} de {data?.data.length ?? 0} ingresos
             </span>
             <div className="flex gap-6">
+              {totalGross > 0 && (
+                <span className="text-muted-foreground">
+                  Total bruto:{' '}
+                  <span className="font-semibold tabular-nums">{formatMoney(String(totalGross), 'PEN')}</span>
+                </span>
+              )}
               <span className="text-muted-foreground">
-                Total filtrado:{' '}
+                Total neto:{' '}
                 <span className="font-semibold tabular-nums text-success">{formatMoney(String(total), 'PEN')}</span>
               </span>
               <span className="text-muted-foreground">

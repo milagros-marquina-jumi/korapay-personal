@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { Mail, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { CatalogManager } from '@/components/catalog/catalog-manager';
@@ -10,11 +11,49 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { SavingBucketsManager } from '@/components/savings/saving-buckets-manager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { apiFetch } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+
+interface GlobalCompanyItem {
+  id: string;
+  name: string;
+  clients?: { id: string; name: string }[];
+}
+
+function displayGlobalCompany(item: { [key: string]: unknown }) {
+  const clients = (item.clients ?? []) as { id: string; name: string }[];
+  return (
+    <span className="flex flex-col">
+      <span>{String(item.name)}</span>
+      {clients.length > 0 && (
+        <span className="text-xs text-muted-foreground">
+          {clients.length} cliente{clients.length === 1 ? '' : 's'}: {clients.map((c) => c.name).join(', ')}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function displayGlobalClient(item: { [key: string]: unknown }) {
+  const company = item.globalCompany as { name: string } | null;
+  return (
+    <span className="flex flex-col">
+      <span>{String(item.name)}</span>
+      {company && <span className="text-xs text-muted-foreground">{company.name}</span>}
+    </span>
+  );
+}
 
 export default function ConfiguracionPage() {
   const { activeWorkspace, activeWorkspaceId } = useWorkspace();
   const ws = activeWorkspaceId ?? '';
+
+  const { data: globalCompanies } = useQuery({
+    queryKey: queryKeys.globalCompanies(),
+    queryFn: () => apiFetch<GlobalCompanyItem[]>('/global-companies'),
+  });
+
+  const companyOptions = (globalCompanies ?? []).map((c) => ({ value: c.id, label: c.name }));
 
   return (
     <PageShell title="Configuración" description="Workspaces, tipo de cambio y catálogos">
@@ -110,7 +149,7 @@ export default function ConfiguracionPage() {
                   { name: 'name', label: 'Nombre', required: true },
                   { name: 'ruc', label: 'RUC', placeholder: 'Opcional' },
                 ]}
-                display={(c) => String(c.name)}
+                display={displayGlobalCompany}
               />
             </CardContent>
           </Card>
@@ -120,8 +159,11 @@ export default function ConfiguracionPage() {
                 title="Clientes"
                 endpoint="/global-clients"
                 queryKey={queryKeys.globalClients()}
-                fields={[{ name: 'name', label: 'Nombre', required: true }]}
-                display={(c) => String(c.name)}
+                fields={[
+                  { name: 'name', label: 'Nombre', required: true },
+                  { name: 'globalCompanyId', label: 'Empresa', options: companyOptions },
+                ]}
+                display={displayGlobalClient}
               />
             </CardContent>
           </Card>

@@ -22,6 +22,7 @@ export function formatDate(value: string | Date): string {
 export function formatDateTime(value: string | Date): string {
   const d = new Date(value);
   return new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'America/Lima',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

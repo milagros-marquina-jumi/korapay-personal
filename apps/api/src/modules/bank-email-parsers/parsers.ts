@@ -36,9 +36,9 @@ function extractReference(text: string): string | undefined {
 }
 
 function extractRecipient(text: string): string | undefined {
-  const m = text.match(/(?:destinatario|beneficiario)\s*:?\s*([A-Za-zÁÉÍÓÚÑáéíóúñ\s.-]{3,60})(?:\n|$)/i);
+  const m = text.match(/(?:destinatario|beneficiario)\s*:?\s*([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ*\s.-]{3,60})(?:\n|$)/i);
   if (m?.[1]) return m[1].trim();
-  const alt = text.match(/a favor de\s+([A-Za-zÁÉÍÓÚÑáéíóúñ\s.-]{3,60})/i);
+  const alt = text.match(/a favor de\s+([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ*\s.-]{3,60})/i);
   return alt?.[1]?.trim() ?? undefined;
 }
 

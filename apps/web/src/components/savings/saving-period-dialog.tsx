@@ -82,13 +82,13 @@ export function SavingPeriodDialog({ open, onOpenChange }: Readonly<Props>) {
     setMonth(target.month);
     setAccounts(
       buckets.map((b) => {
-        const previous = last?.accounts.find((a) => a.bucket === b.bucket && a.currency === b.currency);
+        const _previous = last?.accounts.find((a) => a.bucket === b.bucket && a.currency === b.currency);
         return {
           bucket: b.bucket,
           bank: b.bank ?? null,
           currency: b.currency,
-          amount: previous?.amount ?? '0',
-          selected: !!previous,
+          amount: '0',
+          selected: false,
         };
       }),
     );

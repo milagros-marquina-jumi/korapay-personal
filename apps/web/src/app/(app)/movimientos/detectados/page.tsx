@@ -185,7 +185,7 @@ export default function DetectadosPage() {
         id: 'amount',
         accessorFn: (r) => Number(r.amount),
         sortingFn: 'basic',
-        size: 140,
+        size: 180,
         header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
         cell: ({ row }) => {
           const tx = row.original;
@@ -304,6 +304,7 @@ export default function DetectadosPage() {
       title="Movimientos detectados"
       titleAside={
         <InfoTooltip
+          className="ml-2"
           content={
             <span>
               Alta (&ge;80%): banco, monto, moneda, fecha, tarjeta y comercio detectados

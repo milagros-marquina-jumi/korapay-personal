@@ -46,14 +46,14 @@ export function classifyType(text: string): BankTransactionType {
   if (/revers|anulaci[oó]n|anulad/.test(t)) return 'REVERSAL';
   if (/devoluci[oó]n(?!\s+de\s+(tu|su)\s+tarjeta)|reembolso|refund/i.test(t)) return 'REFUND';
   if (/plin|yape/i.test(t)) return 'TRANSFER_SENT';
-  if (/retiro|cajero|atm/.test(t)) return 'CASH_WITHDRAWAL';
+  if (/\bretiro\b|cajero\s*autom[aá]tico|\batm\b/i.test(t)) return 'CASH_WITHDRAWAL';
   if (/transferencia (recibida|recibiste|abono)/.test(t) || /recibiste una transferencia/.test(t))
     return 'TRANSFER_RECEIVED';
   if (/transferencia|enviaste|transferiste/.test(t)) return 'TRANSFER_SENT';
   if (/suscripci[oó]n|recurrente/.test(t)) return 'SUBSCRIPTION';
   if (/pago de servicio|recibo|servicio|comisi[oó]n|intereses/.test(t)) return 'SERVICE_PAYMENT';
   if (/cuota|en \d+ cuotas/.test(t)) return 'INSTALLMENT_PURCHASE';
-  if (/internet|online|e-?commerce|por internet|web/.test(t)) return 'ONLINE_PURCHASE';
+  if (/por internet|online|e-?commerce|\bweb\b/i.test(t)) return 'ONLINE_PURCHASE';
   return 'CARD_PURCHASE';
 }
 

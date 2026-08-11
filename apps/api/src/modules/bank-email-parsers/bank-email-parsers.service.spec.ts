@@ -44,6 +44,87 @@ describe('BankEmailParsersService', () => {
     expect(r?.parsed.transactionType).toBe('REFUND');
   });
 
+  it('classifies Interbank transferencia as TRANSFER_SENT', () => {
+    const r = svc.parse(
+      email({
+        sender: 'Interbank Servicio al Cliente <servicioalcliente@netinterbank.com.pe>',
+        subject: 'Constancia de transferencia',
+        textBody: `Hola MILAGROS, te enviamos tu Constancia de transferencia
+Codigo de operacion 00487915
+Fecha y hora 25 Jul 2026 1:51 PM
+Cuenta cargo Cuenta Simple Soles 376 3205752880
+Destinatario JIMENEZ HU*** JA*** AL*** 8983202581449
+Moneda y monto S/ 500.00
+En Interbank, nunca te pediremos: Tu clave, numero de tarjeta y/o cuenta, codigo CVV, codigo de seguridad para concretar transacciones ni la devolucion de tu tarjeta, mediante ningun correo`,
+      }),
+    );
+    expect(r?.parserKey).toBe('interbank');
+    expect(r?.parsed.amount).toBe('500.00');
+    expect(r?.parsed.currency).toBe('PEN');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.recipient).toContain('JIMENEZ');
+  });
+
+  it('classifies Interbank USD transferencia as TRANSFER_SENT', () => {
+    const r = svc.parse(
+      email({
+        sender: 'Interbank Servicio al Cliente <servicioalcliente@netinterbank.com.pe>',
+        subject: 'Constancia de transferencia',
+        textBody: `Hola MILAGROS, te enviamos tu Constancia de transferencia
+Codigo de operacion 00459297
+Tipo de cambio Venta 3.539
+Cuenta cargo Cuenta Simple Soles 376 3205752880
+Cuenta destino Cuenta Simple Dolares 8983406591086
+Moneda y monto US$ 6,821.00`,
+      }),
+    );
+    expect(r?.parserKey).toBe('interbank');
+    expect(r?.parsed.amount).toBe('6821.00');
+    expect(r?.parsed.currency).toBe('USD');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+  });
+
+  it('classifies BBVA comprobante electronico as SERVICE_PAYMENT', () => {
+    const r = svc.parse(
+      email({
+        sender: 'Procesos BBVA <procesos@bbva.com.pe>',
+        subject: 'BBVA - Envio de Comprobante de Documento Electronico BF29-29004876',
+        textBody: `Hola MILAGROS JULISA MARQUINA MORA,
+Este es tu comprobante electronico por el pago de intereses y/o comisiones que realizaste
+Tipo de comprobante: BOLETA DE VENTA ELECTRONICA
+Numero: BF29-29004876
+Monto: PEN 5.80
+Fecha de Emision: 2026-07-31`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bbva');
+    expect(r?.parsed.amount).toBe('5.80');
+    expect(r?.parsed.currency).toBe('PEN');
+    expect(r?.parsed.transactionType).toBe('SERVICE_PAYMENT');
+    expect(r?.parsed.merchant).toContain('intereses');
+  });
+
+  it('classifies BBVA card purchase as CARD_PURCHASE not CASH_WITHDRAWAL', () => {
+    const r = svc.parse(
+      email({
+        sender: 'BBVA <procesos@bbva.com.pe>',
+        subject: 'Has realizado un consumo con tu tarjeta BBVA',
+        textBody: `Hola, MILAGROS
+Has realizado el siguiente consumo:
+Comercio: PedidosYa*Plus
+Monto: 16.90
+Moneda: PEN
+Fecha: 10/08/2026
+Hora: 08:25:22
+Este se cargara a tu tarjeta terminada en *4239
+Por tu seguridad, BBVA te informa: Nunca solicitaremos tus datos confidenciales por correo, tales como la clave SMS de Internet, clave de cajero, DNI o tu numero de celular.`,
+      }),
+    );
+    expect(r?.parserKey).toBe('bbva');
+    expect(r?.parsed.transactionType).toBe('CARD_PURCHASE');
+    expect(r?.parsed.merchant).toBe('PedidosYa*Plus');
+  });
+
   it('routes unknown sender to generic parser with lower confidence', () => {
     const r = svc.parse(email({ sender: 'Banco X <x@x.com>', textBody: 'Compra por S/ 10.00' }));
     expect(r?.parserKey).toBe('generic');

@@ -18,6 +18,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   ACTIVE: { label: 'Activo', className: 'bg-success/10 text-success' },
   INACTIVE: { label: 'Inactivo', className: 'bg-muted text-muted-foreground' },
+  FINISHED: { label: 'Finalizado', className: 'bg-muted text-muted-foreground' },
+  EXPIRING: { label: 'Por vencer', className: 'bg-warning/10 text-warning' },
 };
 export function statusLabel(status: string): string {
   return statusConfig[status]?.label ?? status;

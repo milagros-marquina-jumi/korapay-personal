@@ -35,7 +35,7 @@ export function SearchSelect({
   searchPlaceholder = 'Buscar...',
   clearable = false,
   clearLabel = 'Sin asignar',
-}: SearchSelectProps) {
+}: Readonly<SearchSelectProps>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
@@ -45,6 +45,12 @@ export function SearchSelect({
   }, [options, query]);
 
   const selectedLabel = options.find((o) => o.value === value)?.label;
+
+  const commit = (next: string) => {
+    onValueChange(next);
+    setOpen(false);
+    setQuery('');
+  };
 
   return (
     <DropdownMenu
@@ -105,9 +111,7 @@ export function SearchSelect({
               key={option.value}
               onSelect={(e) => {
                 e.preventDefault();
-                onValueChange(option.value);
-                setOpen(false);
-                setQuery('');
+                commit(option.value);
               }}
               className="flex items-center justify-between"
             >

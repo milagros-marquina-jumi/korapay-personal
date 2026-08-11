@@ -295,7 +295,15 @@ export interface SavingYearlyPivot {
   grandTotal: string;
 }
 
+export interface PersonalMatrices {
+  expenseByMonth: MonthlyMatrixRow[];
+  incomeByMonth: MonthlyMatrixRow[];
+  fixedByMonth: MonthlyMatrixRow[];
+  variableByMonth: MonthlyMatrixRow[];
+}
+
 export interface PersonalReports {
+  matrices?: PersonalMatrices;
   years: number[];
   yearlyTotals: { year: number; income: string; expense: string; net: string; fixed: string; variable: string }[];
   yearlyByCategory: { year: number; categories: { name: string; total: string }[] }[];
@@ -645,6 +653,10 @@ export interface EmploymentContract {
   currency: string;
   status: string;
   notes?: string | null;
+  companyName?: string | null;
+  grossSalary?: string | null;
+  state?: 'ACTIVE' | 'EXPIRING' | 'FINISHED';
+  daysRemaining?: number | null;
 }
 
 export interface TaxObligationInstallment {

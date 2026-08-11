@@ -1,12 +1,13 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
+import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { ActiveContractsDialog } from '@/components/contracts/active-contracts-dialog';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
@@ -59,9 +60,9 @@ function ContratosContent() {
 
   const statusOptions = useMemo(
     () =>
-      [...new Set(allContracts.map((c) => c.status).filter(Boolean) as string[])].map((v) => ({
+      [...new Set(allContracts.map((c) => c.state ?? c.status).filter(Boolean) as string[])].map((v) => ({
         value: v,
-        label: v,
+        label: statusLabel(v),
       })),
     [allContracts],
   );
@@ -84,7 +85,7 @@ function ContratosContent() {
     () =>
       allContracts.filter(
         (c) =>
-          (status === FILTER_ALL || c.status === status) &&
+          (status === FILTER_ALL || (c.state ?? c.status) === status) &&
           (type === FILTER_ALL || c.type === type) &&
           (currency === FILTER_ALL || c.currency === currency),
       ),
@@ -101,10 +102,15 @@ function ContratosContent() {
   const columns = useMemo<ColumnDef<EmploymentContract, unknown>[]>(
     () => [
       {
-        id: 'position',
-        accessorFn: (r) => r.position ?? 'Contrato',
-        header: ({ column }) => <SortableHeader column={column} label="Cargo" />,
-        cell: ({ row }) => <span className="font-medium">{row.original.position ?? 'Contrato'}</span>,
+        id: 'company',
+        accessorFn: (r) => r.companyName ?? '',
+        header: ({ column }) => <SortableHeader column={column} label="Empresa" />,
+        cell: ({ row }) => (
+          <div className="flex flex-col">
+            <span className="font-medium">{row.original.companyName ?? 'Sin empresa'}</span>
+            {row.original.position && <span className="text-xs text-muted-foreground">{row.original.position}</span>}
+          </div>
+        ),
       },
       {
         accessorKey: 'startDate',
@@ -123,20 +129,36 @@ function ContratosContent() {
       },
       {
         id: 'salary',
-        header: 'Salario',
-        cell: ({ row }) =>
-          row.original.salary ? (
-            <span className="font-medium tabular-nums">
-              {formatMoney(row.original.salary, row.original.currency as 'PEN' | 'USD')}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">-</span>
-          ),
+        header: 'Salario bruto',
+        cell: ({ row }) => {
+          const own = row.original.salary;
+          const derived = row.original.grossSalary;
+          const value = own ?? derived;
+          if (!value) return <span className="text-muted-foreground">-</span>;
+          return (
+            <div className="flex flex-col">
+              <span className="font-medium tabular-nums">
+                {formatMoney(value, row.original.currency as 'PEN' | 'USD')}
+              </span>
+              {!own && <span className="text-xs text-muted-foreground">según sus pagos</span>}
+            </div>
+          );
+        },
       },
       {
         accessorKey: 'status',
         header: 'Estado',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => {
+          const days = row.original.daysRemaining;
+          return (
+            <div className="flex flex-col gap-0.5">
+              <StatusBadge status={row.original.state ?? row.original.status} />
+              {row.original.state === 'EXPIRING' && days !== null && days !== undefined && (
+                <span className="text-xs text-warning">{days === 0 ? 'vence hoy' : `faltan ${days} días`}</span>
+              )}
+            </div>
+          );
+        },
       },
       {
         id: 'actions',
@@ -151,7 +173,7 @@ function ContratosContent() {
               onClick={async () => {
                 const ok = await confirm({
                   title: 'Eliminar contrato',
-                  description: `Se eliminará el contrato "${row.original.position ?? 'Contrato'}". Esta acción no se puede deshacer.`,
+                  description: `Se eliminará el contrato de "${row.original.companyName ?? 'Sin empresa'}". Esta acción no se puede deshacer.`,
                   confirmLabel: 'Eliminar',
                   destructive: true,
                 });
@@ -171,15 +193,18 @@ function ContratosContent() {
       description="Tus contratos laborales"
       action={
         activeWorkspaceId && (
-          <ContractFormDialog
-            workspaceId={activeWorkspaceId}
-            onSaved={markNew}
-            trigger={
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Nuevo contrato
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <ActiveContractsDialog contracts={allContracts} />
+            <ContractFormDialog
+              workspaceId={activeWorkspaceId}
+              onSaved={markNew}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo contrato
+                </Button>
+              }
+            />
+          </div>
         )
       }
     >

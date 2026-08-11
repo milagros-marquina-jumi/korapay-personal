@@ -350,18 +350,22 @@ function PaymentsBreakdown({
       >
         <div className="mt-2 divide-y rounded-lg border">
           {payments.map((payment) => (
-            <div key={payment.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">{formatDate(payment.date)}</span>
-              {payment.method && <span className="truncate text-xs text-muted-foreground">{payment.method}</span>}
-              <span className="font-semibold tabular-nums text-success">{formatMoney(payment.amount, currency)}</span>
-              {onDeletePayment && (
-                <IconAction
-                  icon={Trash2}
-                  label="Eliminar pago"
-                  destructive
-                  onClick={() => onDeletePayment(payment.id)}
-                />
-              )}
+            <div key={payment.id} className="flex items-center gap-3 px-3 py-2 text-sm">
+              <span className="w-24 shrink-0 tabular-nums text-muted-foreground">{formatDate(payment.date)}</span>
+              <span className="flex-1 truncate text-xs text-muted-foreground">{payment.method || '—'}</span>
+              <span className="w-28 shrink-0 text-right font-semibold tabular-nums text-success">
+                {formatMoney(payment.amount, currency)}
+              </span>
+              <span className="w-8 shrink-0">
+                {onDeletePayment && (
+                  <IconAction
+                    icon={Trash2}
+                    label="Eliminar pago"
+                    destructive
+                    onClick={() => onDeletePayment(payment.id)}
+                  />
+                )}
+              </span>
             </div>
           ))}
         </div>
@@ -399,7 +403,8 @@ export default function DeudasPage() {
   });
 
   const deletePaymentMutation = useMutation({
-    mutationFn: (paymentId: string) => apiFetch(`/debts/payments/${paymentId}`, { method: 'DELETE' }),
+    mutationFn: (paymentId: string) =>
+      apiFetch(`/debts/payments/${paymentId}?workspaceId=${activeWorkspaceId}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.debts(activeWorkspaceId ?? '') });
       toast.success('Pago eliminado');

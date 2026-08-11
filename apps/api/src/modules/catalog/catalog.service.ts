@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { buildGrossByCompany, deriveContractState } from './contract-state';
 
 @Injectable()
 export class CatalogService {
@@ -78,11 +79,31 @@ export class CatalogService {
   }
 
   async employmentContracts(workspaceId: string) {
-    const contracts = await this.prisma.employmentContract.findMany({
-      where: { workspaceId, deletedAt: null },
-      orderBy: { startDate: 'desc' },
-    });
-    return contracts.map((c) => ({ ...c, salary: c.salary?.toString() ?? null }));
+    const [contracts, companies, salaries] = await Promise.all([
+      this.prisma.employmentContract.findMany({
+        where: { workspaceId, deletedAt: null },
+        orderBy: { startDate: 'desc' },
+      }),
+      this.prisma.company.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { id: true, name: true },
+      }),
+      this.prisma.transaction.findMany({
+        where: { workspaceId, deletedAt: null, type: 'INCOME', concept: 'Sueldo', companyId: { not: null } },
+        select: { companyId: true, date: true, amountGross: true, amountBase: true },
+      }),
+    ]);
+
+    const companyName = new Map(companies.map((c) => [c.id, c.name]));
+    const grossByCompany = buildGrossByCompany(salaries);
+
+    return contracts.map((c) => ({
+      ...c,
+      salary: c.salary?.toString() ?? null,
+      companyName: companyName.get(c.companyId ?? '') ?? null,
+      grossSalary: grossByCompany.get(c.companyId ?? '') ?? null,
+      ...deriveContractState(c.endDate),
+    }));
   }
 
   async createEmploymentContract(data: {
@@ -106,7 +127,7 @@ export class CatalogService {
         endDate: data.endDate ? new Date(data.endDate) : null,
         salary: data.salary ?? null,
         currency: data.currency ?? 'PEN',
-        status: data.endDate ? 'FINISHED' : 'ACTIVE',
+        status: deriveContractState(data.endDate ? new Date(data.endDate) : null).state,
         notes: data.notes ?? null,
       },
     });
@@ -123,7 +144,7 @@ export class CatalogService {
     if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate as string);
     if (data.endDate !== undefined) {
       updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
-      updateData.status = data.endDate ? 'FINISHED' : 'ACTIVE';
+      updateData.status = deriveContractState(data.endDate ? new Date(data.endDate as string) : null).state;
     }
     if (data.salary !== undefined) updateData.salary = data.salary;
     if (data.currency !== undefined) updateData.currency = data.currency;

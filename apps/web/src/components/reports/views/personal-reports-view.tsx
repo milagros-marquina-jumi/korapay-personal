@@ -9,6 +9,7 @@ import { HeatmapTable } from '@/components/charts/heatmap-table';
 import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { buildCategoryHeatmap, MONTH_SHORT } from '@/components/reports/report-constants';
+import { YearMonthMatrix } from '@/components/reports/year-month-matrix';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,6 +61,7 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
   }
 
   const allYearsView = year === FILTER_ALL;
+  const matrices = data.matrices;
 
   const donutData = data.expenseByCategory.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
 
@@ -145,6 +147,9 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
                     />
                   </div>
                 )}
+                <div className="mt-6">
+                  <YearMonthMatrix title="Egresos por año y mes" rows={matrices?.expenseByMonth} />
+                </div>
                 {!allYearsView && data.incomeVsExpense.length > 0 && (
                   <div className="mt-6">
                     <h4 className="mb-3 text-sm font-medium text-muted-foreground">Egresos por mes</h4>
@@ -173,7 +178,11 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
           </CardHeader>
           <CardContent>
             {incomeExpenseData.length ? (
-              <MonthlyBar data={incomeExpenseData} />
+              <div className="space-y-6">
+                <MonthlyBar data={incomeExpenseData} />
+                <YearMonthMatrix title="Ingresos por año y mes" rows={matrices?.incomeByMonth} />
+                <YearMonthMatrix title="Egresos por año y mes" rows={matrices?.expenseByMonth} />
+              </div>
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
             )}
@@ -218,6 +227,8 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
                 secondColor="#3b82f6"
               />
             )}
+            <YearMonthMatrix title="Gasto fijo por año y mes" rows={matrices?.fixedByMonth} />
+            <YearMonthMatrix title="Gasto no fijo por año y mes" rows={matrices?.variableByMonth} />
           </CardContent>
         </Card>
       </TabsContent>

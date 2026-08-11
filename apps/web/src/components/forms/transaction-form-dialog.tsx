@@ -349,18 +349,14 @@ export function TransactionFormDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="concept">Concepto</Label>
-            <Input
-              id="concept"
-              list="concept-suggestions"
-              placeholder="Ej. Sueldo, Gratificación, CTS..."
-              {...register('concept')}
+            <Label>Concepto</Label>
+            <SearchSelect
+              placeholder="Selecciona un concepto"
+              searchPlaceholder="Buscar concepto..."
+              value={watch('concept') ?? ''}
+              onValueChange={(v) => setValue('concept', v, { shouldValidate: true })}
+              options={(categories ?? []).map((c) => ({ value: c.name, label: c.name }))}
             />
-            <datalist id="concept-suggestions">
-              {(categories ?? []).map((c) => (
-                <option key={c.id} value={c.name} />
-              ))}
-            </datalist>
             {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
           </div>
 

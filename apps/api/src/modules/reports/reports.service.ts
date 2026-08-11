@@ -5,6 +5,7 @@ import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { buildCompanyProfitability } from './company-profitability';
 import { buildEmploymentBreakdown } from './employment-breakdown';
+import { buildPersonalMatrices } from './personal-matrix';
 
 @Injectable()
 export class ReportsService {
@@ -207,6 +208,7 @@ export class ReportsService {
       savingsEvolution,
       fixedVsVariable,
       monthlyFixedVsVariable,
+      matrices: buildPersonalMatrices(allTransactions),
     };
   }
 

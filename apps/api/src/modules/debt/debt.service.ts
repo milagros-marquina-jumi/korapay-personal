@@ -91,9 +91,12 @@ export class DebtService {
     });
     return payment;
   }
-  async removePayment(paymentId: string) {
-    const payment = await this.prisma.debtPayment.findUnique({ where: { id: paymentId } });
-    if (!payment) throw new NotFoundException('Payment not found');
+  async removePayment(paymentId: string, workspaceId: string) {
+    const payment = await this.prisma.debtPayment.findUnique({
+      where: { id: paymentId },
+      include: { debt: { select: { workspaceId: true } } },
+    });
+    if (payment?.debt.workspaceId !== workspaceId) throw new NotFoundException('Pago no encontrado');
     await this.prisma.debtPayment.delete({ where: { id: paymentId } });
     const allPayments = await this.prisma.debtPayment.findMany({
       where: { debtId: payment.debtId },

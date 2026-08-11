@@ -12,22 +12,8 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card } from '@/components/ui/card';
 import { apiFetch } from '@/lib/api';
 import type { MonthlySummary } from '@/lib/api.types';
+import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
-
-const MONTH_NAMES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
 
 function ResumenMesContent() {
   const { activeWorkspaceId } = useWorkspace();

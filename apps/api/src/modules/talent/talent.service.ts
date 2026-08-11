@@ -1,22 +1,9 @@
 import { randomBytes } from 'node:crypto';
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
+import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
-
-const MONTH_NAMES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
 
 interface MonthlyBucket {
   salary: Decimal;

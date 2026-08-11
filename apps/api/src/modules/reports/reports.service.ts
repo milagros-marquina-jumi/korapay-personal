@@ -1,22 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
-
-const MONTH_NAMES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
 
 @Injectable()
 export class ReportsService {
@@ -185,7 +171,14 @@ export class ReportsService {
         year: number;
         month: number;
         total: Decimal;
-        accounts: { bucket: string; bank: string | null; currency: string; amount: string; amountBase: string }[];
+        accounts: {
+          id: string;
+          bucket: string;
+          bank: string | null;
+          currency: string;
+          amount: string;
+          amountBase: string;
+        }[];
       }
     >();
 
@@ -196,6 +189,7 @@ export class ReportsService {
       if (!period) continue;
       period.total = period.total.add(new Decimal(b.amountBase));
       period.accounts.push({
+        id: b.id,
         bucket: b.bucket,
         bank: b.bank,
         currency: b.currency,

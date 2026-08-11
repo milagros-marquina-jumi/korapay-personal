@@ -1,4 +1,5 @@
 export { CategoryDonut, type CategorySlice } from './category-donut';
+export { type HeatmapRow, HeatmapTable } from './heatmap-table';
 export { IncomeExpenseArea, type IncomeExpensePoint } from './income-expense-area';
 export { MonthlyBar, type MonthlyPoint } from './monthly-bar';
 export { CHART_CATEGORICAL, categoricalColor, EXPENSE_COLOR, INCOME_COLOR } from './palette';

@@ -23,6 +23,7 @@ import { PersonModule } from './modules/person/person.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { ReconciliationRulesModule } from './modules/reconciliation-rules/reconciliation-rules.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { SavingBalanceModule } from './modules/saving-balance/saving-balance.module';
 import { SavingGoalModule } from './modules/saving-goal/saving-goal.module';
 import { TalentModule } from './modules/talent/talent.module';
 import { TalentLedgerModule } from './modules/talent-ledger/talent-ledger.module';
@@ -51,6 +52,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     PendingItemModule,
     DebtModule,
     SavingGoalModule,
+    SavingBalanceModule,
     AuditModule,
     ProfileModule,
     TalentModule,

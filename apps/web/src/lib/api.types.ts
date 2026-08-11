@@ -252,6 +252,7 @@ export interface SavingEntry {
 }
 
 export interface SavingBalanceAccount {
+  id: string;
   bucket: string;
   bank?: string | null;
   currency: string;
@@ -270,6 +271,27 @@ export interface SavingBalancePeriod {
 export interface SavingBalancesMonthly {
   data: SavingBalancePeriod[];
   years: number[];
+}
+
+export interface SavingBucket {
+  bucket: string;
+  bank?: string | null;
+  currency: string;
+  periods: number;
+}
+
+export interface SavingLastPeriod {
+  year: number;
+  month: number;
+  label: string;
+  accounts: { bucket: string; bank?: string | null; currency: string; amount: string }[];
+}
+
+export interface SavingYearlyPivot {
+  monthNames: string[];
+  rows: { year: number; months: string[]; total: string }[];
+  monthTotals: string[];
+  grandTotal: string;
 }
 
 export interface PersonalReports {

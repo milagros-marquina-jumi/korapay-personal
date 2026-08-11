@@ -7,6 +7,7 @@ import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
 import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { SavingBucketsManager } from '@/components/savings/saving-buckets-manager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { queryKeys } from '@/lib/query-keys';
@@ -163,6 +164,13 @@ export default function ConfiguracionPage() {
                 />
               </CardContent>
             </Card>
+            {(activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED') && (
+              <Card>
+                <CardContent className="pt-6">
+                  <SavingBucketsManager />
+                </CardContent>
+              </Card>
+            )}
             {activeWorkspace?.type === 'BUSINESS' && (
               <>
                 <Card>

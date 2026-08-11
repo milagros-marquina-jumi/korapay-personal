@@ -20,6 +20,9 @@ export const queryKeys = {
   savingGoals: (workspaceId: string) => ['saving-goals', workspaceId] as const,
   savingBalances: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['saving-balances', workspaceId, filters ?? {}] as const,
+  savingBuckets: (workspaceId: string) => ['saving-buckets', workspaceId] as const,
+  savingLastPeriod: (workspaceId: string) => ['saving-last-period', workspaceId] as const,
+  savingYearlyPivot: (workspaceId: string) => ['saving-yearly-pivot', workspaceId] as const,
   personalReports: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['personal-reports', workspaceId, filters ?? {}] as const,
   businessReports: (workspaceId: string, filters?: Record<string, unknown>) =>

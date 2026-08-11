@@ -479,6 +479,7 @@ async function main() {
     descripcion: string | null;
     monto: number | null;
     banco: string | null;
+    masDetalle: string | null;
     estado: string | null;
   }>('egresos_personal');
   let expenseCount = 0;
@@ -497,6 +498,7 @@ async function main() {
         categoryId,
         status: mapExcelStatus(r.estado),
         tags: [r.fijoNoFijo ?? '', r.banco ?? '', r.mes ?? ''].filter(Boolean),
+        notes: r.masDetalle ?? null,
       },
     });
     expenseCount++;

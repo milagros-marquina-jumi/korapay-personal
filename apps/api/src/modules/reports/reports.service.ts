@@ -300,18 +300,107 @@ export class ReportsService {
   }
 
   async business(workspaceId: string, year?: number) {
-    const [transactions, applications, people, ledger] = await Promise.all([
+    const [transactions, applications, people, ledger, allTransactions, projects] = await Promise.all([
       this.prisma.transaction.findMany({
         where: { workspaceId, deletedAt: null, ...this.yearFilter(year) },
+        include: { projects: { select: { name: true } } },
       }),
       this.prisma.application.findMany({ where: { workspaceId, deletedAt: null } }),
       this.prisma.person.findMany({ where: { workspaceId, deletedAt: null } }),
       this.prisma.talentLedgerEntry.findMany({ where: { workspaceId, deletedAt: null } }),
+      this.prisma.transaction.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { date: true, type: true, amountBase: true, applicationId: true },
+      }),
+      this.prisma.project.findMany({ where: { workspaceId, deletedAt: null } }),
     ]);
 
-    const years = [...new Set(transactions.map((t) => t.date.getUTCFullYear()))].sort((a, b) => b - a);
+    const years = [...new Set(allTransactions.map((t) => t.date.getUTCFullYear()))].sort((a, b) => b - a);
     const appName = new Map(applications.map((a) => [a.id, a.name]));
     const personName = new Map(people.map((p) => [p.id, p.name]));
+
+    const yearAgg = new Map<number, { income: Decimal; cost: Decimal; team: Decimal }>();
+    const appMonthAgg = new Map<string, Decimal[]>();
+    for (const t of allTransactions) {
+      const y = t.date.getUTCFullYear();
+      if (!yearAgg.has(y)) yearAgg.set(y, { income: new Decimal(0), cost: new Decimal(0), team: new Decimal(0) });
+      const bucket = yearAgg.get(y);
+      if (!bucket) continue;
+      const amount = new Decimal(t.amountBase);
+      if (t.type === 'INCOME') bucket.income = bucket.income.add(amount);
+      else if (t.type === 'BUSINESS_COST') {
+        bucket.cost = bucket.cost.add(amount);
+        const name = appName.get(t.applicationId ?? '') ?? 'Sin aplicación';
+        if (!appMonthAgg.has(name))
+          appMonthAgg.set(
+            name,
+            Array.from({ length: 12 }, () => new Decimal(0)),
+          );
+        const months = appMonthAgg.get(name);
+        const idx = t.date.getUTCMonth();
+        if (months?.[idx]) months[idx] = months[idx].add(amount);
+      } else if (t.type === 'TEAM_PAYMENT') bucket.team = bucket.team.add(amount);
+    }
+
+    const yearlyTotals = [...yearAgg.entries()]
+      .map(([y, v]) => ({
+        year: y,
+        income: v.income.toFixed(2),
+        cost: v.cost.toFixed(2),
+        teamPayment: v.team.toFixed(2),
+        utility: v.income.minus(v.cost).minus(v.team).toFixed(2),
+      }))
+      .sort((a, b) => a.year - b.year);
+
+    const costByAppMonth = [...appMonthAgg.entries()]
+      .map(([name, months]) => ({
+        name,
+        months: months.map((m) => m.toFixed(2)),
+        total: months.reduce((s, m) => s.add(m), new Decimal(0)).toFixed(2),
+      }))
+      .sort((a, b) => Number(b.total) - Number(a.total));
+
+    const projectAgg = new Map<string, Decimal>();
+    const monthlyAgg = new Map<string, { income: Decimal; cost: Decimal; team: Decimal }>();
+    for (const t of transactions) {
+      const amount = new Decimal(t.amountBase);
+      const key = `${t.date.getUTCFullYear()}-${t.date.getUTCMonth() + 1}`;
+      if (!monthlyAgg.has(key)) {
+        monthlyAgg.set(key, { income: new Decimal(0), cost: new Decimal(0), team: new Decimal(0) });
+      }
+      const bucket = monthlyAgg.get(key);
+      if (bucket) {
+        if (t.type === 'INCOME') bucket.income = bucket.income.add(amount);
+        else if (t.type === 'BUSINESS_COST') bucket.cost = bucket.cost.add(amount);
+        else if (t.type === 'TEAM_PAYMENT') bucket.team = bucket.team.add(amount);
+      }
+      if (t.type !== 'BUSINESS_COST') continue;
+      const names = t.projects.length ? t.projects.map((p) => p.name) : ['Sin proyecto'];
+      for (const name of names) {
+        projectAgg.set(name, (projectAgg.get(name) ?? new Decimal(0)).add(amount.div(names.length)));
+      }
+    }
+
+    const costByProject = [...projectAgg.entries()]
+      .map(([name, total]) => ({ name, total: total.toFixed(2) }))
+      .sort((a, b) => Number(b.total) - Number(a.total));
+
+    const monthlyFlow = [...monthlyAgg.entries()]
+      .map(([key, v]) => {
+        const [y = 0, m = 1] = key.split('-').map(Number);
+        return {
+          year: y,
+          month: m,
+          label: `${MONTH_NAMES[m - 1]} ${y}`,
+          income: v.income.toFixed(2),
+          cost: v.cost.toFixed(2),
+          teamPayment: v.team.toFixed(2),
+          utility: v.income.minus(v.cost).minus(v.team).toFixed(2),
+        };
+      })
+      .sort((a, b) => a.year - b.year || a.month - b.month);
+
+    const projectCount = projects.length;
 
     let income = new Decimal(0);
     let cost = new Decimal(0);
@@ -355,7 +444,12 @@ export class ReportsService {
       teamPayment: teamPayment.toFixed(2),
       utility: income.minus(cost).minus(teamPayment).toFixed(2),
       costByApp,
+      costByProject,
+      costByAppMonth,
       teamByPerson,
+      yearlyTotals,
+      monthlyFlow,
+      projectCount,
       talent: {
         paid: talentPaid.toFixed(2),
         debt: talentDebt.toFixed(2),

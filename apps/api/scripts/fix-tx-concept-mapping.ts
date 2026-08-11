@@ -9,7 +9,12 @@ async function main() {
     return;
   }
 
-  // Only fix Excel-imported transactions (have Fijo/No Fijo tags)
+  const categories = await p.category.findMany({
+    where: { workspaceId: ws.id },
+    select: { name: true },
+  });
+  const categoryNames = new Set(categories.map((c) => c.name.toLowerCase()));
+
   const txs = await p.transaction.findMany({
     where: {
       workspaceId: ws.id,
@@ -22,22 +27,29 @@ async function main() {
 
   console.log(`Encontrados ${txs.length} egresos`);
 
-  let updated = 0;
-  for (const tx of txs) {
-    const newConcept = tx.description ?? tx.concept;
-    const newDescription = tx.concept;
+  let swapped = 0;
+  let skipped = 0;
 
-    await p.transaction.update({
-      where: { id: tx.id },
-      data: {
-        concept: newConcept,
-        description: newDescription,
-      },
-    });
-    updated++;
+  for (const tx of txs) {
+    const conceptIsCategory = categoryNames.has((tx.concept ?? '').toLowerCase());
+    const descriptionIsCategory = categoryNames.has((tx.description ?? '').toLowerCase());
+
+    if (conceptIsCategory && !descriptionIsCategory && tx.description) {
+      await p.transaction.update({
+        where: { id: tx.id },
+        data: {
+          concept: tx.description,
+          description: tx.concept,
+        },
+      });
+      swapped++;
+    } else {
+      skipped++;
+    }
   }
 
-  console.log(`Actualizados: ${updated} registros (concept ↔ description intercambiados)`);
+  console.log(`Swapeados: ${swapped} (concept era categoria, ahora tiene el item)`);
+  console.log(`Sin cambios: ${skipped} (ya correctos)`);
   await p.$disconnect();
 }
 

@@ -36,7 +36,7 @@ import { apiFetch } from '@/lib/api';
 import type { Debt } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, todayLocal } from '@/lib/utils';
 
 const debtSchema = z.object({
   direction: z.enum(['DEBO', 'ME_DEBEN']),
@@ -247,11 +247,11 @@ function PaymentFormDialog({
     formState: { errors },
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: { amount: '', date: new Date().toISOString().slice(0, 10), method: '' },
+    defaultValues: { amount: '', date: todayLocal(), method: '' },
   });
 
   useEffect(() => {
-    if (open) reset({ amount: '', date: new Date().toISOString().slice(0, 10), method: '' });
+    if (open) reset({ amount: '', date: todayLocal(), method: '' });
   }, [open, reset]);
 
   const mutation = useMutation({

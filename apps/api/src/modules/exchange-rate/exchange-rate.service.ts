@@ -53,9 +53,18 @@ export class ExchangeRateService {
     return latest ? String(latest.rate) : '3.42';
   }
 
-  async history() {
-    const rates = await this.prisma.exchangeRate.findMany({ orderBy: { date: 'desc' }, take: 90 });
-    return rates.map((r) => this.serialize(r));
+  async history(page = 1, limit = 10) {
+    const skip = (page - 1) * limit;
+    const [rates, total] = await Promise.all([
+      this.prisma.exchangeRate.findMany({ orderBy: { date: 'desc' }, skip, take: limit }),
+      this.prisma.exchangeRate.count(),
+    ]);
+    return {
+      data: rates.map((r) => this.serialize(r)),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async upsert(date: string, rate: string) {

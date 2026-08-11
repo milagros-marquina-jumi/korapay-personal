@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import { useState } from 'react';
 import { CategoryDonut, MonthlyBar, type MonthlyPoint } from '@/components/charts';
 import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -27,9 +28,13 @@ import { queryKeys } from '@/lib/query-keys';
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
 function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
+  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.personalReports(workspaceId),
-    queryFn: () => apiFetch<PersonalReports>(`/reports/personal?workspaceId=${workspaceId}`),
+    queryKey: queryKeys.personalReports(workspaceId, selectedYear ? { year: selectedYear } : {}),
+    queryFn: () =>
+      apiFetch<PersonalReports>(
+        `/reports/personal?workspaceId=${workspaceId}${selectedYear ? `&year=${selectedYear}` : ''}`,
+      ),
     enabled: !!workspaceId,
   });
 
@@ -55,35 +60,58 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
   const totalFixedVar = fixed + variable;
   const fixedPct = totalFixedVar > 0 ? (fixed / totalFixedVar) * 100 : 0;
 
-  const maxSaving = Math.max(1, ...data.savingsEvolution.map((s) => Number(s.total)));
-
   return (
     <Tabs defaultValue="categoria">
       <TabsList>
         <TabsTrigger value="categoria">Gastos por categoría</TabsTrigger>
         <TabsTrigger value="mes">Ingresos vs egresos</TabsTrigger>
-        <TabsTrigger value="ahorro">Evolución de ahorros</TabsTrigger>
         <TabsTrigger value="fijo">Fijo vs no fijo</TabsTrigger>
       </TabsList>
 
       <TabsContent value="categoria" className="mt-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Gastos por categoría</CardTitle>
+            <select
+              value={selectedYear ?? ''}
+              onChange={(e) => setSelectedYear(e.target.value ? Number(e.target.value) : undefined)}
+              className="rounded-md border bg-background px-3 py-1.5 text-sm"
+            >
+              <option value="">Todos los años</option>
+              {(data.years ?? []).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
           </CardHeader>
           <CardContent>
             {donutData.length ? (
-              <div className="grid gap-6 lg:grid-cols-2">
-                <CategoryDonut data={donutData} />
-                <div className="divide-y">
-                  {data.expenseByCategory.map((c) => (
-                    <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                      <span className="truncate">{c.name}</span>
-                      <span className="tabular-nums font-medium">{formatMoney(c.total, 'PEN')}</span>
-                    </div>
-                  ))}
+              <>
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <CategoryDonut data={donutData} />
+                  <div className="divide-y">
+                    {data.expenseByCategory.map((c) => (
+                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
+                        <span className="truncate">{c.name}</span>
+                        <span className="tabular-nums font-medium">{formatMoney(c.total, 'PEN')}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+                {data.incomeVsExpense.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="mb-3 text-sm font-medium text-muted-foreground">Egresos por mes</h4>
+                    <MonthlyBar
+                      data={data.incomeVsExpense.map((m) => ({
+                        label: `${MONTHS[m.month - 1]} ${String(m.year).slice(2)}`,
+                        ingresos: 0,
+                        egresos: Number(m.expense),
+                      }))}
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">Sin gastos registrados</p>
             )}
@@ -101,36 +129,6 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
               <MonthlyBar data={barData} />
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
-            )}
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="ahorro" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Evolución de ahorros por mes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data.savingsEvolution.length ? (
-              <div className="space-y-2">
-                {data.savingsEvolution.map((s) => (
-                  <div key={`${s.year}-${s.month}`} className="flex items-center gap-3">
-                    <span className="w-28 shrink-0 text-xs capitalize text-muted-foreground">{s.label}</span>
-                    <div className="h-6 flex-1 overflow-hidden rounded bg-muted">
-                      <div
-                        className="h-full rounded bg-brand/70"
-                        style={{ width: `${(Number(s.total) / maxSaving) * 100}%` }}
-                      />
-                    </div>
-                    <span className="w-32 shrink-0 text-right text-sm font-medium tabular-nums">
-                      {formatMoney(s.total, 'PEN')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="py-12 text-center text-sm text-muted-foreground">Sin saldos de ahorro registrados</p>
             )}
           </CardContent>
         </Card>

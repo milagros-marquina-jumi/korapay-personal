@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuditInterceptor } from './common/audit/audit.interceptor';
 import { AuthModule } from './common/auth/auth.module';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { ScheduledTasksModule } from './common/scheduled-tasks/scheduled-tasks.module';
 import { AccountModule } from './modules/account/account.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -66,6 +67,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     DetectedTransactionsModule,
     ReconciliationRulesModule,
     ReportsModule,
+    ScheduledTasksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

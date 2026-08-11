@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@/common/auth/auth.guard';
 import { UpsertExchangeRateDto } from './exchange-rate.dto';
@@ -18,9 +18,9 @@ export class ExchangeRateController {
   }
 
   @Get('history')
-  @ApiOperation({ summary: 'Exchange rate history (by day)' })
-  history() {
-    return this.exchangeRateService.history();
+  @ApiOperation({ summary: 'Exchange rate history (paginated)' })
+  history(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.exchangeRateService.history(Number(page) || 1, Number(limit) || 10);
   }
 
   @Post('refresh')

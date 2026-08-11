@@ -32,6 +32,7 @@ export class DebtController {
     return this.debtService.addPayment(id, workspaceId, { ...body });
   }
   @Delete('payments/:paymentId')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Delete a payment' })
   removePayment(@Param('paymentId') paymentId: string) {
     return this.debtService.removePayment(paymentId);

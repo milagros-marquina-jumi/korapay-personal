@@ -80,20 +80,29 @@ export default function DashboardPage() {
               value={formatMoney(summary.ingresos, 'PEN')}
               icon={ArrowUpRight}
               color="text-success"
+              tooltip="Total de movimientos tipo INCOME en el periodo"
             />
             <KPICard
               label="Egresos"
               value={formatMoney(summary.egresos, 'PEN')}
               icon={ArrowDownRight}
               color="text-destructive"
+              tooltip="Total de movimientos tipo EXPENSE en el periodo"
             />
             <KPICard
               label="Disponible"
               value={formatMoney(summary.disponible, 'PEN')}
               icon={Wallet}
               color="text-info"
+              tooltip="Saldo actual de tus cuentas (balance inicial + ingresos pagados - egresos pagados)"
             />
-            <KPICard label="Ahorro" value={formatMoney(summary.ahorro, 'PEN')} icon={PiggyBank} color="text-brand" />
+            <KPICard
+              label="Ahorro"
+              value={formatMoney(summary.ahorro, 'PEN')}
+              icon={PiggyBank}
+              color="text-brand"
+              tooltip="Total de movimientos tipo SAVING en el periodo"
+            />
           </>
         )}
       </div>

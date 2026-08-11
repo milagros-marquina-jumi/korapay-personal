@@ -12,25 +12,30 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { apiFetch } from '@/lib/api';
 import type { ExchangeRateInfo } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { formatDate, todayLocal } from '@/lib/utils';
 
 export function ExchangeRatePanel() {
   const queryClient = useQueryClient();
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayLocal);
   const [rate, setRate] = useState('');
+  const [page, setPage] = useState(1);
+  const limit = 10;
 
   const { data: latest } = useQuery({
     queryKey: queryKeys.exchangeRate(),
     queryFn: () => apiFetch<ExchangeRateInfo | null>('/exchange-rate'),
   });
-  const { data: history } = useQuery({
-    queryKey: queryKeys.exchangeRateHistory(),
-    queryFn: () => apiFetch<ExchangeRateInfo[]>('/exchange-rate/history'),
+  const { data: historyPage } = useQuery({
+    queryKey: queryKeys.exchangeRateHistory(page, limit),
+    queryFn: () =>
+      apiFetch<{ data: ExchangeRateInfo[]; total: number; page: number; totalPages: number }>(
+        `/exchange-rate/history?page=${page}&limit=${limit}`,
+      ),
   });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.exchangeRate() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.exchangeRateHistory() });
+    queryClient.invalidateQueries({ queryKey: ['exchange-rate', 'history'] });
   };
 
   const refresh = useMutation({
@@ -93,25 +98,47 @@ export function ExchangeRatePanel() {
           </Button>
         </form>
 
-        {history && history.length > 0 && (
-          <div className="overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>USD → PEN</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {history.map((h) => (
-                  <TableRow key={h.date}>
-                    <TableCell>{formatDate(h.date)}</TableCell>
-                    <TableCell className="tabular-nums">{h.rate}</TableCell>
+        {historyPage && historyPage.data.length > 0 && (
+          <>
+            <div className="overflow-hidden rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>USD → PEN</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {historyPage.data.map((h) => (
+                    <TableRow key={h.date}>
+                      <TableCell>{formatDate(h.date)}</TableCell>
+                      <TableCell className="tabular-nums">{h.rate}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            {historyPage.totalPages > 1 && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  Página {historyPage.page} de {historyPage.totalPages} ({historyPage.total} registros)
+                </span>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                    Anterior
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= historyPage.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

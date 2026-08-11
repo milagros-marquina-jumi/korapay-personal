@@ -8,8 +8,9 @@ interface KPICardProps {
   color?: string;
   trend?: { direction: 'up' | 'down'; value: string };
   className?: string;
+  tooltip?: string;
 }
-export function KPICard({ label, value, icon: Icon, color, trend, className }: KPICardProps) {
+export function KPICard({ label, value, icon: Icon, color, trend, className, tooltip }: KPICardProps) {
   return (
     <div
       className={cn(
@@ -22,7 +23,9 @@ export function KPICard({ label, value, icon: Icon, color, trend, className }: K
         className={cn('absolute inset-x-0 top-0 h-1 opacity-80', color ? 'bg-current' : 'bg-primary', color)}
       />
       <div className="flex items-start justify-between">
-        <span className="text-sm font-medium text-muted-foreground">{label}</span>
+        <span className="text-sm font-medium text-muted-foreground" title={tooltip}>
+          {label}
+        </span>
         {Icon && (
           <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-current/10', color)}>
             <Icon className={cn('h-5 w-5', color ?? 'text-primary')} />

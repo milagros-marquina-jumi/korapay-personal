@@ -50,5 +50,5 @@ export const queryKeys = {
   globalCompanies: () => ['global-companies'] as const,
   globalClients: () => ['global-clients'] as const,
   exchangeRate: () => ['exchange-rate'] as const,
-  exchangeRateHistory: () => ['exchange-rate', 'history'] as const,
+  exchangeRateHistory: (page?: number, limit?: number) => ['exchange-rate', 'history', page ?? 1, limit ?? 10] as const,
 } as const;

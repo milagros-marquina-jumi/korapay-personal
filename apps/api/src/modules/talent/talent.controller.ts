@@ -81,6 +81,15 @@ export class TalentController {
   ) {
     return this.talentService.addDistribution(contractId, workspaceId, { ...body });
   }
+  @Post(':id/distributions')
+  @ApiOperation({ summary: 'Create loose distribution (no contract, e.g. CTS / Gratificación / Liquidación)' })
+  addLooseDistribution(
+    @Param('id') id: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+    @Body() body: CreateTalentDistributionDto,
+  ) {
+    return this.talentService.addLooseDistribution(id, workspaceId, { ...body });
+  }
   @Patch('distributions/:distId')
   @ApiOperation({ summary: 'Update income distribution' })
   updateDistribution(

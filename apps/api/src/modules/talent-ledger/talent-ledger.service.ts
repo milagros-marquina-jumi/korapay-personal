@@ -6,6 +6,7 @@ export interface LedgerFilters {
   talentId?: string;
   status?: string;
   type?: string;
+  category?: string;
   year?: number;
   month?: number;
 }
@@ -18,6 +19,7 @@ export interface LedgerActor {
 interface LedgerCreateInput {
   date: string;
   type: string;
+  category?: string;
   paidAmount?: string;
   debtAmount?: string;
   pendingAmount?: string;
@@ -29,6 +31,7 @@ interface LedgerCreateInput {
 interface LedgerUpdateInput {
   date?: string;
   type?: string;
+  category?: string;
   paidAmount?: string;
   debtAmount?: string;
   pendingAmount?: string;
@@ -54,6 +57,7 @@ export class TalentLedgerService {
         ...(filters.talentId ? { talentId: filters.talentId } : {}),
         ...(filters.status ? { status: filters.status } : {}),
         ...(filters.type ? { type: filters.type } : {}),
+        ...(filters.category ? { category: filters.category } : {}),
         ...(filters.year ? { year: filters.year } : {}),
         ...(filters.month ? { month: filters.month } : {}),
       },
@@ -68,6 +72,7 @@ export class TalentLedgerService {
         deletedAt: null,
         ...(filters.status ? { status: filters.status } : {}),
         ...(filters.type ? { type: filters.type } : {}),
+        ...(filters.category ? { category: filters.category } : {}),
         ...(filters.year ? { year: filters.year } : {}),
         ...(filters.month ? { month: filters.month } : {}),
       },
@@ -135,6 +140,7 @@ export class TalentLedgerService {
         year: day.getUTCFullYear(),
         month: day.getUTCMonth() + 1,
         type: data.type,
+        category: data.category ?? null,
         paidAmount: data.paidAmount ?? '0',
         debtAmount: data.debtAmount ?? '0',
         pendingAmount: data.pendingAmount ?? '0',
@@ -169,6 +175,7 @@ export class TalentLedgerService {
       patch.month = day.getUTCMonth() + 1;
     }
     if (data.type !== undefined) patch.type = data.type;
+    if (data.category !== undefined) patch.category = data.category || null;
     if (data.paidAmount !== undefined) patch.paidAmount = data.paidAmount;
     if (data.debtAmount !== undefined) patch.debtAmount = data.debtAmount;
     if (data.pendingAmount !== undefined) patch.pendingAmount = data.pendingAmount;

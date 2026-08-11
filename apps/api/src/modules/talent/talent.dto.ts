@@ -59,6 +59,11 @@ export class CreateTalentDto {
   @IsIn(['ACTIVE', 'INACTIVE'])
   status?: string;
 
+  @ApiPropertyOptional({ enum: ['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER'] })
+  @IsOptional()
+  @IsIn(['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER'])
+  terminationReason?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -147,6 +152,11 @@ export class CreateTalentContractDto {
   @IsIn(['ACTIVE', 'FINISHED'])
   status?: string;
 
+  @ApiPropertyOptional({ description: 'Descripcion libre del plazo (ej: 6 meses luego indefinido)' })
+  @IsOptional()
+  @IsString()
+  contractTerm?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -186,6 +196,16 @@ export class CreateTalentDistributionDto {
   @IsOptional()
   @IsIn(['Mensual', 'Gratificación', 'Liquidación', 'CTS', 'Extra'])
   paymentType?: string;
+
+  @ApiPropertyOptional({ description: 'Empresa (solo para distribuciones sin contrato, ej: CTS/Gratificación)' })
+  @IsOptional()
+  @IsString()
+  companyName?: string;
+
+  @ApiPropertyOptional({ description: 'Cliente (solo para distribuciones sin contrato)' })
+  @IsOptional()
+  @IsString()
+  clientName?: string;
 
   @ApiPropertyOptional({ example: '4000.00' })
   @IsOptional()

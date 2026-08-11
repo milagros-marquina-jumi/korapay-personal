@@ -187,6 +187,18 @@ function TalentDetailContent() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+  const createLooseDistMut = useMutation({
+    mutationFn: (values: DistributionFormValues) =>
+      apiFetch(`/talents/${id}/distributions?workspaceId=${ws}`, {
+        method: 'POST',
+        body: JSON.stringify(values),
+      }),
+    onSuccess: () => {
+      invalidateTalent();
+      toast.success('Ingreso suelto registrado');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const updateDistMut = useMutation({
     mutationFn: ({ distId, values }: { distId: string; values: DistributionFormValues }) =>
       apiFetch(`/talents/distributions/${distId}?workspaceId=${ws}`, { method: 'PATCH', body: JSON.stringify(values) }),
@@ -368,7 +380,7 @@ function TalentDetailContent() {
                   color="text-brand"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-4">
                 <KPICard
                   label="Sueldo total"
                   value={formatMoney(report.income.salary, 'PEN')}
@@ -387,7 +399,147 @@ function TalentDetailContent() {
                   icon={AlertTriangle}
                   color="text-destructive"
                 />
+                {Number(report.expense.fraudLoss) > 0 && (
+                  <KPICard
+                    label="Pérdida por fraude"
+                    value={formatMoney(report.expense.fraudLoss, 'PEN')}
+                    icon={AlertTriangle}
+                    color="text-destructive"
+                  />
+                )}
               </div>
+              {report.byCompany.length > 0 && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Por empresa</CardTitle>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Empresa</TableHead>
+                            <TableHead className="text-right">Recibí</TableHead>
+                            <TableHead className="text-right">Se quedó</TableHead>
+                            <TableHead className="text-right">Pagos</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {report.byCompany.map((c) => (
+                            <TableRow key={c.name}>
+                              <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                              <TableCell className="text-right tabular-nums text-info">
+                                {formatMoney(c.received, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">{formatMoney(c.kept, 'PEN')}</TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">{c.payments}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Por cliente final</CardTitle>
+                    </CardHeader>
+                    <CardContent className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Cliente</TableHead>
+                            <TableHead className="text-right">Recibí</TableHead>
+                            <TableHead className="text-right">Se quedó</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {report.byClient.map((c) => (
+                            <TableRow key={c.name}>
+                              <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                              <TableCell className="text-right tabular-nums text-info">
+                                {formatMoney(c.received, 'PEN')}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">{formatMoney(c.kept, 'PEN')}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {(report.byPaymentType.length > 0 || report.expenseByCategory.length > 0) && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {report.byPaymentType.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Por tipo de pago (Planilla vs RxH)</CardTitle>
+                      </CardHeader>
+                      <CardContent className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Tipo</TableHead>
+                              <TableHead className="text-right">Recibí</TableHead>
+                              <TableHead className="text-right">Se quedó</TableHead>
+                              <TableHead className="text-right">Cantidad</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {report.byPaymentType.map((p) => (
+                              <TableRow key={p.name}>
+                                <TableCell className="text-sm font-medium">{p.name}</TableCell>
+                                <TableCell className="text-right tabular-nums text-info">
+                                  {formatMoney(p.received, 'PEN')}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums">{formatMoney(p.kept, 'PEN')}</TableCell>
+                                <TableCell className="text-right text-xs text-muted-foreground">{p.count}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {report.expenseByCategory.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Egresos por categoría</CardTitle>
+                      </CardHeader>
+                      <CardContent className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Categoría</TableHead>
+                              <TableHead className="text-right">Pagado</TableHead>
+                              <TableHead className="text-right">Deuda</TableHead>
+                              <TableHead className="text-right">Falta</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {report.expenseByCategory.map((c) => (
+                              <TableRow key={c.name}>
+                                <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                                <TableCell className="text-right tabular-nums text-success">
+                                  {formatMoney(c.paid, 'PEN')}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums text-warning">
+                                  {formatMoney(c.debt, 'PEN')}
+                                </TableCell>
+                                <TableCell className="text-right tabular-nums text-destructive">
+                                  {formatMoney(c.pending, 'PEN')}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Detalle por mes</CardTitle>
@@ -551,7 +703,14 @@ function TalentDetailContent() {
                       <div className="min-w-0">
                         <CardTitle className="truncate">{contract.position ?? 'Contrato'}</CardTitle>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {[contract.companyName, contract.clientName].filter(Boolean).join(' / ') || 'Sin empresa'}
+                          {[
+                            contract.companyName
+                              ? `${contract.companyName}${contract.sequenceIndex ? ` (#${contract.sequenceIndex})` : ''}`
+                              : null,
+                            contract.clientName,
+                          ]
+                            .filter(Boolean)
+                            .join(' / ') || 'Sin empresa'}
                           {contract.paymentType ? ` · ${contract.paymentType}` : ''}
                         </p>
                       </div>
@@ -579,12 +738,18 @@ function TalentDetailContent() {
                         <span>
                           {formatDate(contract.startDate)} – {formatDateOrActive(contract.endDate)}
                         </span>
+                        <span className="italic">Duró: {formatDuration(contract.startDate, contract.endDate)}</span>
                         {contract.rate && (
                           <span className="font-medium tabular-nums text-foreground">
                             Sueldo: {formatMoney(contract.rate, contract.currency as 'PEN' | 'USD')}
                           </span>
                         )}
                       </div>
+                      {contract.contractTerm && (
+                        <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">Plazo:</span> {contract.contractTerm}
+                        </p>
+                      )}
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">Pagos por mes</p>
                         <DistributionFormDialog
@@ -670,6 +835,95 @@ function TalentDetailContent() {
             );
           })()}
 
+          {talent.looseDistributions && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base">Ingresos sueltos (CTS, Gratificación, Liquidación)</CardTitle>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Ingresos que no dependen de un contrato de mes específico.
+                  </p>
+                </div>
+                <DistributionFormDialog
+                  loose
+                  onSubmit={(v) => createLooseDistMut.mutateAsync(v).then(() => undefined)}
+                  isPending={createLooseDistMut.isPending}
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <Plus className="mr-1 size-4" /> Nuevo ingreso suelto
+                    </Button>
+                  }
+                />
+              </CardHeader>
+              <CardContent>
+                {talent.looseDistributions.length ? (
+                  <div className="overflow-x-auto rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead className="text-right">Con descuento</TableHead>
+                          <TableHead className="text-right">Recibí</TableHead>
+                          <TableHead className="text-right">Se quedó</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {talent.looseDistributions.map((dist) => (
+                          <TableRow key={dist.id}>
+                            <TableCell className="whitespace-nowrap text-sm">
+                              {dist.date ? formatDate(dist.date) : '—'}
+                            </TableCell>
+                            <TableCell className="text-sm">{dist.paymentType}</TableCell>
+                            <TableCell className="text-sm">
+                              {[dist.companyName, dist.clientName].filter(Boolean).join(' / ') || '—'}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatMoney(dist.amountWithDiscount, 'PEN')}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-info">
+                              {formatMoney(dist.amountReceived, 'PEN')}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatMoney(dist.amountRetained, 'PEN')}
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={dist.status} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-0.5">
+                                <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
+                                <IconAction
+                                  icon={Trash2}
+                                  label="Eliminar"
+                                  destructive
+                                  onClick={async () => {
+                                    const ok = await confirm({
+                                      title: 'Eliminar ingreso',
+                                      description: 'Esta acción no se puede deshacer.',
+                                      confirmLabel: 'Eliminar',
+                                      destructive: true,
+                                    });
+                                    if (ok) deleteDistMut.mutate(dist.id);
+                                  }}
+                                />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="py-4 text-center text-sm text-muted-foreground">Sin ingresos sueltos registrados.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {editingContract && (
             <TalentContractFormDialog
               contract={editingContract}
@@ -684,6 +938,7 @@ function TalentDetailContent() {
           {editingDist && (
             <DistributionFormDialog
               distribution={editingDist}
+              loose={!editingDist.contractId}
               open={!!editingDist}
               onOpenChange={(next) => !next && setEditingDist(null)}
               onSubmit={(v) => updateDistMut.mutateAsync({ distId: editingDist.id, values: v }).then(() => undefined)}
@@ -750,6 +1005,7 @@ function normalize(values: LedgerFormValues) {
   return {
     date: values.date,
     type: values.type,
+    category: values.category || undefined,
     paidAmount: values.paidAmount || '0',
     debtAmount: values.debtAmount || '0',
     pendingAmount: values.pendingAmount || '0',

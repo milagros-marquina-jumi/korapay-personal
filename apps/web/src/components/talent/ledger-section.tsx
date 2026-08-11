@@ -22,6 +22,20 @@ const STATUS_LABELS: Record<string, string> = {
   PARTIAL: 'Parcial',
   OVERDUE: 'Vencido',
   CANCELLED: 'Cancelado',
+  NUNCA_PAGO: 'Nunca pagó',
+};
+const CATEGORY_LABELS: Record<string, string> = {
+  EDUCACION: 'Educación',
+  SUSCRIPCION: 'Suscripción',
+  TRABAJO: 'Trabajo',
+  ALQUILER: 'Alquiler',
+  PRESTAMO: 'Préstamo',
+  MOBILIARIO: 'Mobiliario',
+  EQUIPO: 'Equipo',
+  TRANSPORTE: 'Transporte',
+  COMIDA: 'Comida',
+  FRAUDE: 'Fraude',
+  OTRO: 'Otro',
 };
 
 interface LedgerSectionProps {
@@ -50,6 +64,7 @@ export function LedgerSection({
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(FILTER_ALL);
   const [type, setType] = useState(FILTER_ALL);
+  const [category, setCategory] = useState(FILTER_ALL);
   const [year, setYear] = useState(FILTER_ALL);
   const [month, setMonth] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<TalentLedgerEntry | null>(null);
@@ -57,6 +72,14 @@ export function LedgerSection({
   const cur = currency as 'PEN' | 'USD';
   const statusOptions = useMemo(
     () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: STATUS_LABELS[v] ?? v })),
+    [entries],
+  );
+  const categoryOptions = useMemo(
+    () =>
+      [...new Set(entries.map((e) => e.category ?? '').filter(Boolean))].map((v) => ({
+        value: v,
+        label: CATEGORY_LABELS[v] ?? v,
+      })),
     [entries],
   );
   const availableYears = useMemo(() => [...new Set(entries.map((e) => e.year))].sort((a, b) => b - a), [entries]);
@@ -68,17 +91,24 @@ export function LedgerSection({
         (!q || (e.description ?? '').toLowerCase().includes(q)) &&
         (status === FILTER_ALL || e.status === status) &&
         (type === FILTER_ALL || e.type === type) &&
+        (category === FILTER_ALL || (e.category ?? '') === category) &&
         (year === FILTER_ALL || String(e.year) === year) &&
         (month === FILTER_ALL || String(e.month) === month),
     );
-  }, [entries, search, status, type, year, month]);
+  }, [entries, search, status, type, category, year, month]);
 
   const hasFilters =
-    search !== '' || status !== FILTER_ALL || type !== FILTER_ALL || year !== FILTER_ALL || month !== FILTER_ALL;
+    search !== '' ||
+    status !== FILTER_ALL ||
+    type !== FILTER_ALL ||
+    category !== FILTER_ALL ||
+    year !== FILTER_ALL ||
+    month !== FILTER_ALL;
   const clear = () => {
     setSearch('');
     setStatus(FILTER_ALL);
     setType(FILTER_ALL);
+    setCategory(FILTER_ALL);
     setYear(FILTER_ALL);
     setMonth(FILTER_ALL);
   };
@@ -94,6 +124,15 @@ export function LedgerSection({
         accessorKey: 'type',
         header: 'Tipo',
         cell: ({ row }) => <span className="text-sm">{TYPE_LABELS[row.original.type] ?? row.original.type}</span>,
+      },
+      {
+        accessorKey: 'category',
+        header: 'Categoría',
+        cell: ({ row }) => (
+          <span className="text-xs text-muted-foreground">
+            {row.original.category ? (CATEGORY_LABELS[row.original.category] ?? row.original.category) : '—'}
+          </span>
+        ),
       },
       {
         id: 'paid',
@@ -199,6 +238,15 @@ export function LedgerSection({
               placeholder="Estado"
               allLabel="Todo estado"
             />
+            {categoryOptions.length > 0 && (
+              <FilterSelect
+                value={category}
+                onValueChange={setCategory}
+                options={categoryOptions}
+                placeholder="Categoría"
+                allLabel="Toda categoría"
+              />
+            )}
             <MonthYearFilter
               year={year}
               month={month}

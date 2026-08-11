@@ -454,16 +454,22 @@ export interface TalentContract {
   startDate: string;
   endDate?: string | null;
   status: string;
+  contractTerm?: string | null;
   notes?: string | null;
+  sequenceIndex?: number;
   incomeDistributions?: TalentIncomeDistribution[];
 }
 
 export interface TalentIncomeDistribution {
   id: string;
+  contractId?: string | null;
+  talentId?: string | null;
   date?: string | null;
   year?: number | null;
   month?: number | null;
   paymentType: string;
+  companyName?: string | null;
+  clientName?: string | null;
   salary?: string | null;
   amountWithDiscount: string;
   amountReceived: string;
@@ -494,7 +500,7 @@ export interface TalentDebtRow {
 
 export interface TalentReport {
   income: { salary: string; withDiscount: string; receivedByMe: string; keptByTalent: string };
-  expense: { paid: string; debt: string; pending: string };
+  expense: { paid: string; debt: string; pending: string; fraudLoss: string };
   net: string;
   byMonth: {
     year: number;
@@ -510,6 +516,10 @@ export interface TalentReport {
     net: string;
   }[];
   debtRows: TalentDebtRow[];
+  byCompany: { name: string; received: string; kept: string; salary: string; payments: number }[];
+  byClient: { name: string; received: string; kept: string }[];
+  byPaymentType: { name: string; received: string; kept: string; count: number }[];
+  expenseByCategory: { name: string; paid: string; debt: string; pending: string }[];
 }
 
 export interface TalentPivotPeriod {
@@ -531,6 +541,7 @@ export interface TalentGlobalReport {
     debt: string;
     pending: string;
     net: string;
+    fraudLoss: string;
   };
   incomeByPerson: {
     talentId: string;
@@ -543,6 +554,19 @@ export interface TalentGlobalReport {
   expenseByPerson: { talentId: string; name: string; paid: string; debt: string; pending: string }[];
   incomePivot: TalentPivotPeriod[];
   expensePivot: TalentPivotPeriod[];
+  byCompany: { name: string; received: string; kept: string; salary: string; talents: string[]; payments: number }[];
+  byClient: { name: string; received: string; kept: string; talents: string[] }[];
+  byPaymentType: { name: string; received: string; kept: string; count: number }[];
+  expenseByCategory: { name: string; paid: string; debt: string; pending: string }[];
+  timeSeries: { year: number; month: number; label: string; income: string; expense: string; net: string }[];
+  profitabilityByPerson: {
+    talentId: string;
+    name: string;
+    received: string;
+    paid: string;
+    net: string;
+    margin: string;
+  }[];
 }
 
 export interface Talent {
@@ -551,6 +575,7 @@ export interface Talent {
   email?: string | null;
   phone?: string | null;
   status: string;
+  terminationReason?: string | null;
   role?: string | null;
   startedWithMeAt?: string | null;
   endedWithMeAt?: string | null;
@@ -563,6 +588,7 @@ export interface Talent {
   accessToken?: string | null;
   tokenEnabledAt?: string | null;
   contracts?: TalentContract[];
+  looseDistributions?: TalentIncomeDistribution[];
 }
 
 export interface TalentLedgerEntry {
@@ -572,6 +598,7 @@ export interface TalentLedgerEntry {
   year: number;
   month: number;
   type: string;
+  category?: string | null;
   paidAmount: string;
   debtAmount: string;
   pendingAmount: string;
@@ -657,6 +684,8 @@ export interface EmploymentContract {
   grossSalary?: string | null;
   state?: 'ACTIVE' | 'EXPIRING' | 'FINISHED';
   daysRemaining?: number | null;
+  sequence?: number;
+  sequenceTotal?: number;
 }
 
 export interface TaxObligationInstallment {

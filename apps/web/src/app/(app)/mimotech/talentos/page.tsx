@@ -53,12 +53,14 @@ function initials(name: string) {
 const schema = z.object({
   name: z.string().min(1, 'Requerido'),
   status: z.enum(['ACTIVE', 'INACTIVE']),
+  terminationReason: z.enum(['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER']).optional().or(z.literal('')),
   role: z.string().optional(),
   startedWithMeAt: z.string().optional(),
   endedWithMeAt: z.string().optional(),
   firstJobAt: z.string().optional(),
   studyPlace: z.string().optional(),
   studyStartAt: z.string().optional(),
+  studyEndAt: z.string().optional(),
   slideUrl: z.string().optional(),
   email: z.string().optional(),
   phone: z.string().optional(),
@@ -68,6 +70,13 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
+const TERMINATION_LABELS: Record<string, string> = {
+  FRAUD: 'Fraude',
+  INDECISIVE: 'Indeciso',
+  ENDED: 'Finalizó contrato',
+  RESIGNED: 'Renunció',
+  OTHER: 'Otro',
+};
 
 function TalentFormDialog({
   workspaceId,
@@ -107,12 +116,14 @@ function TalentFormDialog({
       reset({
         name: talent.name,
         status: (talent.status as FormValues['status']) ?? 'ACTIVE',
+        terminationReason: (talent.terminationReason as FormValues['terminationReason']) ?? '',
         role: talent.role ?? '',
         startedWithMeAt: talent.startedWithMeAt ? talent.startedWithMeAt.slice(0, 10) : '',
         endedWithMeAt: talent.endedWithMeAt ? talent.endedWithMeAt.slice(0, 10) : '',
         firstJobAt: talent.firstJobAt ? talent.firstJobAt.slice(0, 10) : '',
         studyPlace: talent.studyPlace ?? '',
         studyStartAt: talent.studyStartAt ? talent.studyStartAt.slice(0, 10) : '',
+        studyEndAt: talent.studyEndAt ? talent.studyEndAt.slice(0, 10) : '',
         slideUrl: talent.slideUrl ?? '',
         email: talent.email ?? '',
         phone: talent.phone ?? '',
@@ -127,12 +138,14 @@ function TalentFormDialog({
         workspaceId,
         name: values.name,
         status: values.status,
+        terminationReason: values.terminationReason || undefined,
         role: values.role || undefined,
         startedWithMeAt: values.startedWithMeAt || undefined,
         endedWithMeAt: values.endedWithMeAt || undefined,
         firstJobAt: values.firstJobAt || undefined,
         studyPlace: values.studyPlace || undefined,
         studyStartAt: values.studyStartAt || undefined,
+        studyEndAt: values.studyEndAt || undefined,
         slideUrl: values.slideUrl || undefined,
         email: values.email || undefined,
         phone: values.phone || undefined,
@@ -220,6 +233,33 @@ function TalentFormDialog({
                 <Label htmlFor="studyStartAt">Inicio de estudios</Label>
                 <Input id="studyStartAt" type="date" {...register('studyStartAt')} />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="studyEndAt">Fin de estudios</Label>
+                <Input id="studyEndAt" type="date" {...register('studyEndAt')} />
+              </div>
+              {watch('status') === 'INACTIVE' && (
+                <div className="space-y-2">
+                  <Label>Motivo de baja</Label>
+                  <Select
+                    value={watch('terminationReason') || ''}
+                    onValueChange={(v) => setValue('terminationReason', v as FormValues['terminationReason'])}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(TERMINATION_LABELS).map(([v, l]) => (
+                        <SelectItem key={v} value={v}>
+                          {l}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

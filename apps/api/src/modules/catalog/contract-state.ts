@@ -12,6 +12,32 @@ function startOfDayUtc(date: Date) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
+interface SequenceRow {
+  id: string;
+  companyId: string | null;
+  startDate: Date;
+}
+
+// Numera los contratos de cada empresa por orden cronologico para distinguir reingresos.
+export function buildContractSequence(rows: SequenceRow[]): Map<string, { sequence: number; sequenceTotal: number }> {
+  const byCompany = new Map<string, SequenceRow[]>();
+  for (const row of rows) {
+    const key = row.companyId ?? '';
+    const bucket = byCompany.get(key) ?? [];
+    bucket.push(row);
+    byCompany.set(key, bucket);
+  }
+
+  const out = new Map<string, { sequence: number; sequenceTotal: number }>();
+  for (const bucket of byCompany.values()) {
+    const ordered = [...bucket].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    ordered.forEach((row, index) => {
+      out.set(row.id, { sequence: index + 1, sequenceTotal: ordered.length });
+    });
+  }
+  return out;
+}
+
 interface SalaryRow {
   companyId: string | null;
   date: Date;

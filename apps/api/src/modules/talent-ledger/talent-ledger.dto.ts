@@ -2,6 +2,20 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsNumberString, IsOptional, IsString, Max, Min } from 'class-validator';
 
 const TYPES = ['EGRESO', 'DEUDA'];
+const CATEGORIES = [
+  'EDUCACION',
+  'SUSCRIPCION',
+  'TRABAJO',
+  'ALQUILER',
+  'PRESTAMO',
+  'MOBILIARIO',
+  'EQUIPO',
+  'TRANSPORTE',
+  'COMIDA',
+  'FRAUDE',
+  'OTRO',
+];
+const STATUSES = ['PAID', 'PENDING', 'PARTIAL', 'OVERDUE', 'CANCELLED', 'NUNCA_PAGO'];
 
 export class ListTalentLedgerDto {
   @IsString()
@@ -19,6 +33,10 @@ export class ListTalentLedgerDto {
   @IsOptional()
   @IsIn(TYPES)
   type?: string;
+
+  @IsOptional()
+  @IsIn(CATEGORIES)
+  category?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -62,6 +80,10 @@ export class CreateTalentLedgerDto {
   type!: string;
 
   @IsOptional()
+  @IsIn(CATEGORIES)
+  category?: string;
+
+  @IsOptional()
   @IsNumberString()
   paidAmount?: string;
 
@@ -74,7 +96,7 @@ export class CreateTalentLedgerDto {
   pendingAmount?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(STATUSES)
   status?: string;
 
   @IsOptional()
@@ -100,6 +122,10 @@ export class UpdateTalentLedgerDto {
   type?: string;
 
   @IsOptional()
+  @IsIn(CATEGORIES)
+  category?: string;
+
+  @IsOptional()
   @IsNumberString()
   paidAmount?: string;
 
@@ -112,7 +138,7 @@ export class UpdateTalentLedgerDto {
   pendingAmount?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(STATUSES)
   status?: string;
 
   @IsOptional()

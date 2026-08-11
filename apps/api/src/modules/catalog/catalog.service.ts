@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { ContractIncomeService } from './contract-income.service';
-import { buildGrossByCompany, deriveContractState } from './contract-state';
+import { buildContractSequence, buildGrossByCompany, deriveContractState } from './contract-state';
 
 @Injectable()
 export class CatalogService {
@@ -101,11 +101,14 @@ export class CatalogService {
     const companyName = new Map(companies.map((c) => [c.id, c.name]));
     const grossByCompany = buildGrossByCompany(salaries);
 
+    const sequence = buildContractSequence(contracts);
+
     return contracts.map((c) => ({
       ...c,
       salary: c.salary?.toString() ?? null,
       companyName: companyName.get(c.companyId ?? '') ?? null,
       grossSalary: grossByCompany.get(c.companyId ?? '') ?? null,
+      ...(sequence.get(c.id) ?? { sequence: 1, sequenceTotal: 1 }),
       ...deriveContractState(c.endDate),
     }));
   }

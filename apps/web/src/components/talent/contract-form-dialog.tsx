@@ -35,6 +35,7 @@ const schema = z.object({
   startDate: z.string().min(1, 'Requerido'),
   endDate: z.string().optional(),
   status: z.enum(['ACTIVE', 'FINISHED']),
+  contractTerm: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -97,6 +98,7 @@ export function TalentContractFormDialog({
         startDate: contract.startDate.slice(0, 10),
         endDate: contract.endDate ? contract.endDate.slice(0, 10) : '',
         status: (contract.status as ContractFormValues['status']) ?? 'ACTIVE',
+        contractTerm: contract.contractTerm ?? '',
         notes: contract.notes ?? '',
       });
     }
@@ -210,6 +212,10 @@ export function TalentContractFormDialog({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contractTerm">Plazo del contrato</Label>
+              <Input id="contractTerm" placeholder="Ej. 6 meses luego indefinido" {...register('contractTerm')} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>

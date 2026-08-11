@@ -639,6 +639,7 @@ model TalentProfile {
   email          String?
   phone          String?
   status         String    @default("ACTIVE")
+  terminationReason String? @map("termination_reason")
   role           String?
   startedWithMeAt DateTime? @map("started_with_me_at") @db.Date
   endedWithMeAt   DateTime? @map("ended_with_me_at") @db.Date
@@ -657,6 +658,7 @@ model TalentProfile {
   workspace    Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   contracts    TalentContract[]
   ledgerEntries TalentLedgerEntry[]
+  looseDistributions TalentIncomeDistribution[] @relation("TalentLooseDistribution")
 
   @@index([workspaceId])
   @@map("talent_profiles")
@@ -670,6 +672,7 @@ model TalentLedgerEntry {
   year          Int
   month         Int
   type          String    @default("EGRESO")
+  category      String?
   paidAmount    Decimal   @default(0) @map("paid_amount") @db.Decimal(18, 2)
   debtAmount    Decimal   @default(0) @map("debt_amount") @db.Decimal(18, 2)
   pendingAmount Decimal   @default(0) @map("pending_amount") @db.Decimal(18, 2)
@@ -687,6 +690,7 @@ model TalentLedgerEntry {
 
   @@index([talentId, date])
   @@index([workspaceId, type])
+  @@index([workspaceId, category])
   @@map("talent_ledger_entries")
 }
 
@@ -704,6 +708,7 @@ model TalentContract {
   startDate       DateTime @map("start_date") @db.Date
   endDate         DateTime? @map("end_date") @db.Date
   status          String   @default("ACTIVE")
+  contractTerm    String?  @map("contract_term")
   notes           String?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -717,12 +722,15 @@ model TalentContract {
 
 model TalentIncomeDistribution {
   id               String  @id @default(uuid())
-  contractId       String  @map("contract_id")
+  contractId       String? @map("contract_id")
+  talentId         String? @map("talent_id")
   transactionId    String? @map("transaction_id")
   date             DateTime? @db.Date
   year             Int?
   month            Int?
   paymentType      String  @default("Mensual") @map("payment_type")
+  companyName      String? @map("company_name")
+  clientName       String? @map("client_name")
   salary           Decimal? @db.Decimal(18, 2)
   amountWithDiscount Decimal @map("amount_with_discount") @db.Decimal(18, 2)
   amountReceived   Decimal @map("amount_received") @db.Decimal(18, 2)
@@ -734,8 +742,11 @@ model TalentIncomeDistribution {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  contract TalentContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  contract TalentContract? @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  talent   TalentProfile?  @relation("TalentLooseDistribution", fields: [talentId], references: [id], onDelete: Cascade)
 
+  @@index([talentId, date])
+  @@index([contractId])
   @@map("talent_income_distributions")
 }
 

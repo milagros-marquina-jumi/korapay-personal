@@ -15,4 +15,4 @@ pnpm-debug.log*
 !.env.example
 postgres-data/
 openapi.json
-
+.claude

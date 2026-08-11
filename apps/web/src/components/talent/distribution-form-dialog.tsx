@@ -22,6 +22,8 @@ import type { TalentIncomeDistribution } from '@/lib/api.types';
 const schema = z.object({
   date: z.string().min(1, 'Requerido'),
   paymentType: z.enum(['Mensual', 'Gratificación', 'Liquidación', 'CTS', 'Extra']),
+  companyName: z.string().optional(),
+  clientName: z.string().optional(),
   salary: z.string().optional(),
   amountWithDiscount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   amountReceived: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
@@ -39,6 +41,8 @@ interface Props {
   onOpenChange?: (open: boolean) => void;
   onSubmit: (values: DistributionFormValues) => Promise<void> | void;
   isPending?: boolean;
+  /** Si true, muestra los campos empresa/cliente (para distribuciones sueltas sin contrato) */
+  loose?: boolean;
 }
 
 export function DistributionFormDialog({
@@ -48,6 +52,7 @@ export function DistributionFormDialog({
   onOpenChange,
   onSubmit,
   isPending,
+  loose = false,
 }: Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -65,7 +70,7 @@ export function DistributionFormDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       date: new Date().toISOString().slice(0, 10),
-      paymentType: 'Mensual',
+      paymentType: loose ? 'CTS' : 'Mensual',
       status: 'PAID',
     },
   });
@@ -75,6 +80,8 @@ export function DistributionFormDialog({
       reset({
         date: distribution.date ? distribution.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
         paymentType: (distribution.paymentType as DistributionFormValues['paymentType']) ?? 'Mensual',
+        companyName: distribution.companyName ?? '',
+        clientName: distribution.clientName ?? '',
         salary: distribution.salary ? Number(distribution.salary).toString() : '',
         amountWithDiscount: Number(distribution.amountWithDiscount).toFixed(2),
         amountReceived: Number(distribution.amountReceived).toFixed(2),
@@ -126,6 +133,19 @@ export function DistributionFormDialog({
               </Select>
             </div>
           </div>
+
+          {loose && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Empresa</Label>
+                <Input id="companyName" placeholder="Ej. NTT DATA" {...register('companyName')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientName">Cliente</Label>
+                <Input id="clientName" placeholder="Ej. BCP" {...register('clientName')} />
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

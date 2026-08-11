@@ -167,7 +167,8 @@ export function TransactionFormDialog({
 
   const isRecurring = watch('isRecurring');
   const currentType = watch('type');
-  const showRecurringHint = showCompany && currentType === 'INCOME';
+  // En ingresos laborales la repeticion la define el contrato, no la recurrencia del movimiento.
+  const contractDrivenIncome = showCompany;
   const currentStatus = watch('status');
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
@@ -450,6 +451,13 @@ export function TransactionFormDialog({
             </Select>
           </div>
 
+          {!editing && contractDrivenIncome && (
+            <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+              Los sueldos que se repiten cada mes se proyectan solos desde el contrato de la empresa. Registra aquí solo
+              pagos puntuales.
+            </p>
+          )}
+
           {watch('type') === 'EXPENSE' && (
             <label
               htmlFor="isFixed"
@@ -541,13 +549,7 @@ export function TransactionFormDialog({
               </div>
             )}
 
-            {!editing && showRecurringHint && (
-              <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
-                Los sueldos recurrentes se proyectan desde el contrato de cada empresa, en Contratos.
-              </p>
-            )}
-
-            {!editing && !showRecurringHint && (
+            {!editing && !contractDrivenIncome && (
               <div className="space-y-3 rounded-lg border border-border/60 p-3">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">

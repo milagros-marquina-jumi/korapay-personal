@@ -8,6 +8,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ActiveContractsDialog } from '@/components/contracts/active-contracts-dialog';
+import { SequenceBadge } from '@/components/contracts/sequence-badge';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
@@ -38,6 +39,7 @@ function ContratosContent() {
   const [status, setStatus] = useState(FILTER_ALL);
   const [type, setType] = useState(FILTER_ALL);
   const [currency, setCurrency] = useState(FILTER_ALL);
+  const [company, setCompany] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<EmploymentContract | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -76,6 +78,14 @@ function ContratosContent() {
     [allContracts],
   );
 
+  const companyOptions = useMemo(
+    () =>
+      [...new Set(allContracts.map((c) => c.companyName).filter(Boolean) as string[])]
+        .sort((a, b) => a.localeCompare(b))
+        .map((v) => ({ value: v, label: v })),
+    [allContracts],
+  );
+
   const currencyOptions = [
     { value: 'PEN', label: 'Soles' },
     { value: 'USD', label: 'Dólares' },
@@ -87,9 +97,10 @@ function ContratosContent() {
         (c) =>
           (status === FILTER_ALL || (c.state ?? c.status) === status) &&
           (type === FILTER_ALL || c.type === type) &&
-          (currency === FILTER_ALL || c.currency === currency),
+          (currency === FILTER_ALL || c.currency === currency) &&
+          (company === FILTER_ALL || c.companyName === company),
       ),
-    [allContracts, status, type, currency],
+    [allContracts, status, type, currency, company],
   );
 
   const handleClear = () => {
@@ -97,6 +108,7 @@ function ContratosContent() {
     setStatus(FILTER_ALL);
     setType(FILTER_ALL);
     setCurrency(FILTER_ALL);
+    setCompany(FILTER_ALL);
   };
 
   const columns = useMemo<ColumnDef<EmploymentContract, unknown>[]>(
@@ -107,7 +119,10 @@ function ContratosContent() {
         header: ({ column }) => <SortableHeader column={column} label="Empresa" />,
         cell: ({ row }) => (
           <div className="flex flex-col">
-            <span className="font-medium">{row.original.companyName ?? 'Sin empresa'}</span>
+            <div className="flex items-center gap-2">
+              <span className="font-medium">{row.original.companyName ?? 'Sin empresa'}</span>
+              <SequenceBadge sequence={row.original.sequence} total={row.original.sequenceTotal} />
+            </div>
             {row.original.position && <span className="text-xs text-muted-foreground">{row.original.position}</span>}
           </div>
         ),
@@ -212,10 +227,23 @@ function ContratosContent() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar contratos..."
-        showClear={search !== '' || status !== FILTER_ALL || type !== FILTER_ALL || currency !== FILTER_ALL}
+        showClear={
+          search !== '' ||
+          status !== FILTER_ALL ||
+          type !== FILTER_ALL ||
+          currency !== FILTER_ALL ||
+          company !== FILTER_ALL
+        }
         onClear={handleClear}
         filters={
           <>
+            <FilterSelect
+              value={company}
+              onValueChange={setCompany}
+              options={companyOptions}
+              placeholder="Empresa"
+              allLabel="Toda empresa"
+            />
             <FilterSelect
               value={status}
               onValueChange={setStatus}

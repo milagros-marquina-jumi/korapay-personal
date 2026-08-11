@@ -6,8 +6,9 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, Landmark, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
 import { CategoryDonut } from '@/components/charts/category-donut';
+import { GroupedBar } from '@/components/charts/grouped-bar';
 import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
-import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
+import { INCOME_COLOR } from '@/components/charts/palette';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { CompaniesMonthDialog, type CompaniesMonthSelection } from '@/components/reports/companies-month-dialog';
 import { CompanyDurationTable } from '@/components/reports/company-duration-table';
@@ -20,6 +21,15 @@ import { apiFetch } from '@/lib/api';
 import type { EmploymentReports, TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
+
+const AVERAGE_COLOR = '#eda100';
+
+const YEAR_COMPARISON_SERIES = [
+  { key: 'total', name: 'Total del año', color: INCOME_COLOR },
+  { key: 'promedio', name: 'Promedio mensual', color: AVERAGE_COLOR },
+];
+
+const MONTH_SERIES = [{ key: 'total', name: 'Ingresos', color: INCOME_COLOR }];
 
 export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
   const { data: allYears } = useQuery({
@@ -74,19 +84,18 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const companyDonut = data.incomeByCompany.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
   const conceptDonut = data.incomeByConcept.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
 
-  const timeSeries: MonthlyPoint[] = allYearsView
-    ? data.yearlyTotals.map((y) => ({ label: String(y.year), ingresos: Number(y.total), egresos: 0 }))
-    : data.incomeByMonth.map((m) => ({
-        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
-        ingresos: Number(m.total),
-        egresos: 0,
-      }));
-
-  const averageSeries: MonthlyPoint[] = data.yearlyTotals.map((y) => ({
+  const yearComparison = data.yearlyTotals.map((y) => ({
     label: String(y.year),
-    ingresos: Number(y.average),
-    egresos: 0,
+    total: Number(y.total),
+    promedio: Number(y.average),
   }));
+
+  const monthSeries = data.incomeByMonth.map((m) => ({
+    label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+    total: Number(m.total),
+  }));
+
+  const timeSeries = allYearsView ? yearComparison : monthSeries;
 
   const currentYearRow = data.yearlyTotals.find((y) => y.year === selectedYear);
   const totalGeneral = data.yearlyTotals.reduce((s, y) => s + Number(y.total), 0);
@@ -173,18 +182,9 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
               {timeSeries.length ? (
                 <>
                   {allYearsView ? (
-                    <div className="grid gap-6 lg:grid-cols-2">
-                      <div>
-                        <h4 className="mb-3 text-sm font-medium text-muted-foreground">Total del año</h4>
-                        <MonthlyBar data={timeSeries} firstName="Total" />
-                      </div>
-                      <div>
-                        <h4 className="mb-3 text-sm font-medium text-muted-foreground">Promedio mensual</h4>
-                        <MonthlyBar data={averageSeries} firstName="Promedio" />
-                      </div>
-                    </div>
+                    <GroupedBar data={yearComparison} series={YEAR_COMPARISON_SERIES} height={340} />
                   ) : (
-                    <MonthlyBar data={timeSeries} firstName="Ingresos" />
+                    <GroupedBar data={monthSeries} series={MONTH_SERIES} height={320} />
                   )}
                   {allYearsView && (
                     <div className="mt-6 overflow-x-auto rounded-lg border">

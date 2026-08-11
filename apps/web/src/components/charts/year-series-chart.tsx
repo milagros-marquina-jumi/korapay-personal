@@ -35,11 +35,12 @@ interface ChartRow {
   [year: string]: string | number;
 }
 
+const MAX_LABEL_POINTS = 24;
+
 function buildRows(series: YearSeries[], categories: string[]): ChartRow[] {
   return categories.map((label, index) => {
     const row: ChartRow = { label };
     for (const s of series) {
-      // Un año en curso trae ceros en los meses futuros: se omiten para no dibujar caidas a 0.
       const value = s.values[index] ?? 0;
       const hasLater = s.values.slice(index).some((v) => v > 0);
       if (value > 0 || hasLater) row[String(s.year)] = value;
@@ -48,13 +49,9 @@ function buildRows(series: YearSeries[], categories: string[]): ChartRow[] {
   });
 }
 
-// Las etiquetas se dibujan por serie y categoria: pasado este total se solapan.
-const MAX_LABEL_POINTS = 24;
-
 function renderLabel(value: number | string) {
   const n = Number(value);
-  if (!n) return '';
-  return compactAmount(n);
+  return n ? compactAmount(n) : '';
 }
 
 export function YearSeriesChart({
@@ -66,43 +63,38 @@ export function YearSeriesChart({
 }: Readonly<Props>) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
-  const axis = '#898781';
+  const axis = isDark ? '#a3a19a' : '#6b6960';
   const grid = isDark ? '#2c2c2a' : '#e1e0d9';
 
   const rows = buildRows(series, categories);
   const colorOf = (index: number) => categoricalColor(index, isDark);
   const labelsVisible = showLabels && series.length * categories.length <= MAX_LABEL_POINTS;
 
-  const shared = (
-    <>
-      <CartesianGrid stroke={grid} vertical={false} />
-      <XAxis dataKey="label" stroke={axis} tickLine={false} axisLine={false} fontSize={12} />
-      <YAxis
-        stroke={axis}
-        tickLine={false}
-        axisLine={false}
-        fontSize={12}
-        width={64}
-        tickFormatter={(v) => compactAmount(Number(v))}
-      />
-      <Tooltip
-        formatter={(v: number, name: string) => [formatMoney(String(v), 'PEN'), name]}
-        contentStyle={{
-          background: isDark ? '#1f1e1c' : '#ffffff',
-          border: `1px solid ${grid}`,
-          borderRadius: 12,
-          fontSize: 12,
-        }}
-      />
-      <Legend wrapperStyle={{ fontSize: 12 }} />
-    </>
-  );
+  const axisProps = { stroke: axis, tick: { fill: axis, fontSize: 12 } };
+  const tooltipProps = {
+    formatter: (v: number, name: string) => [formatMoney(String(v), 'PEN'), name] as [string, string],
+    contentStyle: {
+      background: isDark ? '#1f1e1c' : '#ffffff',
+      border: `1px solid ${grid}`,
+      borderRadius: 12,
+      fontSize: 12,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+    },
+    itemStyle: { color: isDark ? '#f1f5f9' : '#0f172a' },
+    labelStyle: { color: isDark ? '#f1f5f9' : '#0f172a', fontWeight: 600 },
+  };
+  const legendProps = { iconType: 'circle' as const, wrapperStyle: { fontSize: 12, paddingTop: 8 } };
+  const margin = { top: labelsVisible ? 26 : 12, right: 16, bottom: 4, left: 8 };
 
   if (variant === 'line') {
     return (
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={rows} margin={{ top: 24, right: 16, bottom: 0, left: 8 }}>
-          {shared}
+        <LineChart data={rows} margin={margin}>
+          <CartesianGrid stroke={grid} vertical={false} />
+          <XAxis dataKey="label" {...axisProps} tickLine={false} axisLine={{ stroke: grid }} />
+          <YAxis {...axisProps} tickLine={false} axisLine={false} width={68} tickFormatter={compactAmount} />
+          <Tooltip {...tooltipProps} />
+          <Legend {...legendProps} />
           {series.map((s, i) => (
             <Line
               key={s.year}
@@ -132,8 +124,12 @@ export function YearSeriesChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={rows} margin={{ top: 24, right: 16, bottom: 0, left: 8 }} barGap={2}>
-        {shared}
+      <BarChart data={rows} margin={margin} barGap={2}>
+        <CartesianGrid stroke={grid} vertical={false} />
+        <XAxis dataKey="label" {...axisProps} tickLine={false} axisLine={{ stroke: grid }} />
+        <YAxis {...axisProps} tickLine={false} axisLine={false} width={68} tickFormatter={compactAmount} />
+        <Tooltip {...tooltipProps} cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }} />
+        <Legend {...legendProps} />
         {series.map((s, i) => (
           <Bar key={s.year} dataKey={String(s.year)} name={String(s.year)} fill={colorOf(i)} radius={[4, 4, 0, 0]}>
             {labelsVisible && (

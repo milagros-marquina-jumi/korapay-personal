@@ -10,7 +10,7 @@ function Textarea({ className, maxLength, ...props }: TextareaProps) {
     <textarea
       maxLength={maxLength ?? DEFAULT_MAX_LENGTH}
       className={cn(
-        'flex min-h-20 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50',
+        'flex min-h-20 w-full rounded-lg border border-border bg-card px-3.5 py-2 text-sm shadow-soft transition-all placeholder:text-muted-foreground/70 hover:border-primary/30 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/12 disabled:cursor-not-allowed disabled:opacity-50',
         className,
       )}
       {...props}

@@ -6,6 +6,7 @@ import { PrismaService } from '@/common/prisma/prisma.service';
 import { buildCompanyProfitability } from './company-profitability';
 import { buildEmploymentBreakdown } from './employment-breakdown';
 import { buildPersonalMatrices } from './personal-matrix';
+import { buildTaxBurden } from './tax-burden';
 
 @Injectable()
 export class ReportsService {
@@ -213,7 +214,7 @@ export class ReportsService {
   }
 
   async employment(workspaceId: string, year?: number) {
-    const [transactions, allTransactions] = await Promise.all([
+    const [transactions, allTransactions, taxObligations] = await Promise.all([
       this.prisma.transaction.findMany({
         where: { workspaceId, deletedAt: null, type: 'INCOME', ...this.yearFilter(year) },
         include: { company: { select: { name: true } } },
@@ -222,6 +223,10 @@ export class ReportsService {
       this.prisma.transaction.findMany({
         where: { workspaceId, deletedAt: null, type: 'INCOME' },
         select: { date: true, amountBase: true, concept: true, companyId: true },
+      }),
+      this.prisma.taxObligation.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { year: true, amount: true, status: true },
       }),
     ]);
 
@@ -334,6 +339,7 @@ export class ReportsService {
       incomeByCompany: sortDesc(byCompany),
       companyProfitability: buildCompanyProfitability(transactions),
       incomeByMonth,
+      taxBurden: buildTaxBurden(allTransactions, taxObligations),
     };
   }
 

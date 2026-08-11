@@ -39,6 +39,8 @@ function IngresosContent() {
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [companyId, setCompanyId] = useState<string>(FILTER_ALL);
   const [bank, setBank] = useState<string>(FILTER_ALL);
+  const [concept, setConcept] = useState<string>(FILTER_ALL);
+  const [paymentMethod, setPaymentMethod] = useState<string>(FILTER_ALL);
   const [month, setMonth] = useState<string>(FILTER_ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const { show: showOwn, toggle: toggleOwn, isHidden } = useOwnCompanyVisibility();
@@ -112,6 +114,18 @@ function IngresosContent() {
     return [...set].sort((a, b) => a.localeCompare(b, 'es')).map((value) => ({ value, label: value }));
   }, [data?.data, catalogs]);
 
+  const paymentMethodOptions = useMemo(() => {
+    const set = new Set(
+      (data?.data ?? []).map((tx) => splitTags(tx.tags, catalogs).paymentMethod).filter(Boolean) as string[],
+    );
+    return [...set].sort((a, b) => a.localeCompare(b, 'es')).map((value) => ({ value, label: value }));
+  }, [data?.data, catalogs]);
+
+  const conceptOptions = useMemo(() => {
+    const set = new Set((data?.data ?? []).map((tx) => tx.concept.trim()).filter(Boolean));
+    return [...set].sort((a, b) => a.localeCompare(b, 'es')).map((value) => ({ value, label: value }));
+  }, [data?.data]);
+
   const availableYears = useMemo(() => {
     const set = new Set((data?.data ?? []).map((tx) => new Date(tx.date).getUTCFullYear()));
     return [...set].sort((a, b) => b - a);
@@ -126,7 +140,12 @@ function IngresosContent() {
     return (data?.data ?? []).filter((tx) => {
       if (status !== FILTER_ALL && tx.status !== status) return false;
       if (companyId !== FILTER_ALL && tx.companyId !== companyId) return false;
-      if (bank !== FILTER_ALL && splitTags(tx.tags, catalogs).bank !== bank) return false;
+      if (bank !== FILTER_ALL || paymentMethod !== FILTER_ALL) {
+        const split = splitTags(tx.tags, catalogs);
+        if (bank !== FILTER_ALL && split.bank !== bank) return false;
+        if (paymentMethod !== FILTER_ALL && split.paymentMethod !== paymentMethod) return false;
+      }
+      if (concept !== FILTER_ALL && tx.concept.trim() !== concept) return false;
       const d = new Date(tx.date);
       if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
       if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
@@ -134,7 +153,7 @@ function IngresosContent() {
       if (term && !`${tx.concept} ${companyName(tx.companyId) ?? ''}`.toLowerCase().includes(term)) return false;
       return true;
     });
-  }, [data?.data, status, companyId, bank, year, month, search, companies, catalogs, isHidden]);
+  }, [data?.data, status, companyId, bank, paymentMethod, concept, year, month, search, companies, catalogs, isHidden]);
 
   const total = useMemo(() => rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0), [rows]);
   const totalGross = useMemo(() => rows.reduce((sum, tx) => sum + grossOf(tx), 0), [rows]);
@@ -260,6 +279,8 @@ function IngresosContent() {
           status !== FILTER_ALL ||
           companyId !== FILTER_ALL ||
           bank !== FILTER_ALL ||
+          paymentMethod !== FILTER_ALL ||
+          concept !== FILTER_ALL ||
           year !== FILTER_ALL ||
           month !== FILTER_ALL
         }
@@ -268,6 +289,8 @@ function IngresosContent() {
           setStatus(FILTER_ALL);
           setCompanyId(FILTER_ALL);
           setBank(FILTER_ALL);
+          setPaymentMethod(FILTER_ALL);
+          setConcept(FILTER_ALL);
           setYear(FILTER_ALL);
           setMonth(FILTER_ALL);
         }}
@@ -293,6 +316,20 @@ function IngresosContent() {
               options={companyOptions}
               placeholder="Empresa"
               allLabel="Toda empresa"
+            />
+            <FilterSelect
+              value={concept}
+              onValueChange={setConcept}
+              options={conceptOptions}
+              placeholder="Concepto"
+              allLabel="Todo concepto"
+            />
+            <FilterSelect
+              value={paymentMethod}
+              onValueChange={setPaymentMethod}
+              options={paymentMethodOptions}
+              placeholder="Forma de pago"
+              allLabel="Toda forma de pago"
             />
             <FilterSelect
               value={bank}

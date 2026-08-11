@@ -17,15 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { Workspace } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { WORKSPACE_TYPE_OPTIONS, workspaceTypeLabel } from '@/lib/workspace-types';
 
-const TYPE_OPTIONS: { value: string; label: string; hint: string }[] = [
-  { value: 'PERSONAL', label: 'Personal', hint: 'Finanzas personales del día a día' },
-  { value: 'EMPLOYMENT', label: 'Ingresos laborales', hint: 'Empresas donde trabajas (planilla/recibos)' },
-  { value: 'BUSINESS', label: 'Empresa', hint: 'Tu empresa: costos, equipo, proyectos' },
-  { value: 'SHARED', label: 'Compartido', hint: 'Sociedad o gastos compartidos' },
-  { value: 'SAVINGS', label: 'Ahorros', hint: 'Metas y fondos de ahorro' },
-  { value: 'DEBTS', label: 'Deudas', hint: 'Préstamos y obligaciones' },
-];
+const TYPE_OPTIONS = WORKSPACE_TYPE_OPTIONS;
 
 interface FormState {
   name: string;
@@ -221,7 +215,7 @@ export function WorkspaceManager() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="secondary">{w.type}</Badge>
+              <Badge variant="secondary">{workspaceTypeLabel(w.type)}</Badge>
               <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(w)} />
             </div>
           </div>

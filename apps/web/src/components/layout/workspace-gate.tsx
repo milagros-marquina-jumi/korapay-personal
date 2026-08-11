@@ -5,13 +5,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
-
-const TYPE_LABEL: Record<string, string> = {
-  PERSONAL: 'Personal',
-  EMPLOYMENT: 'Ingresos Laborales',
-  BUSINESS: 'MIMOTECH',
-  SHARED: 'Compartido',
-};
+import { workspaceTypeLabel } from '@/lib/workspace-types';
 
 export function WorkspaceGate({ type, children }: { type: string | string[]; children: ReactNode }) {
   const { activeWorkspace, isLoading } = useWorkspace();
@@ -20,7 +14,7 @@ export function WorkspaceGate({ type, children }: { type: string | string[]; chi
 
   const allowed = Array.isArray(type) ? type : [type];
   if (!allowed.includes(activeWorkspace.type)) {
-    const label = allowed.map((t) => TYPE_LABEL[t] ?? t).join(' o ');
+    const label = allowed.map((t) => workspaceTypeLabel(t)).join(' o ');
     return (
       <EmptyState
         title={`Esta sección pertenece a ${label}`}

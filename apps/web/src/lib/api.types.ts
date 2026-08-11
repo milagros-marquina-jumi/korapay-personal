@@ -365,8 +365,35 @@ export interface CompanyProfitability {
   lastDate: string | null;
 }
 
+export interface TaxBurdenYear {
+  year: number;
+  income: string;
+  accruedTax: string;
+  accruedNet: string;
+  accruedRate: number;
+  cashTax: string;
+  cashNet: string;
+  cashRate: number;
+  cashTaxYear: number | null;
+  cashTaxStatus: string | null;
+}
+
+export interface TaxBurden {
+  rows: TaxBurdenYear[];
+  totals: {
+    income: string;
+    accruedTax: string;
+    accruedNet: string;
+    accruedRate: number;
+    cashTax: string;
+    cashNet: string;
+  };
+  unmatchedTaxYears: number[];
+}
+
 export interface EmploymentReports {
   breakdown: EmploymentBreakdown;
+  taxBurden?: TaxBurden;
   companyProfitability: CompanyProfitability[];
   years: number[];
   total: string;

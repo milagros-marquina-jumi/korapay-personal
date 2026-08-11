@@ -17,6 +17,7 @@ import { EmploymentBreakdownTab } from '@/components/reports/employment-breakdow
 import { MonthlySummaryPanel } from '@/components/reports/monthly-summary-panel';
 import { OwnCompanyToggle, useOwnCompanyVisibility } from '@/components/reports/own-company-toggle';
 import { DURATION_LIMITS, MONTH_SHORT } from '@/components/reports/report-constants';
+import { TaxBurdenPanel } from '@/components/reports/tax-burden-panel';
 import { TrendDelta } from '@/components/reports/trend-delta';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -408,7 +409,9 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
           </Card>
         </TabsContent>
 
-        <TabsContent value="renta" className="mt-4">
+        <TabsContent value="renta" className="mt-4 space-y-4">
+          <TaxBurdenPanel taxBurden={data.taxBurden} />
+
           <Card>
             <CardHeader>
               <CardTitle>Obligaciones de renta</CardTitle>

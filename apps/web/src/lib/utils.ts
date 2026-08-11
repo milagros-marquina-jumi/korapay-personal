@@ -19,6 +19,18 @@ export function formatDate(value: string | Date): string {
   }).format(d);
 }
 
+export function formatDateTime(value: string | Date): string {
+  const d = new Date(value);
+  return new Intl.DateTimeFormat('es-PE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(d);
+}
+
 export function formatMonthYear(value: string | Date): string {
   const d = new Date(value);
   const month = new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC', month: 'long' }).format(d);

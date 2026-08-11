@@ -12,8 +12,12 @@ function extractMerchant(text: string): string | undefined {
   const patterns = [
     /(?:pago autom[aá]tico exitoso de tu servicio|pago de tu servicio)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,60})/i,
     /(?:constancia pago de|constancia de pago de)\s+(tarjetas propias|tarjeta de cr[eé]dito)/i,
-    /(?:en el comercio|en|comercio:?)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,40})/,
+    /(?:nombre del comercio|comercio)\s*[:]?\s*([A-Z0-9][A-Za-z0-9 .&*'-]{2,60})/i,
+    /(?:consumo|compra)\s+(?:de|con tu|en).+?(?:en)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,60})/i,
+    /(?:en el comercio|en)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,40})/,
     /(?:realizaste una compra en|compra en)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{2,40})/i,
+    /(?:enviaste|envio|envió)\s+(?:un pago de\s+)?(?:\$|USD|S\/)\s*[\d.,]+\s*(?:USD\s*)?(?:a|por)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{3,60})/i,
+    /(?:pago de|por el pago de)\s+(intereses(?:\s+y\/o\s+comisiones)?|comisiones)/i,
   ];
   for (const p of patterns) {
     const m = text.match(p);

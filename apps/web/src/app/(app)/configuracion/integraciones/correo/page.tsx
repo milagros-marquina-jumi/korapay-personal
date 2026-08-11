@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
 import type { EmailSource, EmailSourceCreated } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 
 const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'Activo',
@@ -312,12 +312,12 @@ export default function CorreoIntegracionesPage() {
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Última recepción</dt>
-                  <dd className="font-medium">{source.lastReceivedAt ? formatDate(source.lastReceivedAt) : '—'}</dd>
+                  <dd className="font-medium">{source.lastReceivedAt ? formatDateTime(source.lastReceivedAt) : '—'}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Última ingesta</dt>
                   <dd className="font-medium">
-                    {source.lastSuccessfulIngestionAt ? formatDate(source.lastSuccessfulIngestionAt) : '—'}
+                    {source.lastSuccessfulIngestionAt ? formatDateTime(source.lastSuccessfulIngestionAt) : '—'}
                   </dd>
                 </div>
               </dl>

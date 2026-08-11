@@ -13,10 +13,8 @@ import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select'
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
-import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -26,184 +24,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { IconAction } from '@/components/ui/icon-action';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { apiFetch, buildQuery } from '@/lib/api';
-import type { Account, Category, DetectedSummary, DetectedTransaction, ExchangeRateInfo } from '@/lib/api.types';
+import type { DetectedSummary, DetectedTransaction, EmailSource, ExchangeRateInfo } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
-
-const TRANSACTION_TYPE_LABELS: Record<string, string> = {
-  CARD_PURCHASE: 'Compra',
-  ONLINE_PURCHASE: 'Compra online',
-  CASH_WITHDRAWAL: 'Retiro',
-  TRANSFER_SENT: 'Transferencia enviada',
-  TRANSFER_RECEIVED: 'Transferencia recibida',
-  SERVICE_PAYMENT: 'Pago servicio',
-  SUBSCRIPTION: 'Suscripción',
-  REFUND: 'Devolución',
-  REVERSAL: 'Reverso',
-  DECLINED_TRANSACTION: 'Rechazada',
-  INSTALLMENT_PURCHASE: 'Compra en cuotas',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_REVIEW: 'Por revisar',
-  CONFIRMED: 'Confirmado',
-  IGNORED: 'Ignorado',
-  DUPLICATE: 'Duplicado',
-  FAILED: 'Error',
-};
-
-const STATUS_VARIANTS: Record<string, 'warning' | 'success' | 'secondary' | 'info' | 'destructive'> = {
-  PENDING_REVIEW: 'warning',
-  CONFIRMED: 'success',
-  IGNORED: 'secondary',
-  DUPLICATE: 'info',
-  FAILED: 'destructive',
-};
-
-const NON_CONFIRMABLE_TYPES = new Set(['DECLINED_TRANSACTION']);
-
-function confirmBlockedReason(detected: DetectedTransaction): string | null {
-  if (detected.status === 'CONFIRMED') return 'Ya confirmado';
-  if (detected.status === 'DUPLICATE') return 'Duplicado';
-  if (NON_CONFIRMABLE_TYPES.has(detected.transactionType)) return 'No se puede confirmar (rechazada)';
-  return null;
-}
-
-function confidenceLabel(confidence: number): { label: string; className: string } {
-  if (confidence >= 0.8) return { label: 'Alta', className: 'text-success' };
-  if (confidence >= 0.55) return { label: 'Media', className: 'text-warning' };
-  return { label: 'Baja', className: 'text-muted-foreground' };
-}
-
-function ConfirmDialog({
-  detected,
-  open,
-  onOpenChange,
-  onConfirmed,
-}: {
-  detected: DetectedTransaction;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirmed: () => void;
-}) {
-  const { workspaces } = useWorkspace();
-  const [workspaceId, setWorkspaceId] = useState(detected.workspaceId ?? workspaces[0]?.id ?? '');
-  const [accountId, setAccountId] = useState(detected.accountId ?? '');
-  const [categoryId, setCategoryId] = useState(detected.categoryId ?? '');
-  const [createRule, setCreateRule] = useState(false);
-
-  const { data: accounts } = useQuery({
-    queryKey: queryKeys.accounts(workspaceId),
-    queryFn: () => apiFetch<Account[]>(`/accounts?workspaceId=${workspaceId}`),
-    enabled: open && !!workspaceId,
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: queryKeys.categories(workspaceId),
-    queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${workspaceId}`),
-    enabled: open && !!workspaceId,
-  });
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      apiFetch(`/detected-transactions/${detected.id}/confirm`, {
-        method: 'POST',
-        body: JSON.stringify({
-          workspaceId,
-          accountId: accountId || undefined,
-          categoryId: categoryId || undefined,
-          createRule,
-        }),
-      }),
-    onSuccess: () => {
-      onConfirmed();
-      onOpenChange(false);
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Confirmar movimiento</DialogTitle>
-          <DialogDescription>
-            {(detected.merchantOriginal ?? detected.description) || 'Movimiento detectado'} ·{' '}
-            {formatMoney(detected.amount, detected.currency as 'PEN' | 'USD')}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Workspace</Label>
-            <Select
-              value={workspaceId}
-              onValueChange={(v) => {
-                setWorkspaceId(v);
-                setAccountId('');
-                setCategoryId('');
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona un workspace" />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaces.map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Cuenta</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sin cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                {(accounts ?? []).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Categoría</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sin categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {(categories ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Checkbox id="createRule" checked={createRule} onCheckedChange={(v) => setCreateRule(v === true)} />
-            <Label htmlFor="createRule" className="font-normal">
-              Crear regla para futuros movimientos similares
-            </Label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={() => mutation.mutate()} disabled={mutation.isPending || !workspaceId}>
-            {mutation.isPending ? 'Confirmando...' : 'Confirmar'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { formatDate, formatDateTime } from '@/lib/utils';
+import { ConfirmDialog } from './confirm-dialog';
+import { confirmBlockedReason, STATUS_LABELS, STATUS_VARIANTS, TRANSACTION_TYPE_LABELS } from './detected.constants';
 
 export default function DetectadosPage() {
   const queryClient = useQueryClient();
@@ -212,6 +39,7 @@ export default function DetectadosPage() {
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [bankFilter, setBankFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
+  const [confidenceFilter, setConfidenceFilter] = useState(FILTER_ALL);
   const [confirming, setConfirming] = useState<DetectedTransaction | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [usdDetail, setUsdDetail] = useState<DetectedTransaction | null>(null);
@@ -247,6 +75,13 @@ export default function DetectadosPage() {
     queryFn: () => apiFetch<ExchangeRateInfo | null>('/exchange-rate'),
     staleTime: 1000 * 60 * 60,
   });
+
+  const { data: emailSources } = useQuery({
+    queryKey: ['email-sources'],
+    queryFn: () => apiFetch<EmailSource[]>('/email-sources'),
+  });
+
+  const lastSync = emailSources?.[0]?.lastSuccessfulIngestionAt ?? null;
 
   const exchangeRate = exchangeRateInfo ? Number(exchangeRateInfo.rate) : 1;
 
@@ -301,12 +136,22 @@ export default function DetectadosPage() {
   }, [data]);
 
   const rows = useMemo(() => {
+    let filtered = data ?? [];
     const q = search.trim().toLowerCase();
-    if (!q) return data ?? [];
-    return (data ?? []).filter((t) =>
-      `${t.merchantOriginal ?? ''} ${t.description} ${t.bankName ?? ''}`.toLowerCase().includes(q),
-    );
-  }, [data, search]);
+    if (q) {
+      filtered = filtered.filter((t) =>
+        `${t.merchantOriginal ?? ''} ${t.description} ${t.bankName ?? ''}`.toLowerCase().includes(q),
+      );
+    }
+    if (confidenceFilter === 'high') {
+      filtered = filtered.filter((t) => t.confidence >= 0.8);
+    } else if (confidenceFilter === 'medium') {
+      filtered = filtered.filter((t) => t.confidence >= 0.55 && t.confidence < 0.8);
+    } else if (confidenceFilter === 'low') {
+      filtered = filtered.filter((t) => t.confidence < 0.55);
+    }
+    return filtered;
+  }, [data, search, confidenceFilter]);
 
   const columns = useMemo<ColumnDef<DetectedTransaction, unknown>[]>(
     () => [
@@ -340,6 +185,7 @@ export default function DetectadosPage() {
         id: 'amount',
         accessorFn: (r) => Number(r.amount),
         sortingFn: 'basic',
+        size: 140,
         header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
         cell: ({ row }) => {
           const tx = row.original;
@@ -376,15 +222,8 @@ export default function DetectadosPage() {
         ),
       },
       {
-        id: 'confidence',
-        header: 'Confianza',
-        cell: ({ row }) => {
-          const c = confidenceLabel(row.original.confidence);
-          return <span className={`text-sm font-medium ${c.className}`}>{c.label}</span>;
-        },
-      },
-      {
         accessorKey: 'status',
+        size: 120,
         header: 'Estado',
         cell: ({ row }) => (
           <Badge variant={STATUS_VARIANTS[row.original.status] ?? 'secondary'}>
@@ -454,16 +293,38 @@ export default function DetectadosPage() {
   );
 
   const hasFilters =
-    search !== '' || statusFilter !== FILTER_ALL || bankFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
+    search !== '' ||
+    statusFilter !== FILTER_ALL ||
+    bankFilter !== FILTER_ALL ||
+    currencyFilter !== FILTER_ALL ||
+    confidenceFilter !== FILTER_ALL;
 
   return (
     <PageShell
       title="Movimientos detectados"
+      titleAside={
+        <InfoTooltip
+          content={
+            <span>
+              Alta (&ge;80%): banco, monto, moneda, fecha, tarjeta y comercio detectados
+              <br />
+              Media (55-79%): datos basicos, falta tarjeta o comercio
+              <br />
+              Baja (&lt;55%): solo monto detectado
+            </span>
+          }
+        />
+      }
       description="Revisa y confirma los consumos importados desde tus correos"
       action={
-        <Button variant="outline" onClick={() => setSyncOpen(true)}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
-        </Button>
+        <div className="flex items-center gap-3">
+          {lastSync && (
+            <span className="text-xs text-muted-foreground">Ultima sincronizacion: {formatDateTime(lastSync)}</span>
+          )}
+          <Button variant="outline" onClick={() => setSyncOpen(true)}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
+          </Button>
+        </div>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -484,6 +345,7 @@ export default function DetectadosPage() {
           setStatusFilter(FILTER_ALL);
           setBankFilter(FILTER_ALL);
           setCurrencyFilter(FILTER_ALL);
+          setConfidenceFilter(FILTER_ALL);
         }}
         filters={
           <>
@@ -516,6 +378,17 @@ export default function DetectadosPage() {
               placeholder="Moneda"
               allLabel="Toda moneda"
             />
+            <FilterSelect
+              value={confidenceFilter}
+              onValueChange={setConfidenceFilter}
+              options={[
+                { value: 'high', label: 'Alta' },
+                { value: 'medium', label: 'Media' },
+                { value: 'low', label: 'Baja' },
+              ]}
+              placeholder="Confianza"
+              allLabel="Toda confianza"
+            />
           </>
         }
       />
@@ -539,11 +412,26 @@ export default function DetectadosPage() {
           <DialogHeader>
             <DialogTitle>Sincronizar correos</DialogTitle>
             <DialogDescription>
-              La sincronización corre automáticamente cada 15 minutos desde Google Apps Script. Para forzarla ahora,
-              abre tu proyecto en script.google.com y ejecuta la función syncKoraPayBankEmails.
+              Los correos se sincronizan automaticamente cada 15 minutos desde Google Apps Script.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <div className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              Para forzar una sincronizacion ahora, abre tu proyecto en Google Apps Script y ejecuta la funcion{' '}
+              <code className="rounded bg-muted px-1 text-xs">syncKoraPayBankEmails</code>.
+            </p>
+            <p className="text-muted-foreground">Los nuevos movimientos apareceran aqui al refrescar la pagina.</p>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                invalidate();
+                setSyncOpen(false);
+              }}
+            >
+              Refrescar lista
+            </Button>
             <Button onClick={() => window.open('https://script.google.com', '_blank')}>Abrir Apps Script</Button>
           </DialogFooter>
         </DialogContent>

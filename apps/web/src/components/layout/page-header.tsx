@@ -3,13 +3,14 @@ import { cn } from '@/lib/utils';
 
 interface Props {
   title: string;
+  titleAside?: ReactNode;
   description?: string;
   action?: ReactNode;
   sticky?: boolean;
   ref?: Ref<HTMLDivElement>;
 }
 
-export function PageHeader({ title, description, action, sticky = true, ref }: Readonly<Props>) {
+export function PageHeader({ title, titleAside, description, action, sticky = true, ref }: Readonly<Props>) {
   return (
     <div
       ref={ref}
@@ -23,7 +24,10 @@ export function PageHeader({ title, description, action, sticky = true, ref }: R
       )}
     >
       <div className="space-y-1">
-        <h1 className="font-display text-2xl font-bold tracking-tight md:text-[1.75rem]">{title}</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight md:text-[1.75rem]">
+          {title}
+          {titleAside}
+        </h1>
         {description && <p className="text-sm text-muted-foreground">{description}</p>}
       </div>
       {action && <div className="flex items-center gap-2">{action}</div>}

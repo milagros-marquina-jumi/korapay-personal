@@ -51,7 +51,7 @@ export function classifyType(text: string): BankTransactionType {
     return 'TRANSFER_RECEIVED';
   if (/transferencia|enviaste|transferiste/.test(t)) return 'TRANSFER_SENT';
   if (/suscripci[oó]n|recurrente/.test(t)) return 'SUBSCRIPTION';
-  if (/pago de servicio|recibo|servicio/.test(t)) return 'SERVICE_PAYMENT';
+  if (/pago de servicio|recibo|servicio|comisi[oó]n|intereses/.test(t)) return 'SERVICE_PAYMENT';
   if (/cuota|en \d+ cuotas/.test(t)) return 'INSTALLMENT_PURCHASE';
   if (/internet|online|e-?commerce|por internet|web/.test(t)) return 'ONLINE_PURCHASE';
   return 'CARD_PURCHASE';

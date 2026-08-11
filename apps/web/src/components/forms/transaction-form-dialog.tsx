@@ -168,6 +168,26 @@ export function TransactionFormDialog({
   });
 
   useEffect(() => {
+    if (open && !transaction) {
+      reset({
+        type: defaultType,
+        concept: '',
+        amount: '',
+        currency: 'PEN',
+        date: new Date().toISOString().slice(0, 10),
+        status: 'PENDING',
+        categoryId: undefined,
+        companyId: undefined,
+        applicationId: undefined,
+        projectIds: [],
+        personId: undefined,
+        paymentTags: [],
+        isFixed: false,
+        notes: '',
+        dueDate: '',
+        isRecurring: false,
+      });
+    }
     if (open && transaction) {
       reset({
         type: (transaction.type as FormValues['type']) ?? defaultType,
@@ -205,14 +225,14 @@ export function TransactionFormDialog({
           currency: rest.currency,
           date: rest.date,
           status: rest.status,
-          categoryId: rest.categoryId,
-          companyId: rest.companyId,
+          categoryId: rest.categoryId || null,
+          companyId: showCompany ? rest.companyId || null : undefined,
           applicationId: isBusinessCost ? (rest.applicationId ?? null) : undefined,
           projectIds: isBusinessCost ? (projectIds ?? []) : undefined,
           personId: isTeamPayment ? (personId ?? null) : undefined,
-          notes: rest.notes,
-          dueDate: values.dueDate || undefined,
-          tags: finalTags.length ? finalTags : undefined,
+          notes: rest.notes ?? '',
+          dueDate: values.dueDate || null,
+          tags: finalTags,
         };
         return apiFetch<{ id: string }>(`/transactions/${transaction.id}?workspaceId=${workspaceId}`, {
           method: 'PATCH',
@@ -260,7 +280,10 @@ export function TransactionFormDialog({
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo</Label>
-              <Select defaultValue={defaultType} onValueChange={(v) => setValue('type', v as FormValues['type'])}>
+              <Select
+                value={watch('type')}
+                onValueChange={(v) => setValue('type', v as FormValues['type'], { shouldValidate: true })}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -279,7 +302,7 @@ export function TransactionFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Moneda</Label>
-              <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
+              <Select value={watch('currency')} onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -306,6 +329,47 @@ export function TransactionFormDialog({
               />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Categoría</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar categoría..."
+                value={watch('categoryId') ?? ''}
+                onValueChange={(v) => setValue('categoryId', v)}
+                options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Medios de pago / Banco</Label>
+              <MultiSelect
+                placeholder="Selecciona uno o varios"
+                searchPlaceholder="Buscar medio o banco..."
+                selected={watch('paymentTags') ?? []}
+                onChange={(vals) => setValue('paymentTags', vals)}
+                groups={[
+                  { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
+                  { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
+                ]}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Estado</Label>
+            <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PENDING">Pendiente</SelectItem>
+                <SelectItem value="PAID">Pagado</SelectItem>
+                <SelectItem value="PARTIAL">Parcial</SelectItem>
+                <SelectItem value="OVERDUE">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {watch('type') === 'EXPENSE' && (
@@ -379,58 +443,15 @@ export function TransactionFormDialog({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Categoría</Label>
+            {showCompany && (
+              <div className="space-y-1.5">
+                <Label>Empresa</Label>
                 <SearchSelect
                   placeholder="Opcional"
-                  searchPlaceholder="Buscar categoría..."
-                  value={watch('categoryId') ?? ''}
-                  onValueChange={(v) => setValue('categoryId', v)}
-                  options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
-                />
-              </div>
-
-              {showCompany ? (
-                <div className="space-y-2">
-                  <Label>Empresa</Label>
-                  <SearchSelect
-                    placeholder="Opcional"
-                    searchPlaceholder="Buscar empresa..."
-                    value={watch('companyId') ?? ''}
-                    onValueChange={(v) => setValue('companyId', v)}
-                    options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Medios de pago / Banco</Label>
-                  <MultiSelect
-                    placeholder="Selecciona uno o varios"
-                    searchPlaceholder="Buscar medio o banco..."
-                    selected={watch('paymentTags') ?? []}
-                    onChange={(vals) => setValue('paymentTags', vals)}
-                    groups={[
-                      { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
-                      { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
-                    ]}
-                  />
-                </div>
-              )}
-            </div>
-
-            {showCompany && (
-              <div className="space-y-2">
-                <Label>Medios de pago / Banco</Label>
-                <MultiSelect
-                  placeholder="Selecciona uno o varios"
-                  searchPlaceholder="Buscar medio o banco..."
-                  selected={watch('paymentTags') ?? []}
-                  onChange={(vals) => setValue('paymentTags', vals)}
-                  groups={[
-                    { label: 'Medios de pago', options: (paymentMethods ?? []).map((p) => p.name) },
-                    { label: 'Bancos', options: (banks ?? []).map((b) => b.name) },
-                  ]}
+                  searchPlaceholder="Buscar empresa..."
+                  value={watch('companyId') ?? ''}
+                  onValueChange={(v) => setValue('companyId', v)}
+                  options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
                 />
               </div>
             )}
@@ -513,7 +534,6 @@ export function TransactionFormDialog({
           </CollapsibleSection>
 
           <input type="hidden" {...register('amount')} />
-          <input type="hidden" {...register('status')} value={watch('status')} />
 
           <DialogFooter className="shrink-0 border-t pt-3">
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>

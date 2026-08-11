@@ -149,8 +149,10 @@ export function TransactionFormDialog({
 
   const isRecurring = watch('isRecurring');
   const currentType = watch('type');
+  const currentStatus = watch('status');
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
+  const showDueDate = currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE';
   const { data: applications } = useQuery({
     queryKey: queryKeys.applications(workspaceId),
     queryFn: () => apiFetch<Application[]>(`/applications?workspaceId=${workspaceId}`),
@@ -231,7 +233,7 @@ export function TransactionFormDialog({
           projectIds: isBusinessCost ? (projectIds ?? []) : undefined,
           personId: isTeamPayment ? (personId ?? null) : undefined,
           notes: rest.notes ?? '',
-          dueDate: values.dueDate || null,
+          dueDate: showDueDate ? values.dueDate || null : null,
           tags: finalTags,
         };
         return apiFetch<{ id: string }>(`/transactions/${transaction.id}?workspaceId=${workspaceId}`, {
@@ -250,7 +252,7 @@ export function TransactionFormDialog({
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
         recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate || undefined : undefined,
         recurrenceCount: values.isRecurring && recurrenceCount ? Number(recurrenceCount) : undefined,
-        dueDate: values.dueDate || undefined,
+        dueDate: showDueDate ? values.dueDate || undefined : undefined,
       };
       return apiFetch<{ id: string }>('/transactions', { method: 'POST', body: JSON.stringify(payload) });
     },
@@ -461,10 +463,13 @@ export function TransactionFormDialog({
               <Textarea id="notes" rows={2} placeholder="Detalle opcional del movimiento" {...register('notes')} />
             </div>
 
-            {editing && (
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Vencimiento</Label>
+            {showDueDate && (
+              <div className="space-y-1.5">
+                <Label htmlFor="dueDate">Fecha límite de pago</Label>
                 <Input id="dueDate" type="date" {...register('dueDate')} />
+                <p className="text-xs text-muted-foreground">
+                  Si llega esa fecha y sigue sin pagarse, se marcará como vencido automáticamente.
+                </p>
               </div>
             )}
 
@@ -485,13 +490,6 @@ export function TransactionFormDialog({
                     onCheckedChange={(v) => setValue('isRecurring', v)}
                   />
                 </div>
-
-                {!isRecurring && (
-                  <div className="space-y-2">
-                    <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
-                    <Input id="dueDate" type="date" {...register('dueDate')} />
-                  </div>
-                )}
 
                 {isRecurring && (
                   <>

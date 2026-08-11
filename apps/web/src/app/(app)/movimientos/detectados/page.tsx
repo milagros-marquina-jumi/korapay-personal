@@ -63,11 +63,13 @@ export default function DetectadosPage() {
           currency: filters.currency,
         })}`,
       ),
+    refetchInterval: 15 * 60 * 1000,
   });
 
   const { data: summary } = useQuery({
     queryKey: queryKeys.detectedSummary(),
     queryFn: () => apiFetch<DetectedSummary>('/detected-transactions/summary'),
+    refetchInterval: 15 * 60 * 1000,
   });
 
   const { data: exchangeRateInfo } = useQuery({
@@ -79,9 +81,10 @@ export default function DetectadosPage() {
   const { data: emailSources } = useQuery({
     queryKey: ['email-sources'],
     queryFn: () => apiFetch<EmailSource[]>('/email-sources'),
+    refetchInterval: 15 * 60 * 1000,
   });
 
-  const lastSync = emailSources?.[0]?.lastSuccessfulIngestionAt ?? null;
+  const lastSync = emailSources?.[0]?.lastReceivedAt ?? null;
 
   const exchangeRate = exchangeRateInfo ? Number(exchangeRateInfo.rate) : 1;
 
@@ -89,6 +92,7 @@ export default function DetectadosPage() {
     queryClient.invalidateQueries({ queryKey: ['detected-transactions'] });
     queryClient.invalidateQueries({ queryKey: queryKeys.detectedSummary() });
     queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['email-sources'] });
   };
 
   const ignoreMutation = useMutation({
@@ -320,7 +324,7 @@ export default function DetectadosPage() {
       action={
         <div className="flex items-center gap-3">
           {lastSync && (
-            <span className="text-xs text-muted-foreground">Ultima sincronizacion: {formatDateTime(lastSync)}</span>
+            <span className="text-xs text-muted-foreground">Ultimo contacto: {formatDateTime(lastSync)}</span>
           )}
           <Button variant="outline" onClick={() => setSyncOpen(true)}>
             <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
@@ -418,10 +422,13 @@ export default function DetectadosPage() {
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-muted-foreground">
-              Para forzar una sincronizacion ahora, abre tu proyecto en Google Apps Script y ejecuta la funcion{' '}
-              <code className="rounded bg-muted px-1 text-xs">syncKoraPayBankEmails</code>.
+              La sincronizacion se ejecuta automaticamente cada 15 minutos desde Google Apps Script.
             </p>
-            <p className="text-muted-foreground">Los nuevos movimientos apareceran aqui al refrescar la pagina.</p>
+            <p className="text-muted-foreground">
+              Para forzar una sincronizacion manual: abre Apps Script, ejecuta{' '}
+              <code className="rounded bg-muted px-1 text-xs">syncKoraPayBankEmails</code> y luego presiona Refrescar
+              lista.
+            </p>
           </div>
           <DialogFooter className="flex gap-2">
             <Button

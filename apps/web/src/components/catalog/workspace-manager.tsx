@@ -1,10 +1,10 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as Icons from 'lucide-react';
 import { Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { WorkspaceIcon } from '@/components/layout/workspace-icon';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -53,12 +53,6 @@ const WORKSPACE_ICONS = [
   'Palette',
   'GraduationCap',
 ] as const;
-
-function WorkspaceIcon({ name, className }: { name: string; className?: string }) {
-  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[name];
-  if (IconComponent) return <IconComponent className={className} />;
-  return <span>{name}</span>;
-}
 
 const EMPTY: FormState = { name: '', type: 'PERSONAL', emoji: 'Home', description: '', currency: 'PEN' };
 

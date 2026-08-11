@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { WorkspaceIcon } from '@/components/layout/workspace-icon';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,7 +40,7 @@ export function WorkspaceSwitcher({ collapsed = false }: Readonly<WorkspaceSwitc
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50',
             )}
           >
-            {activeWorkspace?.emoji ?? '•'}
+            <WorkspaceIcon name={activeWorkspace?.emoji} className="size-4.5" />
           </button>
         </TooltipTrigger>
         <TooltipContent side="right" sideOffset={10}>
@@ -63,8 +64,10 @@ export function WorkspaceSwitcher({ collapsed = false }: Readonly<WorkspaceSwitc
       <SelectContent>
         {workspaces.map((w) => (
           <SelectItem key={w.id} value={w.id}>
-            <span className="mr-2">{w.emoji}</span>
-            {w.name}
+            <span className="flex items-center gap-2">
+              <WorkspaceIcon name={w.emoji} className="size-4 shrink-0 text-muted-foreground" />
+              {w.name}
+            </span>
           </SelectItem>
         ))}
       </SelectContent>

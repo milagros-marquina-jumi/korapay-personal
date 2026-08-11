@@ -16,6 +16,12 @@ export class IngestionGuard implements CanActivate {
     if (source.status !== 'ACTIVE') throw new UnauthorizedException('Fuente de correo pausada o revocada');
 
     request.emailSource = source;
+
+    await this.prisma.emailSource.update({
+      where: { id: source.id },
+      data: { lastReceivedAt: new Date() },
+    });
+
     return true;
   }
 

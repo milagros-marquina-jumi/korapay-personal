@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ChevronDown, ChevronRight, Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
@@ -259,16 +259,20 @@ export default function MovimientosPage() {
       {
         accessorKey: 'status',
         header: 'Estado',
-        cell: ({ row }) =>
-          activeWorkspaceId && !row.original.isRecurring ? (
-            <StatusToggle
-              transactionId={row.original.id}
-              workspaceId={activeWorkspaceId}
-              status={row.original.status}
-            />
-          ) : (
-            <StatusBadge status={row.original.status} />
-          ),
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            {activeWorkspaceId && !row.original.isRecurring ? (
+              <StatusToggle
+                transactionId={row.original.id}
+                workspaceId={activeWorkspaceId}
+                status={row.original.status}
+              />
+            ) : (
+              <StatusBadge status={row.original.status} />
+            )}
+            <DueDateHint transaction={row.original} />
+          </div>
+        ),
       },
       {
         id: 'actions',
@@ -594,6 +598,42 @@ export default function MovimientosPage() {
         />
       )}
     </PageShell>
+  );
+}
+
+const DAY_MS = 86_400_000;
+
+function daysUntilDue(dueDate: string) {
+  const today = new Date();
+  const startOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const due = new Date(dueDate);
+  const startOfDue = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+  return Math.round((startOfDue - startOfToday) / DAY_MS);
+}
+
+function DueDateHint({ transaction }: Readonly<{ transaction: Transaction }>) {
+  if (!transaction.dueDate || transaction.status === 'PAID' || transaction.status === 'CANCELLED') return null;
+
+  const days = daysUntilDue(transaction.dueDate);
+  const vencido = days < 0;
+  if (!vencido && days > 7) return null;
+
+  let texto = `Vence en ${days} días`;
+  if (vencido) texto = days === -1 ? 'Venció ayer' : `Venció hace ${Math.abs(days)} días`;
+  else if (days === 0) texto = 'Vence hoy';
+  else if (days === 1) texto = 'Vence mañana';
+
+  return (
+    <span
+      title={`Fecha límite: ${formatDate(transaction.dueDate)}`}
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+        vencido || days === 0 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning',
+      )}
+    >
+      <AlertTriangle className="size-3" aria-hidden />
+      {texto}
+    </span>
   );
 }
 

@@ -62,8 +62,6 @@ export class EmailIngestionService {
       return { status: 'duplicate', processedEmailId: existing.id, result: 'ALREADY_PROCESSED' };
     }
 
-    await this.prisma.emailSource.update({ where: { id: source.id }, data: { lastReceivedAt: new Date() } });
-
     const parsedResult = this.parsers.parse({
       sender: input.sender,
       subject: input.subject,

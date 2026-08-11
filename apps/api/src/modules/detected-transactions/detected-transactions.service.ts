@@ -76,6 +76,15 @@ export class DetectedTransactionsService {
     return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
   }
 
+  async unignore(id: string, profileId: string) {
+    await this.findOne(id, profileId);
+    const row = await this.prisma.detectedBankTransaction.update({
+      where: { id },
+      data: { status: 'PENDING_REVIEW', ignoredAt: null },
+    });
+    return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
+  }
+
   async markDuplicate(id: string, profileId: string) {
     await this.findOne(id, profileId);
     const row = await this.prisma.detectedBankTransaction.update({ where: { id }, data: { status: 'DUPLICATE' } });
@@ -87,7 +96,6 @@ export class DetectedTransactionsService {
     if (!detected) throw new NotFoundException('Movimiento detectado no encontrado');
     if (detected.status === 'CONFIRMED') throw new ConflictException('Este movimiento ya fue confirmado');
     if (detected.status === 'DUPLICATE') throw new BadRequestException('No se puede confirmar un duplicado');
-    if (detected.status === 'IGNORED') throw new BadRequestException('No se puede confirmar un movimiento ignorado');
     if (BLOCKED_TYPES.includes(detected.transactionType)) {
       throw new BadRequestException('No se puede confirmar una operación rechazada');
     }

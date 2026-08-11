@@ -73,8 +73,13 @@ hacer clic. `banco`→tag. CRUD completo en `/mimotech/costos` (crear/editar/eli
 por estado/app/proyecto, columnas Proyecto(s) y Banco).
 
 ### Mimotech_Pagos → Pagos equipo
-Campos: persona, salario, fecha, mes, estado, notas, monto.
-→ `Transaction` tipo TEAM_PAYMENT. `persona`→Person (kind TEAM).
+Campos: persona (7 del equipo interno), salario (etiqueta literal "Salario", no un monto),
+fecha, mes, estado (todo Pagado), notas (periodicidad: Semana N / quincena / fin), monto (PEN).
+→ `Transaction` tipo TEAM_PAYMENT con relación real `person` (kind TEAM); `notas`→description,
+`mes`→tag. La UI usa la relación `person` (no el texto del concepto). El **salario de referencia**
+se guarda en `Person.salary` (sembrado = monto de pago más frecuente por persona). CRUD completo
+en `/mimotech/equipo`: pagos (crear con selector de Persona, editar, eliminar), total pagado por
+persona, y CRUD de miembros del equipo (nombre, rol, salario, estado, contacto).
 
 ### Mimotalents_General → Talentos
 Campos: nombre, inicioConmigo, tiempoConmigo, finConmigo, inicioPrimerTrabajo, diapositiva,

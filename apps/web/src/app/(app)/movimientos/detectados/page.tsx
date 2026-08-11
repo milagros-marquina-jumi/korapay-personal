@@ -68,7 +68,6 @@ const NON_CONFIRMABLE_TYPES = new Set(['DECLINED_TRANSACTION']);
 function confirmBlockedReason(detected: DetectedTransaction): string | null {
   if (detected.status === 'CONFIRMED') return 'Ya confirmado';
   if (detected.status === 'DUPLICATE') return 'Duplicado';
-  if (detected.status === 'IGNORED') return 'Ignorado';
   if (NON_CONFIRMABLE_TYPES.has(detected.transactionType)) return 'No se puede confirmar (rechazada)';
   return null;
 }
@@ -275,6 +274,15 @@ export default function DetectadosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const unignoreMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/detected-transactions/${id}/unignore`, { method: 'POST' }),
+    onSuccess: () => {
+      invalidate();
+      toast.success('Movimiento restaurado a revisión');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiFetch(`/detected-transactions/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
@@ -390,6 +398,7 @@ export default function DetectadosPage() {
         cell: ({ row }) => {
           const t = row.original;
           const isPending = t.status === 'PENDING_REVIEW';
+          const isIgnored = t.status === 'IGNORED';
           const confirmDisabledLabel = confirmBlockedReason(t);
           return (
             <div className="flex justify-end gap-0.5">
@@ -399,19 +408,27 @@ export default function DetectadosPage() {
                 disabled={!!confirmDisabledLabel}
                 onClick={() => setConfirming(t)}
               />
-              <IconAction
-                icon={Ban}
-                label="Ignorar"
-                disabled={!isPending}
-                onClick={async () => {
-                  const ok = await confirm({
-                    title: 'Ignorar movimiento',
-                    description: 'El movimiento no se registrará en tus finanzas.',
-                    confirmLabel: 'Ignorar',
-                  });
-                  if (ok) ignoreMutation.mutate(t.id);
-                }}
-              />
+              {isIgnored ? (
+                <IconAction
+                  icon={Ban}
+                  label="Des-ignorar"
+                  onClick={() => unignoreMutation.mutate(t.id)}
+                />
+              ) : (
+                <IconAction
+                  icon={Ban}
+                  label="Ignorar"
+                  disabled={!isPending}
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: 'Ignorar movimiento',
+                      description: 'El movimiento no se registrará en tus finanzas.',
+                      confirmLabel: 'Ignorar',
+                    });
+                    if (ok) ignoreMutation.mutate(t.id);
+                  }}
+                />
+              )}
               <IconAction
                 icon={CopyCheck}
                 label="Marcar como duplicado"

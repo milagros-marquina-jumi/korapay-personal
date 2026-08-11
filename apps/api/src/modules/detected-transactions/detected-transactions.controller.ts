@@ -43,6 +43,11 @@ export class DetectedTransactionsController {
     return this.service.ignore(id, userId);
   }
 
+  @Post(':id/unignore')
+  unignore(@Param('id') id: string, @CurrentUser('sub') userId: string) {
+    return this.service.unignore(id, userId);
+  }
+
   @Post(':id/mark-duplicate')
   markDuplicate(@Param('id') id: string, @CurrentUser('sub') userId: string) {
     return this.service.markDuplicate(id, userId);

@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { PersonBar, type PersonBarDatum, PivotTable } from '@/components/charts';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
@@ -56,27 +56,26 @@ function GlobalReportContent() {
   }));
 
   return (
-    <div className="space-y-6">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link href="/mimotech/talentos">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Talentos
-        </Link>
-      </Button>
-
-      <PageHeader
-        title="Reporte general de Mimotalents"
-        description="Ingresos y egresos por talento, calculados de sus pagos y estado de cuenta"
-        action={
-          <FilterSelect
-            value={year}
-            onValueChange={setYear}
-            options={data.years.map((y) => ({ value: String(y), label: String(y) }))}
-            placeholder="Año"
-            allLabel="Todos los años"
-          />
-        }
-      />
-
+    <PageShell
+      beforeHeader={
+        <Button asChild variant="ghost" size="sm" className="w-fit">
+          <Link href="/mimotech/talentos">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Talentos
+          </Link>
+        </Button>
+      }
+      title="Reporte general de Mimotalents"
+      description="Ingresos y egresos por talento, calculados de sus pagos y estado de cuenta"
+      action={
+        <FilterSelect
+          value={year}
+          onValueChange={setYear}
+          options={data.years.map((y) => ({ value: String(y), label: String(y) }))}
+          placeholder="Año"
+          allLabel="Todos los años"
+        />
+      }
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label="Recibí (MIMOTECH)"
@@ -255,7 +254,7 @@ function GlobalReportContent() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }
 

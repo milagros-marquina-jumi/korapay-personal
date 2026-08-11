@@ -25,7 +25,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -231,19 +231,18 @@ function TalentDetailContent() {
     : null;
 
   return (
-    <div className="space-y-6">
-      <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link href="/mimotech/talentos">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Talentos
-        </Link>
-      </Button>
-
-      <PageHeader
-        title={talent.name}
-        description={talent.role ?? undefined}
-        action={<StatusBadge status={talent.status} />}
-      />
-
+    <PageShell
+      beforeHeader={
+        <Button asChild variant="ghost" size="sm" className="w-fit">
+          <Link href="/mimotech/talentos">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Talentos
+          </Link>
+        </Button>
+      }
+      title={talent.name}
+      description={talent.role ?? undefined}
+      action={<StatusBadge status={talent.status} />}
+    >
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Perfil del talento</CardTitle>
@@ -734,7 +733,7 @@ function TalentDetailContent() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }
 

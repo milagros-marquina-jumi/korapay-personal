@@ -12,7 +12,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { ContractFormDialog } from '@/components/forms/contract-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -166,25 +166,23 @@ function ContratosContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Contratos"
-        description="Tus contratos laborales"
-        action={
-          activeWorkspaceId && (
-            <ContractFormDialog
-              workspaceId={activeWorkspaceId}
-              onSaved={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo contrato
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Contratos"
+      description="Tus contratos laborales"
+      action={
+        activeWorkspaceId && (
+          <ContractFormDialog
+            workspaceId={activeWorkspaceId}
+            onSaved={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo contrato
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -238,7 +236,7 @@ function ContratosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

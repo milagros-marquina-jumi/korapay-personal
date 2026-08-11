@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
@@ -227,17 +227,15 @@ export default function ReglasConciliacionPage() {
   const rules = data ?? [];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Reglas de conciliación"
-        description="Asigna automáticamente workspace, cuenta y categoría según el comercio"
-        action={
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Nueva regla
-          </Button>
-        }
-      />
-
+    <PageShell
+      title="Reglas de conciliación"
+      description="Asigna automáticamente workspace, cuenta y categoría según el comercio"
+      action={
+        <Button onClick={() => setAddOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Nueva regla
+        </Button>
+      }
+    >
       {isLoading ? (
         <Skeleton className="h-64 rounded-2xl" />
       ) : rules.length ? (
@@ -314,6 +312,6 @@ export default function ReglasConciliacionPage() {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

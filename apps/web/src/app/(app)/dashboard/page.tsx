@@ -5,7 +5,7 @@ import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Wallet } from 'lucide-react';
 import { CategoryDonut, IncomeExpenseArea, type IncomeExpensePoint } from '@/components/charts';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -66,12 +66,10 @@ export default function DashboardPage() {
   const recent = transactions.slice(0, 6);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description={activeWorkspace ? `Resumen de ${activeWorkspace.name}` : 'Resumen financiero'}
-      />
-
+    <PageShell
+      title="Dashboard"
+      description={activeWorkspace ? `Resumen de ${activeWorkspace.name}` : 'Resumen financiero'}
+    >
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading || !summary ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
@@ -158,6 +156,6 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

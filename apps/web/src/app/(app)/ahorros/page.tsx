@@ -7,7 +7,7 @@ import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL } from '@/components/data-table/filter-select';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card } from '@/components/ui/card';
 import { apiFetch } from '@/lib/api';
@@ -42,9 +42,7 @@ export default function AhorrosPage() {
   }, [data?.data, search, month]);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Ahorros" description="Saldo de tus cuentas de ahorro por mes" />
-
+    <PageShell title="Ahorros" description="Saldo de tus cuentas de ahorro por mes">
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -108,6 +106,6 @@ export default function AhorrosPage() {
       ) : (
         <EmptyState title="Sin ahorros" description="No hay saldos de ahorro registrados para el periodo." />
       )}
-    </div>
+    </PageShell>
   );
 }

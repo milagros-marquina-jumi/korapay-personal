@@ -15,7 +15,7 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
@@ -287,27 +287,25 @@ export default function MovimientosPage() {
   const categoryName = (id?: string | null) => categories?.find((c) => c.id === id)?.name ?? '—';
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Movimientos"
-        description="Todos tus ingresos y egresos"
-        action={
-          activeWorkspaceId && (
-            <TransactionFormDialog
-              workspaceId={activeWorkspaceId}
-              workspaceType={activeWorkspace?.type}
-              defaultType="EXPENSE"
-              onCreated={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo movimiento
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Movimientos"
+      description="Todos tus ingresos y egresos"
+      action={
+        activeWorkspaceId && (
+          <TransactionFormDialog
+            workspaceId={activeWorkspaceId}
+            workspaceType={activeWorkspace?.type}
+            defaultType="EXPENSE"
+            onCreated={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo movimiento
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -488,7 +486,7 @@ export default function MovimientosPage() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

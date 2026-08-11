@@ -14,7 +14,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -284,25 +284,23 @@ function EmpresasContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Empresas"
-        description="Empresas asociadas a tus ingresos laborales"
-        action={
-          activeWorkspaceId && (
-            <CompanyFormDialog
-              workspaceId={activeWorkspaceId}
-              onSaved={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nueva empresa
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Empresas"
+      description="Empresas asociadas a tus ingresos laborales"
+      action={
+        activeWorkspaceId && (
+          <CompanyFormDialog
+            workspaceId={activeWorkspaceId}
+            onSaved={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nueva empresa
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -349,7 +347,7 @@ function EmpresasContent() {
           onOpenChange={(next) => !next && setClientsFor(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

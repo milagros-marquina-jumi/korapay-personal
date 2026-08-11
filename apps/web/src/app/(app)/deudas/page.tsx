@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -295,13 +295,11 @@ export default function DeudasPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Deudas"
-        description="Gestiona lo que debes y lo que te deben"
-        action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
-      />
-
+    <PageShell
+      title="Deudas"
+      description="Gestiona lo que debes y lo que te deben"
+      action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -384,6 +382,6 @@ export default function DeudasPage() {
       ) : (
         <EmptyState title="Sin deudas" description="No tienes deudas registradas." />
       )}
-    </div>
+    </PageShell>
   );
 }

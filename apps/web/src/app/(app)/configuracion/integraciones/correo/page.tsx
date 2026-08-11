@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -267,17 +267,15 @@ export default function CorreoIntegracionesPage() {
   const sources = data ?? [];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Integraciones de correo"
-        description="Conecta tus correos bancarios mediante Google Apps Script"
-        action={
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Agregar correo
-          </Button>
-        }
-      />
-
+    <PageShell
+      title="Integraciones de correo"
+      description="Conecta tus correos bancarios mediante Google Apps Script"
+      action={
+        <Button onClick={() => setAddOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" /> Agregar correo
+        </Button>
+      }
+    >
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -395,6 +393,6 @@ export default function CorreoIntegracionesPage() {
           {tokenShown && <TokenPanel token={tokenShown} onClose={() => setTokenShown(null)} />}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 }

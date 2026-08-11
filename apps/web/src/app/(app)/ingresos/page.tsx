@@ -14,7 +14,7 @@ import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -187,27 +187,25 @@ function IngresosContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Ingresos"
-        description="Ingresos por trabajos y empleos"
-        action={
-          activeWorkspaceId && (
-            <TransactionFormDialog
-              workspaceId={activeWorkspaceId}
-              workspaceType={activeWorkspace?.type}
-              defaultType="INCOME"
-              onCreated={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo ingreso
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Ingresos"
+      description="Ingresos por trabajos y empleos"
+      action={
+        activeWorkspaceId && (
+          <TransactionFormDialog
+            workspaceId={activeWorkspaceId}
+            workspaceType={activeWorkspace?.type}
+            defaultType="INCOME"
+            onCreated={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo ingreso
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -292,7 +290,7 @@ function IngresosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

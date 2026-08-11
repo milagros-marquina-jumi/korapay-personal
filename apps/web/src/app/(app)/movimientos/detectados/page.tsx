@@ -11,7 +11,7 @@ import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -409,11 +409,7 @@ export default function DetectadosPage() {
                 onClick={() => setConfirming(t)}
               />
               {isIgnored ? (
-                <IconAction
-                  icon={Ban}
-                  label="Des-ignorar"
-                  onClick={() => unignoreMutation.mutate(t.id)}
-                />
+                <IconAction icon={Ban} label="Des-ignorar" onClick={() => unignoreMutation.mutate(t.id)} />
               ) : (
                 <IconAction
                   icon={Ban}
@@ -461,17 +457,15 @@ export default function DetectadosPage() {
     search !== '' || statusFilter !== FILTER_ALL || bankFilter !== FILTER_ALL || currencyFilter !== FILTER_ALL;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Movimientos detectados"
-        description="Revisa y confirma los consumos importados desde tus correos"
-        action={
-          <Button variant="outline" onClick={() => setSyncOpen(true)}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
-          </Button>
-        }
-      />
-
+    <PageShell
+      title="Movimientos detectados"
+      description="Revisa y confirma los consumos importados desde tus correos"
+      action={
+        <Button variant="outline" onClick={() => setSyncOpen(true)}>
+          <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar
+        </Button>
+      }
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KPICard label="Por revisar" value={String(summary?.pendingReview ?? 0)} icon={Inbox} />
         <KPICard label="Alta confianza" value={String(summary?.highConfidence ?? 0)} icon={CheckCircle2} />
@@ -600,6 +594,6 @@ export default function DetectadosPage() {
           }}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -11,7 +11,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -206,25 +206,23 @@ function EquipoContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Equipo directo"
-        description="Pagos al equipo directo de MIMOTECH"
-        action={
-          ws && (
-            <TransactionFormDialog
-              workspaceId={ws}
-              defaultType="TEAM_PAYMENT"
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo pago
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Equipo directo"
+      description="Pagos al equipo directo de MIMOTECH"
+      action={
+        ws && (
+          <TransactionFormDialog
+            workspaceId={ws}
+            defaultType="TEAM_PAYMENT"
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo pago
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <KPICard
           label="Total pagado"
@@ -380,7 +378,7 @@ function EquipoContent() {
           isPending={updatePersonMutation.isPending}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

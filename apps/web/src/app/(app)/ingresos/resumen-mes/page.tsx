@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card } from '@/components/ui/card';
@@ -58,9 +58,7 @@ function ResumenMesContent() {
   }, [data?.data, search]);
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Resumen por mes" description="Ingresos netos por empresa, agrupados por año y mes" />
-
+    <PageShell title="Resumen por mes" description="Ingresos netos por empresa, agrupados por año y mes">
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -121,7 +119,7 @@ function ResumenMesContent() {
       ) : (
         <EmptyState title="Sin ingresos" description="No hay ingresos registrados para el periodo seleccionado." />
       )}
-    </div>
+    </PageShell>
   );
 }
 

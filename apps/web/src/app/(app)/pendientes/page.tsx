@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
@@ -238,13 +238,11 @@ export default function PendientesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Pendientes"
-        description="Cobros y pagos pendientes"
-        action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
-      />
-
+    <PageShell
+      title="Pendientes"
+      description="Cobros y pagos pendientes"
+      action={activeWorkspaceId ? <PendingFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -334,6 +332,6 @@ export default function PendientesPage() {
       ) : (
         <EmptyState title="Sin pendientes" description="No tienes cobros ni pagos pendientes." />
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -11,7 +11,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { ProjectFormDialog } from '@/components/forms/project-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -117,25 +117,23 @@ function ProyectosContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Proyectos"
-        description="Proyectos de MIMOTECH"
-        action={
-          activeWorkspaceId && (
-            <ProjectFormDialog
-              workspaceId={activeWorkspaceId}
-              onSaved={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Proyectos"
+      description="Proyectos de MIMOTECH"
+      action={
+        activeWorkspaceId && (
+          <ProjectFormDialog
+            workspaceId={activeWorkspaceId}
+            onSaved={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -171,7 +169,7 @@ function ProyectosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

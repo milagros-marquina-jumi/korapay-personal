@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,9 +56,7 @@ export default function PerfilPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Mi perfil" description="Tu información personal" />
-
+    <PageShell title="Mi perfil" description="Tu información personal">
       <Card>
         <CardHeader>
           <CardTitle>Datos personales</CardTitle>
@@ -99,6 +97,6 @@ export default function PerfilPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageShell>
   );
 }

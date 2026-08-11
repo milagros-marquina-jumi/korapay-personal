@@ -14,7 +14,7 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TaxStatusToggle } from '@/components/data-table/tax-status-toggle';
 import { RentaInstallments } from '@/components/forms/renta-installments';
 import { TaxObligationFormDialog } from '@/components/forms/tax-obligation-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -175,25 +175,23 @@ function RentaContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Renta"
-        description="Obligaciones tributarias y renta anual"
-        action={
-          activeWorkspaceId && (
-            <TaxObligationFormDialog
-              workspaceId={activeWorkspaceId}
-              onSaved={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nueva obligación
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Renta"
+      description="Obligaciones tributarias y renta anual"
+      action={
+        activeWorkspaceId && (
+          <TaxObligationFormDialog
+            workspaceId={activeWorkspaceId}
+            onSaved={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nueva obligación
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <KPICard
           label="Pendiente"
@@ -250,7 +248,7 @@ function RentaContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

@@ -14,7 +14,7 @@ import {
   Users,
 } from 'lucide-react';
 import { CategoryDonut, MonthlyBar, type MonthlyPoint } from '@/components/charts';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -438,9 +438,7 @@ export default function ReportesPage() {
   const isPersonal = activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED';
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Reportes" description="Resumen y análisis financiero" />
-
+    <PageShell title="Reportes" description="Resumen y análisis financiero">
       {activeWorkspaceId && isBusiness ? (
         <BusinessReportsView workspaceId={activeWorkspaceId} />
       ) : activeWorkspaceId && isEmployment ? (
@@ -450,6 +448,6 @@ export default function ReportesPage() {
       ) : (
         <p className="text-sm text-muted-foreground">Selecciona un workspace para ver sus reportes.</p>
       )}
-    </div>
+    </PageShell>
   );
 }

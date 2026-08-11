@@ -11,7 +11,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -200,25 +200,23 @@ function CostosContent() {
   );
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Costos de infraestructura"
-        description="Costos de aplicaciones y servicios de MIMOTECH"
-        action={
-          ws && (
-            <TransactionFormDialog
-              workspaceId={ws}
-              defaultType="BUSINESS_COST"
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo costo
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Costos de infraestructura"
+      description="Costos de aplicaciones y servicios de MIMOTECH"
+      action={
+        ws && (
+          <TransactionFormDialog
+            workspaceId={ws}
+            defaultType="BUSINESS_COST"
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo costo
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <KPICard
           label="Total costos"
@@ -313,7 +311,7 @@ function CostosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { CatalogManager } from '@/components/catalog/catalog-manager';
 import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,9 +16,7 @@ export default function ConfiguracionPage() {
   const ws = activeWorkspaceId ?? '';
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Configuración" description="Workspaces, tipo de cambio y catálogos" />
-
+    <PageShell title="Configuración" description="Workspaces, tipo de cambio y catálogos">
       <Tabs defaultValue="workspaces">
         <TabsList>
           <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
@@ -220,6 +218,6 @@ export default function ConfiguracionPage() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }

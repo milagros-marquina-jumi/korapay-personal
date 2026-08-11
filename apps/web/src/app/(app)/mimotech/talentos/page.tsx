@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
-import { PageHeader } from '@/components/layout/page-header';
+import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -319,25 +319,23 @@ function TalentosContent() {
   const hasFilters = search.trim().length > 0 || status !== 'ACTIVE' || pending !== FILTER_ALL;
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Talentos"
-        description="Talentos tercerizados de MIMOTECH (activos primero, por antigüedad)"
-        action={
-          activeWorkspaceId && (
-            <TalentFormDialog
-              workspaceId={activeWorkspaceId}
-              onCreated={markNew}
-              trigger={
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" /> Nuevo talento
-                </Button>
-              }
-            />
-          )
-        }
-      />
-
+    <PageShell
+      title="Talentos"
+      description="Talentos tercerizados de MIMOTECH (activos primero, por antigüedad)"
+      action={
+        activeWorkspaceId && (
+          <TalentFormDialog
+            workspaceId={activeWorkspaceId}
+            onCreated={markNew}
+            trigger={
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nuevo talento
+              </Button>
+            }
+          />
+        )
+      }
+    >
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
@@ -480,7 +478,7 @@ function TalentosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }
 

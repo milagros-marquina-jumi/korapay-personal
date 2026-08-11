@@ -34,6 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { PendingItem } from '@/lib/api.types';
+import { PENDING_KIND_LABELS } from '@/lib/labels';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { cn, formatDate } from '@/lib/utils';
@@ -207,7 +208,7 @@ export default function PendientesPage() {
 
   const kindOptions = useMemo(() => {
     const values = Array.from(new Set((data ?? []).map((i) => i.kind)));
-    return values.map((v) => ({ value: v, label: v }));
+    return values.map((v) => ({ value: v, label: PENDING_KIND_LABELS[v] ?? v }));
   }, [data]);
 
   const statusOptions = useMemo(() => {

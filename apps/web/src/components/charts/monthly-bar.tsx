@@ -3,7 +3,7 @@
 import { formatMoney } from '@korapay/domain';
 import { useTheme } from 'next-themes';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { EXPENSE_COLOR, INCOME_COLOR } from './palette';
+import { compactAmount, EXPENSE_COLOR, INCOME_COLOR } from './palette';
 
 export interface MonthlyPoint {
   label: string;
@@ -14,9 +14,20 @@ export interface MonthlyPoint {
 interface Props {
   data: MonthlyPoint[];
   height?: number;
+  firstName?: string;
+  firstColor?: string;
+  secondName?: string;
+  secondColor?: string;
 }
 
-export function MonthlyBar({ data, height = 300 }: Props) {
+export function MonthlyBar({
+  data,
+  height = 300,
+  firstName = 'Ingresos',
+  firstColor = INCOME_COLOR,
+  secondName = 'Egresos',
+  secondColor = EXPENSE_COLOR,
+}: Readonly<Props>) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const axis = '#898781';
@@ -24,17 +35,18 @@ export function MonthlyBar({ data, height = 300 }: Props) {
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 4 }} barGap={2}>
+      <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 8 }} barGap={2}>
         <CartesianGrid stroke={grid} vertical={false} />
-        <XAxis dataKey="label" stroke={axis} fontSize={12} tickLine={false} axisLine={false} />
-        <YAxis
+        <XAxis
+          dataKey="label"
           stroke={axis}
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          width={72}
-          tickFormatter={(v) => formatMoney(String(v), 'PEN')}
+          interval="preserveStartEnd"
+          minTickGap={8}
         />
+        <YAxis stroke={axis} fontSize={12} tickLine={false} axisLine={false} width={56} tickFormatter={compactAmount} />
         <Tooltip
           cursor={{ fill: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}
           contentStyle={{
@@ -50,8 +62,8 @@ export function MonthlyBar({ data, height = 300 }: Props) {
           formatter={(value: number, name) => [formatMoney(String(value), 'PEN'), name]}
         />
         <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="ingresos" name="Ingresos" fill={INCOME_COLOR} radius={[4, 4, 0, 0]} />
-        <Bar dataKey="egresos" name="Egresos" fill={EXPENSE_COLOR} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="ingresos" name={firstName} fill={firstColor} radius={[4, 4, 0, 0]} />
+        <Bar dataKey="egresos" name={secondName} fill={secondColor} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

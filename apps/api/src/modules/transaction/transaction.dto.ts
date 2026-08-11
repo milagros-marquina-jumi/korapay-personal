@@ -10,6 +10,7 @@ import {
   IsNumberString,
   IsOptional,
   IsString,
+  Max,
   Min,
 } from 'class-validator';
 
@@ -289,4 +290,22 @@ export class MonthlySummaryDto {
   @IsInt()
   @Min(2000)
   year?: number;
+}
+
+export class DuplicateTransactionDto {
+  @ApiPropertyOptional({ example: 2026 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  year?: number;
+
+  @ApiPropertyOptional({ example: 4 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  month?: number;
 }

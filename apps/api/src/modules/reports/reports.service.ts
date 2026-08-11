@@ -13,8 +13,84 @@ export class ReportsService {
     return { date: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } };
   }
 
+  private isFixedExpense(tags: string[] | null | undefined) {
+    const lower = (tags ?? []).map((x) => x.toLowerCase());
+    return lower.some((x) => x.includes('fijo')) && !lower.some((x) => x.includes('no fijo'));
+  }
+
+  private addToCategory(target: Map<number, Map<string, Decimal>>, year: number, name: string, amount: Decimal) {
+    let categories = target.get(year);
+    if (!categories) {
+      categories = new Map();
+      target.set(year, categories);
+    }
+    categories.set(name, (categories.get(name) ?? new Decimal(0)).add(amount));
+  }
+
+  private aggregateByYear(
+    rows: {
+      date: Date;
+      type: string;
+      amountBase: Decimal | string;
+      tags: string[];
+      category: { name: string } | null;
+    }[],
+  ) {
+    const totals = new Map<number, { income: Decimal; expense: Decimal; fixed: Decimal; variable: Decimal }>();
+    const byCategory = new Map<number, Map<string, Decimal>>();
+
+    for (const row of rows) {
+      const year = row.date.getUTCFullYear();
+      if (!totals.has(year)) {
+        totals.set(year, {
+          income: new Decimal(0),
+          expense: new Decimal(0),
+          fixed: new Decimal(0),
+          variable: new Decimal(0),
+        });
+      }
+      const bucket = totals.get(year);
+      if (!bucket) continue;
+      const amount = new Decimal(row.amountBase);
+
+      if (row.type === 'INCOME') {
+        bucket.income = bucket.income.add(amount);
+        continue;
+      }
+      if (row.type !== 'EXPENSE') continue;
+
+      bucket.expense = bucket.expense.add(amount);
+      if (this.isFixedExpense(row.tags)) bucket.fixed = bucket.fixed.add(amount);
+      else bucket.variable = bucket.variable.add(amount);
+
+      this.addToCategory(byCategory, year, row.category?.name ?? 'Sin categoría', amount);
+    }
+
+    const yearlyTotals = [...totals.entries()]
+      .map(([year, v]) => ({
+        year,
+        income: v.income.toFixed(2),
+        expense: v.expense.toFixed(2),
+        net: v.income.minus(v.expense).toFixed(2),
+        fixed: v.fixed.toFixed(2),
+        variable: v.variable.toFixed(2),
+      }))
+      .sort((a, b) => a.year - b.year);
+
+    const yearlyByCategory = [...byCategory.entries()]
+      .map(([year, categories]) => ({
+        year,
+        categories: [...categories.entries()]
+          .map(([name, total]) => ({ name, total: total.toFixed(2) }))
+          .sort((a, b) => Number(b.total) - Number(a.total)),
+      }))
+      .sort((a, b) => a.year - b.year);
+
+    return { yearlyTotals, yearlyByCategory };
+  }
+
   async personal(workspaceId: string, year?: number) {
-    const [transactions, balances] = await Promise.all([
+    const [transactions, balances, allTransactions, allBalanceYears] = await Promise.all([
       this.prisma.transaction.findMany({
         where: { workspaceId, deletedAt: null, ...this.yearFilter(year) },
         include: { category: true },
@@ -23,11 +99,22 @@ export class ReportsService {
         where: { workspaceId, deletedAt: null, ...(year ? { year } : {}) },
         orderBy: [{ year: 'asc' }, { month: 'asc' }],
       }),
+      this.prisma.transaction.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { date: true, type: true, amountBase: true, tags: true, category: { select: { name: true } } },
+      }),
+      this.prisma.savingBalance.findMany({
+        where: { workspaceId, deletedAt: null },
+        select: { year: true },
+        distinct: ['year'],
+      }),
     ]);
 
     const years = [
-      ...new Set([...transactions.map((t) => t.date.getUTCFullYear()), ...balances.map((b) => b.year)]),
+      ...new Set([...allTransactions.map((t) => t.date.getUTCFullYear()), ...allBalanceYears.map((b) => b.year)]),
     ].sort((a, b) => b - a);
+
+    const { yearlyTotals, yearlyByCategory } = this.aggregateByYear(allTransactions);
 
     // 1. Gastos por categoría
     const byCategory = new Map<string, Decimal>();
@@ -80,16 +167,45 @@ export class ReportsService {
     // 4. Gasto fijo vs no fijo (tag Fijo/No fijo del Excel)
     let fixed = new Decimal(0);
     let variable = new Decimal(0);
+    const monthlyFixedVar = new Map<string, { fixed: Decimal; variable: Decimal }>();
     for (const t of transactions) {
       if (t.type !== 'EXPENSE') continue;
       const tags = (t.tags ?? []).map((x) => x.toLowerCase());
       const isFixed = tags.some((x) => x === 'fijo' || x.includes('fijo')) && !tags.some((x) => x.includes('no fijo'));
-      if (isFixed) fixed = fixed.add(new Decimal(t.amountBase));
-      else variable = variable.add(new Decimal(t.amountBase));
+      const amount = new Decimal(t.amountBase);
+      if (isFixed) fixed = fixed.add(amount);
+      else variable = variable.add(amount);
+      const key = `${t.date.getUTCFullYear()}-${t.date.getUTCMonth() + 1}`;
+      if (!monthlyFixedVar.has(key)) monthlyFixedVar.set(key, { fixed: new Decimal(0), variable: new Decimal(0) });
+      const bucket = monthlyFixedVar.get(key);
+      if (!bucket) continue;
+      if (isFixed) bucket.fixed = bucket.fixed.add(amount);
+      else bucket.variable = bucket.variable.add(amount);
     }
     const fixedVsVariable = { fixed: fixed.toFixed(2), variable: variable.toFixed(2) };
+    const monthlyFixedVsVariable = [...monthlyFixedVar.entries()]
+      .map(([key, v]) => {
+        const [y = 0, m = 1] = key.split('-').map(Number);
+        return {
+          year: y,
+          month: m,
+          label: `${MONTH_NAMES[m - 1]} ${y}`,
+          fixed: v.fixed.toFixed(2),
+          variable: v.variable.toFixed(2),
+        };
+      })
+      .sort((a, b) => a.year - b.year || a.month - b.month);
 
-    return { years, expenseByCategory, incomeVsExpense, savingsEvolution, fixedVsVariable };
+    return {
+      years,
+      yearlyTotals,
+      yearlyByCategory,
+      expenseByCategory,
+      incomeVsExpense,
+      savingsEvolution,
+      fixedVsVariable,
+      monthlyFixedVsVariable,
+    };
   }
 
   async business(workspaceId: string, year?: number) {

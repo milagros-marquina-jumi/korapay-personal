@@ -80,14 +80,14 @@ export default function DashboardPage() {
               value={formatMoney(summary.ingresos, 'PEN')}
               icon={ArrowUpRight}
               color="text-success"
-              tooltip="Total de movimientos tipo INCOME en el periodo"
+              tooltip="Suma de todos los movimientos de tipo Ingreso en el periodo"
             />
             <KPICard
               label="Egresos"
               value={formatMoney(summary.egresos, 'PEN')}
               icon={ArrowDownRight}
               color="text-destructive"
-              tooltip="Total de movimientos tipo EXPENSE en el periodo"
+              tooltip="Suma de todos los movimientos de tipo Egreso en el periodo"
             />
             <KPICard
               label="Disponible"
@@ -101,7 +101,7 @@ export default function DashboardPage() {
               value={formatMoney(summary.ahorro, 'PEN')}
               icon={PiggyBank}
               color="text-brand"
-              tooltip="Total de movimientos tipo SAVING en el periodo"
+              tooltip="Suma de todos los movimientos de tipo Ahorro en el periodo"
             />
           </>
         )}

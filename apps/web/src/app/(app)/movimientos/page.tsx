@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
+import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ChevronDown, ChevronRight, Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
@@ -13,47 +13,26 @@ import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select'
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
+import { DuplicateTransactionDialog } from '@/components/forms/duplicate-transaction-dialog';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { IconAction } from '@/components/ui/icon-action';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Category, Paginated, Transaction } from '@/lib/api.types';
+import { RECURRENCE_LABELS, TRANSACTION_TYPE_LABELS } from '@/lib/labels';
+import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
 import { useHighlightNew } from '@/lib/use-highlight-new';
-import { formatDate, formatDateLong, formatMonthYear } from '@/lib/utils';
-
-const TYPE_LABELS: Record<string, string> = {
-  INCOME: 'Ingreso',
-  EXPENSE: 'Egreso',
-  SAVING: 'Ahorro',
-  BUSINESS_COST: 'Costo',
-  TEAM_PAYMENT: 'Pago equipo',
-  TRANSFER: 'Transferencia',
-};
-
-const RECURRENCE_LABELS: Record<string, string> = {
-  WEEKLY: 'Semanal',
-  MONTHLY: 'Mensual',
-  QUARTERLY: 'Trimestral',
-  YEARLY: 'Anual',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  PAID: 'Pagado',
-  PENDING: 'Pendiente',
-  OVERDUE: 'Vencido',
-  PARTIAL: 'Parcial',
-  CANCELLED: 'Cancelado',
-  PENDING_REVIEW: 'Revisión',
-  ACTIVE: 'Activo',
-  INACTIVE: 'Inactivo',
-};
+import { useOpenMonth } from '@/lib/use-open-month';
+import { cn, formatDate, formatDateLong, formatMonthYear } from '@/lib/utils';
 
 export default function MovimientosPage() {
   const { activeWorkspaceId, activeWorkspace } = useWorkspace();
@@ -63,11 +42,11 @@ export default function MovimientosPage() {
   const [type, setType] = useState<string>(FILTER_ALL);
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [categoryId, setCategoryId] = useState<string>(FILTER_ALL);
-  const [year, setYear] = useState<string>(FILTER_ALL);
   const [month, setMonth] = useState<string>(FILTER_ALL);
   const [detail, setDetail] = useState<Transaction | null>(null);
   const [usdDetail, setUsdDetail] = useState<Transaction | null>(null);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [duplicating, setDuplicating] = useState<Transaction | null>(null);
   const { markNew, highlightClass } = useHighlightNew();
   const isPersonalScope = activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED';
 
@@ -106,20 +85,9 @@ export default function MovimientosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const duplicateMutation = useMutation({
-    mutationFn: (id: string) =>
-      apiFetch<{ id: string }>(`/transactions/${id}/duplicate?workspaceId=${activeWorkspaceId}`, { method: 'POST' }),
-    onSuccess: (created) => {
-      invalidate();
-      if (created?.id) markNew(created.id);
-      toast.success('Movimiento duplicado. Se agregó al inicio con estado pendiente.');
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const statusOptions = useMemo(() => {
     const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
-    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+    return distinct.map((value) => ({ value, label: statusLabel(value) }));
   }, [data?.data]);
 
   const categoryOptions = useMemo(() => (categories ?? []).map((c) => ({ value: c.id, label: c.name })), [categories]);
@@ -129,7 +97,10 @@ export default function MovimientosPage() {
     return [...set].sort((a, b) => b - a);
   }, [data?.data]);
 
+  const [year, setYear] = useDefaultYear(availableYears);
+
   const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
     const filtered = (data?.data ?? []).filter((tx) => {
       if (type !== FILTER_ALL && tx.type !== type) return false;
       if (status !== FILTER_ALL && tx.status !== status) return false;
@@ -137,6 +108,10 @@ export default function MovimientosPage() {
       const d = new Date(tx.date);
       if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
       if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
+      if (q) {
+        const haystack = `${tx.concept} ${tx.category?.name ?? ''} ${tx.notes ?? ''}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
     const seenRules = new Set<string>();
@@ -147,7 +122,7 @@ export default function MovimientosPage() {
       seenRules.add(ruleId);
       return true;
     });
-  }, [data?.data, type, status, categoryId, year, month]);
+  }, [data?.data, type, status, categoryId, year, month, search]);
 
   const totals = useMemo(() => {
     let income = 0;
@@ -158,6 +133,45 @@ export default function MovimientosPage() {
     }
     return { income, expense, net: income - expense };
   }, [rows]);
+
+  const monthGroups = useMemo(() => {
+    const map = new Map<
+      string,
+      { key: string; label: string; items: Transaction[]; income: number; expense: number }
+    >();
+    for (const tx of rows) {
+      const d = new Date(tx.date);
+      const y = d.getUTCFullYear();
+      const m = d.getUTCMonth() + 1;
+      const key = `${y}-${m}`;
+      let group = map.get(key);
+      if (!group) {
+        group = { key, label: `${MONTH_NAMES[m - 1]} ${y}`, items: [], income: 0, expense: 0 };
+        map.set(key, group);
+      }
+      group.items.push(tx);
+      if (tx.type === 'INCOME') group.income += Number(tx.amountBase);
+      else group.expense += Number(tx.amountBase);
+    }
+    return [...map.values()]
+      .map((g) => ({ ...g, net: g.income - g.expense }))
+      .sort((a, b) => {
+        const [ay = 0, am = 0] = a.key.split('-').map(Number);
+        const [by = 0, bm = 0] = b.key.split('-').map(Number);
+        return by - ay || bm - am;
+      });
+  }, [rows]);
+
+  const currentMonthKey = useMemo(() => {
+    const now = new Date();
+    return `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}`;
+  }, []);
+
+  const defaultMonthKey = monthGroups.some((g) => g.key === currentMonthKey)
+    ? currentMonthKey
+    : (monthGroups[0]?.key ?? null);
+
+  const { isOpen: isMonthOpen, toggle: toggleMonth } = useOpenMonth('korapay.movimientos.openMonth', defaultMonthKey);
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
@@ -193,6 +207,14 @@ export default function MovimientosPage() {
             {row.original.isRecurring && (
               <RefreshCw className="size-3.5 shrink-0 text-brand" aria-label="Pago recurrente" />
             )}
+            {row.original.tags?.includes('Fijo') && (
+              <span className="shrink-0 rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground">Fijo</span>
+            )}
+            {row.original.tags?.includes('No Fijo') && (
+              <span className="shrink-0 rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground">
+                No fijo
+              </span>
+            )}
           </span>
         ),
       },
@@ -200,11 +222,6 @@ export default function MovimientosPage() {
         id: 'category',
         header: 'Categoría',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.category?.name ?? '-'}</span>,
-      },
-      {
-        accessorKey: 'type',
-        header: 'Tipo',
-        cell: ({ row }) => <span className="text-sm">{TYPE_LABELS[row.original.type] ?? row.original.type}</span>,
       },
       {
         id: 'amount',
@@ -260,7 +277,7 @@ export default function MovimientosPage() {
           <div className="flex justify-end gap-0.5">
             <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetail(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
-            <IconAction icon={Copy} label="Duplicar" onClick={() => duplicateMutation.mutate(row.original.id)} />
+            <IconAction icon={Copy} label="Copiar a otro mes" onClick={() => setDuplicating(row.original)} />
             <IconAction
               icon={Trash2}
               label="Eliminar"
@@ -281,7 +298,7 @@ export default function MovimientosPage() {
         ),
       },
     ],
-    [duplicateMutation, removeMutation, confirm],
+    [removeMutation, confirm],
   );
 
   const categoryName = (id?: string | null) => categories?.find((c) => c.id === id)?.name ?? '—';
@@ -370,23 +387,15 @@ export default function MovimientosPage() {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        isLoading={isLoading}
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        rowClassName={(t) => highlightClass(t.id)}
-        getRowCanExpand={(row) => !!row.original.isRecurring && !!row.original.recurrenceRule}
-        renderExpanded={(t) =>
-          activeWorkspaceId && t.recurrenceRule ? (
-            <div className="px-4 py-3">
-              <RecurrenceHistory workspaceId={activeWorkspaceId} ruleId={t.recurrenceRule.id} />
-            </div>
-          ) : null
-        }
-        footer={
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      {isLoading && <p className="text-sm text-muted-foreground">Cargando...</p>}
+
+      {!isLoading && monthGroups.length === 0 && (
+        <EmptyState title="Sin movimientos" description="Crea tu primer movimiento con el botón de arriba." />
+      )}
+
+      {!isLoading && monthGroups.length > 0 && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
             <span className="text-muted-foreground">{rows.length} movimientos filtrados</span>
             <div className="flex flex-wrap gap-x-6 gap-y-1">
               <span className="text-muted-foreground">
@@ -406,11 +415,73 @@ export default function MovimientosPage() {
               </span>
             </div>
           </div>
-        }
-        emptyState={
-          <EmptyState title="Sin movimientos" description="Crea tu primer movimiento con el botón de arriba." />
-        }
-      />
+
+          <div className="space-y-3">
+            {monthGroups.map((group) => {
+              const open = isMonthOpen(group.key);
+              return (
+                <Card key={group.key} className="overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => toggleMonth(group.key)}
+                    aria-expanded={open}
+                    className="flex w-full items-center gap-3 border-b bg-muted/40 px-4 py-3 text-left transition-colors hover:bg-muted/60"
+                  >
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-spring',
+                        open && 'rotate-180',
+                      )}
+                    />
+                    <span className="text-sm font-semibold capitalize">{group.label}</span>
+                    {group.key === currentMonthKey && (
+                      <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-strong dark:text-brand">
+                        Mes actual
+                      </span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {group.items.length} {group.items.length === 1 ? 'movimiento' : 'movimientos'}
+                    </span>
+                    <span className="ml-auto flex shrink-0 flex-wrap justify-end gap-x-4 text-xs">
+                      <span className="text-muted-foreground">
+                        Ingresos{' '}
+                        <span className="font-semibold tabular-nums text-success">
+                          {formatMoney(String(group.income), 'PEN')}
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Egresos{' '}
+                        <span className="font-semibold tabular-nums text-destructive">
+                          {formatMoney(String(group.expense), 'PEN')}
+                        </span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Neto <span className="font-semibold tabular-nums">{formatMoney(String(group.net), 'PEN')}</span>
+                      </span>
+                    </span>
+                  </button>
+
+                  {open && (
+                    <DataTable
+                      columns={columns}
+                      data={group.items}
+                      rowClassName={(t) => highlightClass(t.id)}
+                      getRowCanExpand={(row) => !!row.original.isRecurring && !!row.original.recurrenceRule}
+                      renderExpanded={(t) =>
+                        activeWorkspaceId && t.recurrenceRule ? (
+                          <div className="px-4 py-3">
+                            <RecurrenceHistory workspaceId={activeWorkspaceId} ruleId={t.recurrenceRule.id} />
+                          </div>
+                        ) : null
+                      }
+                    />
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <Dialog open={detail !== null} onOpenChange={(next) => !next && setDetail(null)}>
         <DialogContent>
@@ -421,7 +492,7 @@ export default function MovimientosPage() {
           {detail && (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
               <DetailRow label="Fecha" value={formatDateLong(detail.date)} />
-              <DetailRow label="Tipo" value={TYPE_LABELS[detail.type] ?? detail.type} />
+              <DetailRow label="Tipo" value={TRANSACTION_TYPE_LABELS[detail.type] ?? detail.type} />
               <DetailRow
                 label="Monto"
                 value={
@@ -430,7 +501,7 @@ export default function MovimientosPage() {
                     : formatMoney(detail.amountBase, 'PEN')
                 }
               />
-              <DetailRow label="Estado" value={STATUS_LABELS[detail.status] ?? detail.status} />
+              <DetailRow label="Estado" value={statusLabel(detail.status)} />
               <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
               <DetailRow label="Medios de pago" value={detail.tags?.length ? detail.tags.join(', ') : '—'} />
               <DetailRow label="Vencimiento" value={detail.dueDate ? formatDateLong(detail.dueDate) : '—'} />
@@ -484,6 +555,15 @@ export default function MovimientosPage() {
           transaction={editing}
           open={!!editing}
           onOpenChange={(next) => !next && setEditing(null)}
+        />
+      )}
+
+      {activeWorkspaceId && (
+        <DuplicateTransactionDialog
+          workspaceId={activeWorkspaceId}
+          transaction={duplicating}
+          onOpenChange={(next) => !next && setDuplicating(null)}
+          onDuplicated={markNew}
         />
       )}
     </PageShell>

@@ -3,7 +3,7 @@
 import { formatMoney } from '@korapay/domain';
 import { useTheme } from 'next-themes';
 import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { EXPENSE_COLOR, INCOME_COLOR } from './palette';
+import { compactAmount, EXPENSE_COLOR, INCOME_COLOR } from './palette';
 
 export interface IncomeExpensePoint {
   label: string;
@@ -36,15 +36,16 @@ export function IncomeExpenseArea({ data, height = 300 }: Props) {
           </linearGradient>
         </defs>
         <CartesianGrid stroke={grid} strokeDasharray="0" vertical={false} />
-        <XAxis dataKey="label" stroke={axis} fontSize={12} tickLine={false} axisLine={false} />
-        <YAxis
+        <XAxis
+          dataKey="label"
           stroke={axis}
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          width={72}
-          tickFormatter={(v) => formatMoney(String(v), 'PEN')}
+          interval="preserveStartEnd"
+          minTickGap={8}
         />
+        <YAxis stroke={axis} fontSize={12} tickLine={false} axisLine={false} width={56} tickFormatter={compactAmount} />
         <Tooltip
           contentStyle={{
             borderRadius: 12,

@@ -396,25 +396,43 @@ export class TransactionService {
       data: { deletedAt: new Date() },
     });
   }
-  async duplicate(id: string, workspaceId: string) {
+  async duplicate(id: string, workspaceId: string, target?: { year?: number; month?: number }) {
     const original = await this.findOne(id, workspaceId);
-    const {
-      id: _,
-      createdAt: _c,
-      updatedAt: _u,
-      deletedAt: _d,
-      account: _a,
-      category: _cat,
-      splits: _s,
-      recurrenceRule: _r,
-      ...rest
-    } = original as any;
+
+    const source = new Date(original.date);
+    const year = target?.year ?? source.getUTCFullYear();
+    const month = target?.month ?? source.getUTCMonth() + 1;
+    const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const date = new Date(Date.UTC(year, month - 1, Math.min(source.getUTCDate(), lastDay)));
+
+    let dueDate: Date | null = null;
+    if (original.dueDate) {
+      const originalDue = new Date(original.dueDate);
+      const offset = Math.round((originalDue.getTime() - source.getTime()) / 86_400_000);
+      dueDate = new Date(date.getTime() + offset * 86_400_000);
+    }
+
     return this.prisma.transaction.create({
       data: {
-        ...rest,
-        concept: `${rest.concept} (copia)`,
+        workspaceId: original.workspaceId,
+        type: original.type,
+        concept: `${original.concept} (copia)`,
+        description: original.description,
+        notes: original.notes,
+        amountOriginal: original.amountOriginal,
+        currency: original.currency,
+        exchangeRate: original.exchangeRate,
+        amountBase: original.amountBase,
+        categoryId: original.categoryId,
+        accountId: original.accountId,
+        companyId: original.companyId,
+        personId: original.personId,
+        applicationId: original.applicationId,
+        clientId: original.clientId,
+        tags: original.tags,
         status: 'PENDING',
-        date: new Date(),
+        date,
+        dueDate,
       },
     });
   }

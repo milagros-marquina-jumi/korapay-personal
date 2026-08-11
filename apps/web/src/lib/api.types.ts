@@ -296,10 +296,13 @@ export interface SavingYearlyPivot {
 
 export interface PersonalReports {
   years: number[];
+  yearlyTotals: { year: number; income: string; expense: string; net: string; fixed: string; variable: string }[];
+  yearlyByCategory: { year: number; categories: { name: string; total: string }[] }[];
   expenseByCategory: { name: string; total: string }[];
   incomeVsExpense: { year: number; month: number; label: string; income: string; expense: string; net: string }[];
   savingsEvolution: { year: number; month: number; label: string; total: string }[];
   fixedVsVariable: { fixed: string; variable: string };
+  monthlyFixedVsVariable: { year: number; month: number; label: string; fixed: string; variable: string }[];
 }
 
 export interface BusinessReports {

@@ -13,8 +13,8 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import { useState } from 'react';
-import { CategoryDonut, MonthlyBar, type MonthlyPoint } from '@/components/charts';
+import { CategoryDonut, HeatmapTable, MonthlyBar, type MonthlyPoint } from '@/components/charts';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,12 +23,53 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
 import type { BusinessReports, MonthlySummary, PersonalReports, TaxObligation } from '@/lib/api.types';
+import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
 
-const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MONTH_SHORT = MONTH_NAMES.map((m) => m.slice(0, 3));
 
-function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
-  const [selectedYear, setSelectedYear] = useState<number | undefined>(undefined);
+const TOP_CATEGORIES = 10;
+
+function buildCategoryHeatmap(yearly: PersonalReports['yearlyByCategory'] | undefined) {
+  if (!yearly?.length) return null;
+
+  const totals = new Map<string, number>();
+  for (const y of yearly) {
+    for (const c of y.categories) totals.set(c.name, (totals.get(c.name) ?? 0) + Number(c.total));
+  }
+  const columns = [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, TOP_CATEGORIES)
+    .map(([name]) => name);
+
+  if (!columns.length) return null;
+
+  const rows = yearly.map((y) => {
+    const byName = new Map(y.categories.map((c) => [c.name, Number(c.total)]));
+    const values = columns.map((name) => byName.get(name) ?? 0);
+    return {
+      key: String(y.year),
+      label: y.year,
+      values,
+      total: y.categories.reduce((sum, c) => sum + Number(c.total), 0),
+    };
+  });
+
+  return { columns, rows };
+}
+
+function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
+  const { data: allYears } = useQuery({
+    queryKey: queryKeys.personalReports(workspaceId, { years: true }),
+    queryFn: () => apiFetch<PersonalReports>(`/reports/personal?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+    select: (r) => r.years ?? [],
+  });
+
+  const [year, setYear] = useDefaultYear(allYears);
+  const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
+
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.personalReports(workspaceId, selectedYear ? { year: selectedYear } : {}),
     queryFn: () =>
@@ -36,7 +77,18 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
         `/reports/personal?workspaceId=${workspaceId}${selectedYear ? `&year=${selectedYear}` : ''}`,
       ),
     enabled: !!workspaceId,
+    placeholderData: (prev) => prev,
   });
+
+  const yearFilter = (
+    <FilterSelect
+      value={year}
+      onValueChange={setYear}
+      options={(allYears ?? []).map((y) => ({ value: String(y), label: String(y) }))}
+      placeholder="Año"
+      allLabel="Todos los años"
+    />
+  );
 
   if (isLoading || !data) {
     return (
@@ -48,12 +100,35 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
     );
   }
 
+  const allYearsView = year === FILTER_ALL;
+
   const donutData = data.expenseByCategory.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.total) }));
-  const barData: MonthlyPoint[] = data.incomeVsExpense.slice(-12).map((m) => ({
-    label: `${MONTHS[m.month - 1]} ${String(m.year).slice(2)}`,
-    ingresos: Number(m.income),
-    egresos: Number(m.expense),
-  }));
+
+  const incomeExpenseData: MonthlyPoint[] = allYearsView
+    ? (data.yearlyTotals ?? []).map((y) => ({
+        label: String(y.year),
+        ingresos: Number(y.income),
+        egresos: Number(y.expense),
+      }))
+    : data.incomeVsExpense.slice(-12).map((m) => ({
+        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+        ingresos: Number(m.income),
+        egresos: Number(m.expense),
+      }));
+
+  const fixedVariableData: MonthlyPoint[] = allYearsView
+    ? (data.yearlyTotals ?? []).map((y) => ({
+        label: String(y.year),
+        ingresos: Number(y.fixed),
+        egresos: Number(y.variable),
+      }))
+    : data.monthlyFixedVsVariable.map((m) => ({
+        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+        ingresos: Number(m.fixed),
+        egresos: Number(m.variable),
+      }));
+
+  const categoryHeatmap = buildCategoryHeatmap(allYearsView ? data.yearlyByCategory : undefined);
 
   const fixed = Number(data.fixedVsVariable.fixed);
   const variable = Number(data.fixedVsVariable.variable);
@@ -70,20 +145,9 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
 
       <TabsContent value="categoria" className="mt-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Gastos por categoría</CardTitle>
-            <select
-              value={selectedYear ?? ''}
-              onChange={(e) => setSelectedYear(e.target.value ? Number(e.target.value) : undefined)}
-              className="rounded-md border bg-background px-3 py-1.5 text-sm"
-            >
-              <option value="">Todos los años</option>
-              {(data.years ?? []).map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+            {yearFilter}
           </CardHeader>
           <CardContent>
             {donutData.length ? (
@@ -99,12 +163,35 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
                     ))}
                   </div>
                 </div>
-                {data.incomeVsExpense.length > 0 && (
+                {allYearsView && data.yearlyTotals?.length > 0 && (
+                  <div className="mt-6">
+                    <h4 className="mb-3 text-sm font-medium text-muted-foreground">Egresos por año</h4>
+                    <MonthlyBar
+                      data={data.yearlyTotals.map((y) => ({
+                        label: String(y.year),
+                        ingresos: 0,
+                        egresos: Number(y.expense),
+                      }))}
+                    />
+                  </div>
+                )}
+                {allYearsView && categoryHeatmap && (
+                  <div className="mt-6">
+                    <h4 className="mb-3 text-sm font-medium text-muted-foreground">Categorías por año</h4>
+                    <HeatmapTable
+                      rowHeader="Año"
+                      columns={categoryHeatmap.columns}
+                      rows={categoryHeatmap.rows}
+                      minWidth="48rem"
+                    />
+                  </div>
+                )}
+                {!allYearsView && data.incomeVsExpense.length > 0 && (
                   <div className="mt-6">
                     <h4 className="mb-3 text-sm font-medium text-muted-foreground">Egresos por mes</h4>
                     <MonthlyBar
                       data={data.incomeVsExpense.map((m) => ({
-                        label: `${MONTHS[m.month - 1]} ${String(m.year).slice(2)}`,
+                        label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
                         ingresos: 0,
                         egresos: Number(m.expense),
                       }))}
@@ -121,12 +208,13 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
 
       <TabsContent value="mes" className="mt-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Ingresos vs egresos por mes</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle>Ingresos vs egresos por {allYearsView ? 'año' : 'mes'}</CardTitle>
+            {yearFilter}
           </CardHeader>
           <CardContent>
-            {barData.length ? (
-              <MonthlyBar data={barData} />
+            {incomeExpenseData.length ? (
+              <MonthlyBar data={incomeExpenseData} />
             ) : (
               <p className="py-12 text-center text-sm text-muted-foreground">Sin datos suficientes</p>
             )}
@@ -136,8 +224,9 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
 
       <TabsContent value="fijo" className="mt-4">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Gasto fijo vs no fijo</CardTitle>
+            {yearFilter}
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -161,6 +250,15 @@ function PersonalReportsView({ workspaceId }: { workspaceId: string }) {
               </div>
               <Progress value={fixedPct} />
             </div>
+            {fixedVariableData.length > 0 && (
+              <MonthlyBar
+                data={fixedVariableData}
+                firstName="Fijo"
+                firstColor="#f59e0b"
+                secondName="No fijo"
+                secondColor="#3b82f6"
+              />
+            )}
           </CardContent>
         </Card>
       </TabsContent>
@@ -173,6 +271,7 @@ function BusinessReportsView({ workspaceId }: { workspaceId: string }) {
     queryKey: queryKeys.businessReports(workspaceId),
     queryFn: () => apiFetch<BusinessReports>(`/reports/business?workspaceId=${workspaceId}`),
     enabled: !!workspaceId,
+    placeholderData: (prev) => prev,
   });
 
   if (isLoading || !data) {
@@ -310,7 +409,7 @@ function EmploymentReportsView({ workspaceId }: { workspaceId: string }) {
   const barData: MonthlyPoint[] = [];
   for (const period of summary.data) {
     barData.push({
-      label: `${MONTHS[period.month - 1]} ${String(period.year).slice(2)}`,
+      label: `${MONTH_SHORT[period.month - 1]} ${String(period.year).slice(2)}`,
       ingresos: Number(period.totalNet),
       egresos: 0,
     });

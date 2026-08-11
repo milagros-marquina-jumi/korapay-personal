@@ -6,6 +6,7 @@ import { WorkspaceQueryDto } from '@/common/dto/workspace-query.dto';
 import {
   ChangeTransactionStatusDto,
   CreateTransactionDto,
+  DuplicateTransactionDto,
   ListTransactionsDto,
   MonthlySummaryDto,
   TransferDto,
@@ -64,8 +65,12 @@ export class TransactionController {
 
   @Post(':id/duplicate')
   @ApiOperation({ summary: 'Duplicate transaction' })
-  duplicate(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
-    return this.transactionService.duplicate(id, workspaceId);
+  duplicate(
+    @Param('id') id: string,
+    @Query() { workspaceId }: WorkspaceQueryDto,
+    @Body() body: DuplicateTransactionDto,
+  ) {
+    return this.transactionService.duplicate(id, workspaceId, { year: body?.year, month: body?.month });
   }
 
   @Post(':id/status')

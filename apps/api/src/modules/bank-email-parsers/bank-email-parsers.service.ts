@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import type { BankEmailParser, IncomingBankEmail, ParsedBankTransaction } from './parser.types';
-import { BbvaEmailParser, BcpEmailParser, GenericBankEmailParser, InterbankEmailParser } from './parsers';
+import {
+  AgoraEmailParser,
+  BbvaEmailParser,
+  BcpEmailParser,
+  GenericBankEmailParser,
+  InterbankEmailParser,
+  PaypalEmailParser,
+} from './parsers';
 
 @Injectable()
 export class BankEmailParsersService {
@@ -8,6 +15,8 @@ export class BankEmailParsersService {
     new BcpEmailParser(),
     new InterbankEmailParser(),
     new BbvaEmailParser(),
+    new AgoraEmailParser(),
+    new PaypalEmailParser(),
   ];
   private readonly fallback = new GenericBankEmailParser();
 

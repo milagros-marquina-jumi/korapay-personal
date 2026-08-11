@@ -162,3 +162,121 @@ export class GenericBankEmailParser implements BankEmailParser {
     return { ...parsed, confidence: Math.max(0, parsed.confidence - 0.2) };
   }
 }
+
+export class AgoraEmailParser implements BankEmailParser {
+  readonly key = 'agora';
+  readonly bankCode = 'AGORA';
+  supports(input: IncomingBankEmail): boolean {
+    return senderMatches(input, ['agora', 'operaciones.agora.pe']);
+  }
+  parse(input: IncomingBankEmail): ParsedBankTransaction | null {
+    const text = `${input.subject}\n${input.textBody}`;
+    if (isNonTransactional(text)) return null;
+
+    const amount = this.extractAmount(text);
+    if (!amount || amount === '0') return null;
+
+    const currency = detectCurrency(text) ?? 'PEN';
+    const currencyKnown = detectCurrency(text) !== undefined;
+    const recipient = this.extractRecipient(text);
+    const externalReference = this.extractReference(text);
+    const isInternal = /a mis cuentas/i.test(text);
+    const transactionType = isInternal ? 'TRANSFER_SENT' : 'TRANSFER_SENT';
+    const destinationMethod = isInternal ? 'Cuentas propias' : 'Terceros';
+
+    const confidence = computeConfidence({
+      bank: true,
+      amount: true,
+      currency: currencyKnown,
+      date: true,
+      cardLast4: false,
+      merchant: !!recipient,
+      reference: !!externalReference,
+    });
+
+    return {
+      bankCode: this.bankCode,
+      bankName: 'Agora',
+      cardLast4: undefined,
+      merchant: recipient,
+      amount,
+      currency,
+      occurredAt: input.receivedAt,
+      externalReference,
+      installments: undefined,
+      transactionType,
+      confidence,
+      recipient,
+      destinationMethod,
+    };
+  }
+
+  private extractAmount(text: string): string | undefined {
+    const m = text.match(/Monto\s*(?:S\/|US\$|\$|USD|PEN)\s*([\d.,]+\d)/i);
+    if (m?.[1]) return parseAmount(m[1]);
+    return undefined;
+  }
+
+  private extractRecipient(text: string): string | undefined {
+    const m = text.match(/Destino\s*([A-Za-zÁÉÍÓÚÑáéíóúñ0-9\s.-]{3,80})(?:\n|Interbank|Banco|\d{3}-)/i);
+    if (m?.[1]) return m[1].trim();
+    return undefined;
+  }
+
+  private extractReference(text: string): string | undefined {
+    const m = text.match(/(?:Nro\.?\s*de\s*Operaci[oó]n|Operaci[oó]n)\s*(\d+)/i);
+    return m?.[1] ?? undefined;
+  }
+}
+
+export class PaypalEmailParser implements BankEmailParser {
+  readonly key = 'paypal';
+  readonly bankCode = 'PAYPAL';
+  supports(input: IncomingBankEmail): boolean {
+    return senderMatches(input, ['paypal', 'service@intl.paypal.com']);
+  }
+  parse(input: IncomingBankEmail): ParsedBankTransaction | null {
+    const text = `${input.subject}\n${input.textBody}`;
+    if (isNonTransactional(text)) return null;
+
+    const amount = extractAmount(text);
+    if (!amount || amount === '0') return null;
+
+    const currency = detectCurrency(text) ?? 'USD';
+    const currencyKnown = detectCurrency(text) !== undefined;
+    const merchant = extractMerchant(text) ?? extractRecipient(text);
+    const externalReference = extractReference(text) ?? this.extractPaypalReference(text);
+    const cardLast4 = extractCardLast4(text);
+
+    const confidence = computeConfidence({
+      bank: true,
+      amount: true,
+      currency: currencyKnown,
+      date: true,
+      cardLast4: !!cardLast4,
+      merchant: !!merchant,
+      reference: !!externalReference,
+    });
+
+    return {
+      bankCode: this.bankCode,
+      bankName: 'PayPal',
+      cardLast4,
+      merchant,
+      amount,
+      currency,
+      occurredAt: input.receivedAt,
+      externalReference,
+      installments: undefined,
+      transactionType: 'TRANSFER_SENT',
+      confidence,
+      recipient: merchant,
+      destinationMethod: 'PayPal',
+    };
+  }
+
+  private extractPaypalReference(text: string): string | undefined {
+    const m = text.match(/Id\.?\s*de\s*transacci[oó]n\s*([A-Z0-9]+)/i);
+    return m?.[1] ?? undefined;
+  }
+}

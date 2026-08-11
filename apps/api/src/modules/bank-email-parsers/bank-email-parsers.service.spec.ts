@@ -282,6 +282,73 @@ Numero de operacion 123456`,
     expect(r?.parsed.transactionType).toBe('TRANSFER_RECEIVED');
   });
 
+  it('parses Agora internal transfer (cuentas propias)', () => {
+    const r = svc.parse(
+      email({
+        sender: 'Agora <no-reply@operaciones.agora.pe>',
+        subject: 'Realizaste una operacion',
+        textBody: `Hola MILAGROS JULISA
+Operacion realizada: Transferencia a mis cuentas
+MontoS/ 11420.21
+OrigenTarjeta de debito oh!pay
+DestinoCuenta AhorraMas soles
+Fecha y Hora24/07/2026 - 18:06
+ComisionGratis
+Nro. de Operacion255708035`,
+      }),
+    );
+    expect(r?.parserKey).toBe('agora');
+    expect(r?.parsed.amount).toBe('11420.21');
+    expect(r?.parsed.currency).toBe('PEN');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.destinationMethod).toBe('Cuentas propias');
+    expect(r?.parsed.externalReference).toBe('255708035');
+  });
+
+  it('parses Agora external transfer (terceros)', () => {
+    const r = svc.parse(
+      email({
+        sender: 'Agora <no-reply@operaciones.agora.pe>',
+        subject: 'Realizaste una operacion',
+        textBody: `Hola MILAGROS JULISA
+Operacion realizada: Transferencia a otro banco
+MontoS/ 15714.60
+OrigenCuenta Ahorramas Soles
+DestinoMilagros Julisa Marquina Morainterbank003-376-013205752880-15
+Fecha y Hora24/07/2026 - 18:08
+ITFGratis
+Nro. de Operacion255709319`,
+      }),
+    );
+    expect(r?.parserKey).toBe('agora');
+    expect(r?.parsed.amount).toBe('15714.60');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.destinationMethod).toBe('Terceros');
+    expect(r?.parsed.externalReference).toBe('255709319');
+  });
+
+  it('parses PayPal payment sent', () => {
+    const r = svc.parse(
+      email({
+        sender: 'service@intl.paypal.com',
+        subject: 'Usted envio un pago',
+        textBody: `Hola, MILAGROS JULISA MARQUINA MORA
+Usted envio $40.00 USD a Mayersi Lorena Parra Guerrero
+Detalles de la transaccion
+Id. de transaccion 48H884761K687042U
+Fecha de la transaccion 26 de abril de 2024
+Dinero enviado $40.00 USD
+Pagado con VISA x-7387 $40.00 USD`,
+      }),
+    );
+    expect(r?.parserKey).toBe('paypal');
+    expect(r?.parsed.amount).toBe('40.00');
+    expect(r?.parsed.currency).toBe('USD');
+    expect(r?.parsed.transactionType).toBe('TRANSFER_SENT');
+    expect(r?.parsed.merchant).toContain('Mayersi');
+    expect(r?.parsed.externalReference).toBe('48H884761K687042U');
+  });
+
   it('returns null for non-transactional email (OTP)', () => {
     const r = svc.parse(
       email({

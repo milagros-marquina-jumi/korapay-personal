@@ -398,12 +398,14 @@ export default function MovimientosPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
             <span className="text-muted-foreground">{rows.length} movimientos filtrados</span>
             <div className="flex flex-wrap gap-x-6 gap-y-1">
-              <span className="text-muted-foreground">
-                Ingresos:{' '}
-                <span className="font-semibold tabular-nums text-success">
-                  {formatMoney(String(totals.income), 'PEN')}
+              {totals.income > 0 && (
+                <span className="text-muted-foreground">
+                  Ingresos:{' '}
+                  <span className="font-semibold tabular-nums text-success">
+                    {formatMoney(String(totals.income), 'PEN')}
+                  </span>
                 </span>
-              </span>
+              )}
               <span className="text-muted-foreground">
                 Egresos:{' '}
                 <span className="font-semibold tabular-nums text-destructive">
@@ -425,7 +427,10 @@ export default function MovimientosPage() {
                     type="button"
                     onClick={() => toggleMonth(group.key)}
                     aria-expanded={open}
-                    className="flex w-full items-center gap-3 border-b bg-muted/40 px-4 py-3 text-left transition-colors hover:bg-muted/60"
+                    className={cn(
+                      'flex w-full flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3.5 text-left transition-colors hover:bg-muted/50',
+                      open ? 'border-b bg-muted/40' : 'bg-card',
+                    )}
                   >
                     <ChevronDown
                       className={cn(
@@ -442,13 +447,15 @@ export default function MovimientosPage() {
                     <span className="text-xs text-muted-foreground">
                       {group.items.length} {group.items.length === 1 ? 'movimiento' : 'movimientos'}
                     </span>
-                    <span className="ml-auto flex shrink-0 flex-wrap justify-end gap-x-4 text-xs">
-                      <span className="text-muted-foreground">
-                        Ingresos{' '}
-                        <span className="font-semibold tabular-nums text-success">
-                          {formatMoney(String(group.income), 'PEN')}
+                    <span className="ml-auto flex flex-wrap items-center justify-end gap-x-5 gap-y-1 text-xs">
+                      {group.income > 0 && (
+                        <span className="text-muted-foreground">
+                          Ingresos{' '}
+                          <span className="font-semibold tabular-nums text-success">
+                            {formatMoney(String(group.income), 'PEN')}
+                          </span>
                         </span>
-                      </span>
+                      )}
                       <span className="text-muted-foreground">
                         Egresos{' '}
                         <span className="font-semibold tabular-nums text-destructive">
@@ -465,6 +472,7 @@ export default function MovimientosPage() {
                     <DataTable
                       columns={columns}
                       data={group.items}
+                      embedded
                       rowClassName={(t) => highlightClass(t.id)}
                       getRowCanExpand={(row) => !!row.original.isRecurring && !!row.original.recurrenceRule}
                       renderExpanded={(t) =>
@@ -503,7 +511,26 @@ export default function MovimientosPage() {
               />
               <DetailRow label="Estado" value={statusLabel(detail.status)} />
               <DetailRow label="Categoría" value={categoryName(detail.categoryId)} />
-              <DetailRow label="Medios de pago" value={detail.tags?.length ? detail.tags.join(', ') : '—'} />
+              {detail.type === 'EXPENSE' && (
+                <DetailRow label="Tipo de gasto" value={detail.tags?.includes('Fijo') ? 'Fijo' : 'No fijo'} />
+              )}
+              <DetailRow
+                label="Medios de pago"
+                value={
+                  detail.tags?.filter(
+                    (t) =>
+                      !['Fijo', 'No Fijo'].includes(t) && !/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/.test(t),
+                  ).length
+                    ? detail.tags
+                        .filter(
+                          (t) =>
+                            !['Fijo', 'No Fijo'].includes(t) &&
+                            !/^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/.test(t),
+                        )
+                        .join(', ')
+                    : '—'
+                }
+              />
               <DetailRow label="Vencimiento" value={detail.dueDate ? formatDateLong(detail.dueDate) : '—'} />
               <DetailRow
                 label="Recurrencia"
@@ -514,7 +541,7 @@ export default function MovimientosPage() {
               )}
               <div className="col-span-2">
                 <dt className="text-xs text-muted-foreground">Notas</dt>
-                <dd className="mt-0.5 whitespace-pre-wrap">{detail.notes || detail.description || '—'}</dd>
+                <dd className="mt-0.5 whitespace-pre-wrap">{detail.notes || '—'}</dd>
               </div>
             </dl>
           )}

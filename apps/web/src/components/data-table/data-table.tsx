@@ -17,6 +17,7 @@ import {
 import { Fragment, type ReactNode, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[];
@@ -30,6 +31,8 @@ interface DataTableProps<T> {
   getRowCanExpand?: (row: Row<T>) => boolean;
   renderExpanded?: (row: T) => ReactNode;
   footer?: ReactNode;
+  /** Quita la tarjeta propia cuando la tabla ya vive dentro de una. */
+  embedded?: boolean;
 }
 
 export function DataTable<T>({
@@ -44,7 +47,8 @@ export function DataTable<T>({
   getRowCanExpand,
   renderExpanded,
   footer,
-}: DataTableProps<T>) {
+  embedded = false,
+}: Readonly<DataTableProps<T>>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [expanded, setExpanded] = useState<ExpandedState>({});
@@ -70,9 +74,14 @@ export function DataTable<T>({
 
   if (!isLoading && rows.length === 0) {
     return (
-      <div className="space-y-3">
+      <div className={embedded ? '' : 'space-y-3'}>
         {emptyState ?? (
-          <div className="rounded-2xl border border-dashed bg-card py-16 text-center text-sm text-muted-foreground shadow-soft">
+          <div
+            className={cn(
+              'py-16 text-center text-sm text-muted-foreground',
+              !embedded && 'rounded-2xl border border-dashed bg-card shadow-soft',
+            )}
+          >
             Sin resultados
           </div>
         )}
@@ -81,8 +90,8 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
+    <div className={embedded ? '' : 'space-y-3'}>
+      <div className={cn(!embedded && 'overflow-hidden rounded-2xl border bg-card shadow-soft')}>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -123,26 +132,53 @@ export function DataTable<T>({
           </TableBody>
         </Table>
         {footer && <div className="border-t bg-muted/30 px-4 py-3">{footer}</div>}
+
+        {embedded && table.getPageCount() > 1 && (
+          <div className="flex items-center justify-between gap-3 border-t bg-muted/20 px-4 py-2.5 text-sm text-muted-foreground">
+            <span>{table.getFilteredRowModel().rows.length} resultados</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-1 transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Anterior
+              </button>
+              <span className="tabular-nums">
+                {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
+              </span>
+              <button
+                type="button"
+                className="rounded-lg border px-3 py-1 transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Siguiente
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {table.getPageCount() > 1 && (
+      {!embedded && table.getPageCount() > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>{table.getFilteredRowModel().rows.length} resultados</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="rounded-lg border px-3 py-1 disabled:opacity-50"
+              className="rounded-lg border px-3 py-1 transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
               Anterior
             </button>
-            <span>
+            <span className="tabular-nums">
               {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
             </span>
             <button
               type="button"
-              className="rounded-lg border px-3 py-1 disabled:opacity-50"
+              className="rounded-lg border px-3 py-1 transition-colors hover:bg-muted disabled:opacity-50 disabled:hover:bg-transparent"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >

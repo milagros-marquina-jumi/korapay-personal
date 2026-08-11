@@ -195,7 +195,7 @@ export function TalentContractFormDialog({
           <CollapsibleSection label="Ver más opciones">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="endDate">Fin (opcional)</Label>
+                <Label htmlFor="endDate">Fin</Label>
                 <Input id="endDate" type="date" {...register('endDate')} />
               </div>
               <div className="space-y-2">

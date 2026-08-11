@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
 import {
   Dialog,
@@ -64,6 +65,7 @@ const schema = z.object({
   projectIds: z.array(z.string()).optional(),
   personId: z.string().optional(),
   paymentTags: z.array(z.string()).optional(),
+  isFixed: z.boolean().optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
   isRecurring: z.boolean().optional(),
@@ -179,7 +181,8 @@ export function TransactionFormDialog({
         applicationId: transaction.applicationId ?? undefined,
         projectIds: transaction.projects?.map((p) => p.id) ?? [],
         personId: transaction.personId ?? undefined,
-        paymentTags: transaction.tags ?? [],
+        paymentTags: (transaction.tags ?? []).filter((t: string) => !['Fijo', 'No Fijo'].includes(t)),
+        isFixed: transaction.tags?.includes('Fijo') ?? false,
         notes: transaction.notes ?? '',
         dueDate: transaction.dueDate ? transaction.dueDate.slice(0, 10) : '',
         isRecurring: false,
@@ -189,7 +192,9 @@ export function TransactionFormDialog({
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
-      const { recurrenceCount, paymentTags, projectIds, personId, ...rest } = values;
+      const { recurrenceCount, paymentTags, projectIds, personId, isFixed, ...rest } = values;
+      const fixedTag = rest.type === 'EXPENSE' ? (isFixed ? ['Fijo'] : ['No Fijo']) : [];
+      const finalTags = [...fixedTag, ...(paymentTags ?? [])];
       const isBusinessCost = rest.type === 'BUSINESS_COST';
       const isTeamPayment = rest.type === 'TEAM_PAYMENT';
       if (editing && transaction) {
@@ -207,7 +212,7 @@ export function TransactionFormDialog({
           personId: isTeamPayment ? (personId ?? null) : undefined,
           notes: rest.notes,
           dueDate: values.dueDate || undefined,
-          tags: paymentTags?.length ? paymentTags : undefined,
+          tags: finalTags.length ? finalTags : undefined,
         };
         return apiFetch<{ id: string }>(`/transactions/${transaction.id}?workspaceId=${workspaceId}`, {
           method: 'PATCH',
@@ -220,7 +225,7 @@ export function TransactionFormDialog({
         applicationId: isBusinessCost ? rest.applicationId : undefined,
         projectIds: isBusinessCost && projectIds?.length ? projectIds : undefined,
         personId: isTeamPayment ? personId : undefined,
-        tags: paymentTags?.length ? paymentTags : undefined,
+        tags: finalTags.length ? finalTags : undefined,
         recurrenceInterval: values.isRecurring ? 1 : undefined,
         recurrenceFrequency: values.isRecurring ? values.recurrenceFrequency : undefined,
         recurrenceEndDate: values.isRecurring ? values.recurrenceEndDate || undefined : undefined,
@@ -243,14 +248,17 @@ export function TransactionFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="flex max-h-[88vh] w-[min(42rem,95vw)] max-w-none flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{editing ? 'Editar movimiento' : 'Nuevo movimiento'}</DialogTitle>
           <DialogDescription>Registra un ingreso, egreso u otro movimiento.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+        <form
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
+        >
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
               <Label>Tipo</Label>
               <Select defaultValue={defaultType} onValueChange={(v) => setValue('type', v as FormValues['type'])}>
                 <SelectTrigger>
@@ -265,29 +273,11 @@ export function TransactionFormDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="date">Fecha</Label>
               <Input id="date" type="date" {...register('date')} />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="concept">Concepto</Label>
-            <Input id="concept" placeholder="Ej. Pago de alquiler, sueldo, compra..." {...register('concept')} />
-            {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Monto</Label>
-              <MoneyInput
-                id="amount"
-                value={watch('amount') ?? ''}
-                onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
-              />
-              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
-            </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Moneda</Label>
               <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
                 <SelectTrigger>
@@ -300,6 +290,44 @@ export function TransactionFormDialog({
               </Select>
             </div>
           </div>
+
+          <div className="grid grid-cols-[1fr_10rem] gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="concept">Concepto</Label>
+              <Input id="concept" placeholder="Ej. Pago de alquiler, sueldo, compra..." {...register('concept')} />
+              {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="amount">Monto</Label>
+              <MoneyInput
+                id="amount"
+                value={watch('amount') ?? ''}
+                onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
+              />
+              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+            </div>
+          </div>
+
+          {watch('type') === 'EXPENSE' && (
+            <label
+              htmlFor="isFixed"
+              className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"
+            >
+              <Checkbox
+                id="isFixed"
+                checked={watch('isFixed') ?? false}
+                onCheckedChange={(v) => setValue('isFixed', v === true)}
+                className="mt-0.5"
+              />
+              <span className="space-y-0.5">
+                <span className="block text-sm font-medium">Gasto fijo</span>
+                <span className="block text-xs text-muted-foreground">
+                  Se repite cada mes con un monto similar (alquiler, servicios). Solo clasifica el gasto en los
+                  reportes.
+                </span>
+              </span>
+            </label>
+          )}
 
           {showTeamFields && (
             <div className="space-y-2">
@@ -414,7 +442,7 @@ export function TransactionFormDialog({
 
             {editing && (
               <div className="space-y-2">
-                <Label htmlFor="dueDate">Vencimiento (opcional)</Label>
+                <Label htmlFor="dueDate">Vencimiento</Label>
                 <Input id="dueDate" type="date" {...register('dueDate')} />
               </div>
             )}
@@ -475,7 +503,7 @@ export function TransactionFormDialog({
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="recurrenceEndDate">O fecha de fin (opcional)</Label>
+                      <Label htmlFor="recurrenceEndDate">O fecha de fin</Label>
                       <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
                     </div>
                   </>
@@ -487,7 +515,10 @@ export function TransactionFormDialog({
           <input type="hidden" {...register('amount')} />
           <input type="hidden" {...register('status')} value={watch('status')} />
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t pt-3">
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Guardando...' : 'Guardar'}
             </Button>

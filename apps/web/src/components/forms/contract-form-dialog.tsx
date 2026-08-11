@@ -146,7 +146,7 @@ export function ContractFormDialog({
               {errors.startDate && <p className="text-xs text-destructive">{errors.startDate.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">Fin (opcional)</Label>
+              <Label htmlFor="endDate">Fin</Label>
               <Input id="endDate" type="date" {...register('endDate')} />
             </div>
           </div>

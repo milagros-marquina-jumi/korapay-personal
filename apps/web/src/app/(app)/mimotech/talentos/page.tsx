@@ -240,7 +240,7 @@ function TalentFormDialog({
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>
-              <Textarea id="notes" rows={3} placeholder="Notas sobre el talento (opcional)" {...register('notes')} />
+              <Textarea id="notes" rows={3} placeholder="Notas sobre el talento" {...register('notes')} />
             </div>
           </CollapsibleSection>
 

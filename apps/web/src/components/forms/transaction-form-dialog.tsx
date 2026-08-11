@@ -167,6 +167,7 @@ export function TransactionFormDialog({
 
   const isRecurring = watch('isRecurring');
   const currentType = watch('type');
+  const showRecurringHint = showCompany && currentType === 'INCOME';
   const currentStatus = watch('status');
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
@@ -540,7 +541,13 @@ export function TransactionFormDialog({
               </div>
             )}
 
-            {!editing && (
+            {!editing && showRecurringHint && (
+              <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+                Los sueldos recurrentes se proyectan desde el contrato de cada empresa, en Contratos.
+              </p>
+            )}
+
+            {!editing && !showRecurringHint && (
               <div className="space-y-3 rounded-lg border border-border/60 p-3">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">

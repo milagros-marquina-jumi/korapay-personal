@@ -1,10 +1,14 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { ContractIncomeService } from './contract-income.service';
 import { buildGrossByCompany, deriveContractState } from './contract-state';
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly contractIncome: ContractIncomeService,
+  ) {}
 
   applications(workspaceId: string) {
     return this.prisma.application.findMany({
@@ -131,6 +135,7 @@ export class CatalogService {
         notes: data.notes ?? null,
       },
     });
+    await this.contractIncome.syncContractIncomes(created.id, data.workspaceId);
     return { ...created, salary: created.salary?.toString() ?? null };
   }
 
@@ -150,12 +155,14 @@ export class CatalogService {
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.notes !== undefined) updateData.notes = data.notes;
     const updated = await this.prisma.employmentContract.update({ where: { id }, data: updateData as never });
+    await this.contractIncome.syncContractIncomes(id, workspaceId);
     return { ...updated, salary: updated.salary?.toString() ?? null };
   }
 
   async removeEmploymentContract(id: string, workspaceId: string) {
     const found = await this.prisma.employmentContract.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Contrato no encontrado');
+    await this.contractIncome.removeFutureIncomes(id, workspaceId);
     return this.prisma.employmentContract.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 

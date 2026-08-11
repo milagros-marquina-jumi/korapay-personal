@@ -19,11 +19,15 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   ACTIVE: { label: 'Activo', className: 'bg-success/10 text-success' },
   INACTIVE: { label: 'Inactivo', className: 'bg-muted text-muted-foreground' },
 };
+export function statusLabel(status: string): string {
+  return statusConfig[status]?.label ?? status;
+}
+
 interface StatusBadgeProps {
   status: string;
   className?: string;
 }
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+export function StatusBadge({ status, className }: Readonly<StatusBadgeProps>) {
   const config = statusConfig[status] ?? {
     label: status,
     className: 'bg-muted text-muted-foreground',

@@ -21,6 +21,7 @@ import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch } from '@/lib/api';
 import type { SavingBalanceAccount, SavingBalancePeriod, SavingBalancesMonthly } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
 import { cn } from '@/lib/utils';
 
 interface EditingAccount {
@@ -32,7 +33,6 @@ export default function AhorrosPage() {
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
-  const [year, setYear] = useState(FILTER_ALL);
   const [month, setMonth] = useState(FILTER_ALL);
   const [search, setSearch] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -42,13 +42,12 @@ export default function AhorrosPage() {
   const [editing, setEditing] = useState<EditingAccount | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: queryKeys.savingBalances(activeWorkspaceId ?? '', { year }),
-    queryFn: () =>
-      apiFetch<SavingBalancesMonthly>(
-        `/reports/saving-balances?workspaceId=${activeWorkspaceId}${year !== FILTER_ALL ? `&year=${year}` : ''}`,
-      ),
+    queryKey: queryKeys.savingBalances(activeWorkspaceId ?? ''),
+    queryFn: () => apiFetch<SavingBalancesMonthly>(`/reports/saving-balances?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
+
+  const [year, setYear] = useDefaultYear(data?.years);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['saving-balances', activeWorkspaceId] });
@@ -79,6 +78,7 @@ export default function AhorrosPage() {
 
   const periods = useMemo(() => {
     let rows = data?.data ?? [];
+    if (year !== FILTER_ALL) rows = rows.filter((p) => p.year === Number(year));
     if (month !== FILTER_ALL) rows = rows.filter((p) => p.month === Number(month));
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -87,7 +87,7 @@ export default function AhorrosPage() {
         .filter((p) => p.accounts.length > 0);
     }
     return rows;
-  }, [data?.data, search, month]);
+  }, [data?.data, search, month, year]);
 
   const currentKey = useMemo(() => {
     const now = new Date();
@@ -110,12 +110,8 @@ export default function AhorrosPage() {
   };
 
   const toggle = (key: string) => {
-    setExpanded((prev) => {
-      const next = new Set(touched ? prev : isOpen(key) ? [key] : []);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+    const willClose = isOpen(key);
+    setExpanded(willClose ? new Set() : new Set([key]));
     setTouched(true);
   };
 

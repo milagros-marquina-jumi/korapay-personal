@@ -320,6 +320,8 @@ export interface Debt {
   originalAmount: string;
   currency: string;
   dueDate?: string | null;
+  interestRate?: string | null;
+  notes?: string | null;
   status: string;
   totalPaid?: string;
   balance?: string;

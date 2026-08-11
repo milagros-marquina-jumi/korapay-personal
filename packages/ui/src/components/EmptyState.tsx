@@ -1,6 +1,7 @@
-import { Inbox } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
+
+const BRAND_MARK = '/brand/logo-mark-128.png';
 
 interface EmptyStateProps {
   icon?: ReactNode;
@@ -9,7 +10,8 @@ interface EmptyStateProps {
   action?: ReactNode;
   className?: string;
 }
-export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
+
+export function EmptyState({ icon, title, description, action, className }: Readonly<EmptyStateProps>) {
   return (
     <div
       className={cn(
@@ -17,8 +19,8 @@ export function EmptyState({ icon, title, description, action, className }: Empt
         className,
       )}
     >
-      <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-brand-soft text-brand [&_svg]:size-7">
-        {icon ?? <Inbox aria-hidden />}
+      <div className="mb-4 flex size-16 items-center justify-center [&_svg]:size-7">
+        {icon ?? <img src={BRAND_MARK} alt="" width={64} height={64} className="size-16 opacity-90" />}
       </div>
       <h3 className="font-display text-lg font-semibold">{title}</h3>
       {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}

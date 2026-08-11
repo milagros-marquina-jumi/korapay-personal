@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
+import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -212,7 +212,7 @@ export default function PendientesPage() {
 
   const statusOptions = useMemo(() => {
     const values = Array.from(new Set((data ?? []).map((i) => i.status)));
-    return values.map((v) => ({ value: v, label: v }));
+    return values.map((v) => ({ value: v, label: statusLabel(v) }));
   }, [data]);
 
   const items = useMemo(() => {

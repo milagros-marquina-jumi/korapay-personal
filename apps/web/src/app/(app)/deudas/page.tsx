@@ -2,15 +2,17 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
+import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { ChevronDown, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageShell } from '@/components/layout/page-shell';
+import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,12 +24,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
+import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyInput } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { Debt } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
@@ -45,6 +49,7 @@ const debtSchema = z.object({
     .regex(/^\d+(\.\d{1,2})?$/, 'Valor inválido')
     .optional()
     .or(z.literal('')),
+  notes: z.string().optional(),
 });
 
 type DebtFormValues = z.infer<typeof debtSchema>;
@@ -57,15 +62,23 @@ const paymentSchema = z.object({
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
-function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
+interface DebtDialogProps {
+  workspaceId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  debt?: Debt | null;
+  onCreated?: (id: string) => void;
+}
+
+function DebtFormDialog({ workspaceId, open, onOpenChange, debt, onCreated }: Readonly<DebtDialogProps>) {
   const queryClient = useQueryClient();
+  const editing = !!debt;
 
   const {
     register,
     handleSubmit,
     reset,
-    setValue,
+    control,
     formState: { errors },
   } = useForm<DebtFormValues>({
     resolver: zodResolver(debtSchema),
@@ -76,8 +89,22 @@ function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCre
       currency: 'PEN',
       dueDate: '',
       interestRate: '',
+      notes: '',
     },
   });
+
+  useEffect(() => {
+    if (!open) return;
+    reset({
+      direction: (debt?.direction as DebtFormValues['direction']) ?? 'DEBO',
+      concept: debt?.concept ?? '',
+      originalAmount: debt?.originalAmount ?? '',
+      currency: (debt?.currency as 'PEN' | 'USD') ?? 'PEN',
+      dueDate: debt?.dueDate ? debt.dueDate.slice(0, 10) : '',
+      interestRate: debt?.interestRate ?? '',
+      notes: debt?.notes ?? '',
+    });
+  }, [open, debt, reset]);
 
   const mutation = useMutation({
     mutationFn: (values: DebtFormValues) => {
@@ -86,44 +113,53 @@ function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCre
         concept: values.concept,
         originalAmount: values.originalAmount,
         currency: values.currency,
-        workspaceId,
+        notes: values.notes || undefined,
+        dueDate: values.dueDate || undefined,
+        interestRate: values.interestRate || undefined,
       };
-      if (values.dueDate) payload.dueDate = values.dueDate;
-      if (values.interestRate) payload.interestRate = values.interestRate;
-      return apiFetch<Debt>('/debts', { method: 'POST', body: JSON.stringify(payload) });
+      if (editing && debt) {
+        return apiFetch<Debt>(`/debts/${debt.id}?workspaceId=${workspaceId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+      }
+      return apiFetch<Debt>('/debts', { method: 'POST', body: JSON.stringify({ ...payload, workspaceId }) });
     },
-    onSuccess: (created) => {
+    onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.debts(workspaceId) });
-      toast.success('Deuda creada');
+      toast.success(editing ? 'Deuda actualizada' : 'Deuda creada');
       reset();
-      setOpen(false);
-      if (created?.id) onCreated?.(created.id);
+      onOpenChange(false);
+      if (!editing && saved?.id) onCreated?.(saved.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>Nueva deuda</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nueva deuda</DialogTitle>
+          <DialogTitle>{editing ? 'Editar deuda' : 'Nueva deuda'}</DialogTitle>
           <DialogDescription>Registra lo que debes o lo que te deben.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="space-y-2">
-            <Label>Dirección</Label>
-            <Select defaultValue="DEBO" onValueChange={(v) => setValue('direction', v as DebtFormValues['direction'])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DEBO">Debo</SelectItem>
-                <SelectItem value="ME_DEBEN">Me deben</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="debt-direction">Dirección</Label>
+            <Controller
+              control={control}
+              name="direction"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="debt-direction">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DEBO">Debo</SelectItem>
+                    <SelectItem value="ME_DEBEN">Me deben</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <div className="space-y-2">
@@ -135,20 +171,32 @@ function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCre
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="originalAmount">Monto</Label>
-              <Input id="originalAmount" inputMode="decimal" placeholder="0.00" {...register('originalAmount')} />
+              <Controller
+                control={control}
+                name="originalAmount"
+                render={({ field }) => (
+                  <MoneyInput id="originalAmount" value={field.value} onValueChange={field.onChange} />
+                )}
+              />
               {errors.originalAmount && <p className="text-xs text-destructive">{errors.originalAmount.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label>Moneda</Label>
-              <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dólares ($)</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="debt-currency">Moneda</Label>
+              <Controller
+                control={control}
+                name="currency"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="debt-currency">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="PEN">Soles (S/)</SelectItem>
+                      <SelectItem value="USD">Dólares ($)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 
@@ -164,7 +212,15 @@ function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCre
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="debt-notes">Notas</Label>
+            <Textarea id="debt-notes" rows={2} placeholder="Detalle opcional" {...register('notes')} />
+          </div>
+
           <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Guardando...' : 'Guardar'}
             </Button>
@@ -175,29 +231,34 @@ function DebtFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCre
   );
 }
 
-function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtId: string }) {
-  const [open, setOpen] = useState(false);
+function PaymentFormDialog({
+  workspaceId,
+  debt,
+  open,
+  onOpenChange,
+}: Readonly<{ workspaceId: string; debt: Debt; open: boolean; onOpenChange: (open: boolean) => void }>) {
   const queryClient = useQueryClient();
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      amount: '',
-      date: new Date().toISOString().slice(0, 10),
-      method: '',
-    },
+    defaultValues: { amount: '', date: new Date().toISOString().slice(0, 10), method: '' },
   });
+
+  useEffect(() => {
+    if (open) reset({ amount: '', date: new Date().toISOString().slice(0, 10), method: '' });
+  }, [open, reset]);
 
   const mutation = useMutation({
     mutationFn: (values: PaymentFormValues) => {
       const payload: Record<string, unknown> = { amount: values.amount, date: values.date };
       if (values.method) payload.method = values.method;
-      return apiFetch(`/debts/${debtId}/payments?workspaceId=${workspaceId}`, {
+      return apiFetch(`/debts/${debt.id}/payments?workspaceId=${workspaceId}`, {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -206,28 +267,33 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
       queryClient.invalidateQueries({ queryKey: queryKeys.debts(workspaceId) });
       toast.success('Pago registrado');
       reset();
-      setOpen(false);
+      onOpenChange(false);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const currency = debt.currency as 'PEN' | 'USD';
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Registrar pago
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Registrar pago</DialogTitle>
-          <DialogDescription>Agrega un pago a esta deuda.</DialogDescription>
+          <DialogDescription>
+            {debt.concept} · Saldo pendiente {formatMoney(debt.balance ?? '0.00', currency)}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="amount">Monto</Label>
-              <Input id="amount" inputMode="decimal" placeholder="0.00" {...register('amount')} />
+              <Label htmlFor="payment-amount">Monto</Label>
+              <Controller
+                control={control}
+                name="amount"
+                render={({ field }) => (
+                  <MoneyInput id="payment-amount" value={field.value} onValueChange={field.onChange} />
+                )}
+              />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
             <div className="space-y-2">
@@ -243,6 +309,9 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
           </div>
 
           <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? 'Guardando...' : 'Guardar'}
             </Button>
@@ -253,13 +322,55 @@ function PaymentFormDialog({ workspaceId, debtId }: { workspaceId: string; debtI
   );
 }
 
+function PaymentsBreakdown({ debt }: Readonly<{ debt: Debt }>) {
+  const [open, setOpen] = useState(false);
+  const payments = debt.payments ?? [];
+  const currency = debt.currency as 'PEN' | 'USD';
+
+  if (!payments.length) return null;
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronDown className={cn('h-4 w-4 transition-transform duration-300 ease-spring', open && 'rotate-180')} />
+        {payments.length} {payments.length === 1 ? 'pago registrado' : 'pagos registrados'}
+      </button>
+
+      <div
+        style={{ maxHeight: open ? `${payments.length * 40 + 16}px` : '0px' }}
+        className="overflow-hidden transition-[max-height] duration-300 ease-out-soft"
+      >
+        <div className="mt-2 divide-y rounded-lg border">
+          {payments.map((payment) => (
+            <div key={payment.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">{formatDate(payment.date)}</span>
+              {payment.method && <span className="truncate text-xs text-muted-foreground">{payment.method}</span>}
+              <span className="font-semibold tabular-nums text-success">{formatMoney(payment.amount, currency)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DeudasPage() {
   const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
   const [directionFilter, setDirectionFilter] = useState(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Debt | null>(null);
+  const [paying, setPaying] = useState<Debt | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.debts(activeWorkspaceId ?? ''),
@@ -267,9 +378,18 @@ export default function DeudasPage() {
     enabled: !!activeWorkspaceId,
   });
 
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/debts/${id}?workspaceId=${activeWorkspaceId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.debts(activeWorkspaceId ?? '') });
+      toast.success('Deuda eliminada');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const statusOptions = useMemo(() => {
     const values = Array.from(new Set((data ?? []).map((d) => d.status)));
-    return values.map((v) => ({ value: v, label: v }));
+    return values.map((v) => ({ value: v, label: statusLabel(v) }));
   }, [data]);
 
   const debts = useMemo(() => {
@@ -294,11 +414,32 @@ export default function DeudasPage() {
     setCurrencyFilter(FILTER_ALL);
   };
 
+  const confirmRemove = async (debt: Debt) => {
+    const ok = await confirm({
+      title: 'Eliminar deuda',
+      description: `Se eliminará "${debt.concept}" junto con sus pagos registrados. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      destructive: true,
+    });
+    if (ok) removeMutation.mutate(debt.id);
+  };
+
   return (
     <PageShell
       title="Deudas"
       description="Gestiona lo que debes y lo que te deben"
-      action={activeWorkspaceId ? <DebtFormDialog workspaceId={activeWorkspaceId} onCreated={markNew} /> : null}
+      action={
+        activeWorkspaceId ? (
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+          >
+            Nueva deuda
+          </Button>
+        ) : null
+      }
     >
       <DataTableToolbar
         search={search}
@@ -361,7 +502,25 @@ export default function DeudasPage() {
                     </div>
                     <CardTitle className="text-base">{debt.concept}</CardTitle>
                   </div>
-                  <p className="text-xl font-bold tabular-nums">{formatMoney(debt.originalAmount, currency)}</p>
+                  <div className="flex shrink-0 items-start gap-1">
+                    <p className="text-xl font-bold tabular-nums">{formatMoney(debt.originalAmount, currency)}</p>
+                    <div className="flex items-center gap-0.5">
+                      <IconAction
+                        icon={Pencil}
+                        label="Editar deuda"
+                        onClick={() => {
+                          setEditing(debt);
+                          setFormOpen(true);
+                        }}
+                      />
+                      <IconAction
+                        icon={Trash2}
+                        label="Eliminar deuda"
+                        destructive
+                        onClick={() => confirmRemove(debt)}
+                      />
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
@@ -369,10 +528,14 @@ export default function DeudasPage() {
                     {formatMoney(debt.totalPaid ?? '0.00', currency)}
                     {debt.dueDate ? ` · Vence: ${formatDate(debt.dueDate)}` : ''}
                   </p>
+                  {debt.notes && <p className="mt-2 whitespace-pre-wrap text-sm">{debt.notes}</p>}
+                  <PaymentsBreakdown debt={debt} />
                 </CardContent>
                 {activeWorkspaceId && (
                   <CardFooter>
-                    <PaymentFormDialog workspaceId={activeWorkspaceId} debtId={debt.id} />
+                    <Button variant="outline" size="sm" onClick={() => setPaying(debt)}>
+                      Registrar pago
+                    </Button>
                   </CardFooter>
                 )}
               </Card>
@@ -381,6 +544,28 @@ export default function DeudasPage() {
         </div>
       ) : (
         <EmptyState title="Sin deudas" description="No tienes deudas registradas." />
+      )}
+
+      {activeWorkspaceId && (
+        <DebtFormDialog
+          workspaceId={activeWorkspaceId}
+          open={formOpen}
+          onOpenChange={(next) => {
+            setFormOpen(next);
+            if (!next) setEditing(null);
+          }}
+          debt={editing}
+          onCreated={markNew}
+        />
+      )}
+
+      {activeWorkspaceId && paying && (
+        <PaymentFormDialog
+          workspaceId={activeWorkspaceId}
+          debt={paying}
+          open
+          onOpenChange={(next) => !next && setPaying(null)}
+        />
       )}
     </PageShell>
   );

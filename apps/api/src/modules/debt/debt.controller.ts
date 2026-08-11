@@ -31,6 +31,12 @@ export class DebtController {
   addPayment(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto, @Body() body: AddDebtPaymentDto) {
     return this.debtService.addPayment(id, workspaceId, { ...body });
   }
+  @Delete('payments/:paymentId')
+  @ApiOperation({ summary: 'Delete a payment' })
+  removePayment(@Param('paymentId') paymentId: string) {
+    return this.debtService.removePayment(paymentId);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Soft delete debt' })
   remove(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {

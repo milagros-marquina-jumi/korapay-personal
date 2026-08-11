@@ -58,7 +58,11 @@ export class DebtService {
       where: { id, workspaceId, deletedAt: null },
     });
     if (!debt) throw new NotFoundException('Debt not found');
-    return this.prisma.debt.update({ where: { id }, data: data as any });
+    const updateData: Record<string, unknown> = { ...data };
+    if (typeof updateData.dueDate === 'string') {
+      updateData.dueDate = new Date(updateData.dueDate as string);
+    }
+    return this.prisma.debt.update({ where: { id }, data: updateData as any });
   }
   async addPayment(id: string, workspaceId: string, data: { amount: string; date: string; method?: string }) {
     const debt = await this.prisma.debt.findFirst({
@@ -86,6 +90,27 @@ export class DebtService {
       data: { status: newStatus },
     });
     return payment;
+  }
+  async removePayment(paymentId: string) {
+    const payment = await this.prisma.debtPayment.findUnique({ where: { id: paymentId } });
+    if (!payment) throw new NotFoundException('Payment not found');
+    await this.prisma.debtPayment.delete({ where: { id: paymentId } });
+    const allPayments = await this.prisma.debtPayment.findMany({
+      where: { debtId: payment.debtId },
+    });
+    const totalPaid = allPayments.reduce((s, p) => s.plus(new Decimal(p.amount)), new Decimal(0));
+    const debt = await this.prisma.debt.findUnique({ where: { id: payment.debtId } });
+    if (!debt) throw new NotFoundException('Debt not found');
+    const balance = new Decimal(debt.originalAmount).minus(totalPaid);
+    let newStatus = debt.status;
+    if (balance.lte(0)) newStatus = 'PAID';
+    else if (totalPaid.gt(0)) newStatus = 'PARTIAL';
+    else newStatus = 'PENDING';
+    await this.prisma.debt.update({
+      where: { id: payment.debtId },
+      data: { status: newStatus },
+    });
+    return { ok: true };
   }
   async remove(id: string, workspaceId: string) {
     const debt = await this.prisma.debt.findFirst({

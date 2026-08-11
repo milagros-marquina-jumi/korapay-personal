@@ -322,7 +322,10 @@ function PaymentFormDialog({
   );
 }
 
-function PaymentsBreakdown({ debt }: Readonly<{ debt: Debt }>) {
+function PaymentsBreakdown({
+  debt,
+  onDeletePayment,
+}: Readonly<{ debt: Debt; onDeletePayment?: (paymentId: string) => void }>) {
   const [open, setOpen] = useState(false);
   const payments = debt.payments ?? [];
   const currency = debt.currency as 'PEN' | 'USD';
@@ -351,6 +354,14 @@ function PaymentsBreakdown({ debt }: Readonly<{ debt: Debt }>) {
               <span className="text-muted-foreground">{formatDate(payment.date)}</span>
               {payment.method && <span className="truncate text-xs text-muted-foreground">{payment.method}</span>}
               <span className="font-semibold tabular-nums text-success">{formatMoney(payment.amount, currency)}</span>
+              {onDeletePayment && (
+                <IconAction
+                  icon={Trash2}
+                  label="Eliminar pago"
+                  destructive
+                  onClick={() => onDeletePayment(payment.id)}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -383,6 +394,15 @@ export default function DeudasPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.debts(activeWorkspaceId ?? '') });
       toast.success('Deuda eliminada');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: (paymentId: string) => apiFetch(`/debts/payments/${paymentId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.debts(activeWorkspaceId ?? '') });
+      toast.success('Pago eliminado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -529,7 +549,7 @@ export default function DeudasPage() {
                     {debt.dueDate ? ` · Vence: ${formatDate(debt.dueDate)}` : ''}
                   </p>
                   {debt.notes && <p className="mt-2 whitespace-pre-wrap text-sm">{debt.notes}</p>}
-                  <PaymentsBreakdown debt={debt} />
+                  <PaymentsBreakdown debt={debt} onDeletePayment={(id) => deletePaymentMutation.mutate(id)} />
                 </CardContent>
                 {activeWorkspaceId && (
                   <CardFooter>

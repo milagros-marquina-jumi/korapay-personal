@@ -9,6 +9,8 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Banknote,
+  Eye,
+  EyeOff,
   Landmark,
   ReceiptText,
   Wallet,
@@ -26,7 +28,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
-import type { TalentGlobalReport } from '@/lib/api.types';
+import type { Talent, TalentGlobalReport } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 function TimeSeriesBars({
@@ -75,10 +77,21 @@ function TimeSeriesBars({
   );
 }
 
+function InactiveToggle({ show, count, onToggle }: Readonly<{ show: boolean; count: number; onToggle: () => void }>) {
+  if (count <= 0) return null;
+  return (
+    <Button variant="outline" size="sm" onClick={onToggle} className="shrink-0">
+      {show ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+      {show ? 'Ocultar inactivos' : `Ver inactivos (${count})`}
+    </Button>
+  );
+}
+
 function GlobalReportContent() {
   const { activeWorkspaceId } = useWorkspace();
   const ws = activeWorkspaceId ?? '';
   const [year, setYear] = useState(FILTER_ALL);
+  const [showInactive, setShowInactive] = useState(false);
 
   const yearParam = year !== FILTER_ALL ? `&year=${year}` : '';
   const { data, isLoading } = useQuery({
@@ -87,8 +100,31 @@ function GlobalReportContent() {
     enabled: !!ws,
   });
 
-  const incomeColumns = useMemo(() => (data ? data.incomeByPerson.map((p) => p.name) : []), [data]);
-  const expenseColumns = useMemo(() => (data ? data.expenseByPerson.map((p) => p.name) : []), [data]);
+  const { data: talents } = useQuery({
+    queryKey: queryKeys.talents(ws),
+    queryFn: () => apiFetch<Talent[]>(`/talents?workspaceId=${ws}`),
+    enabled: !!ws,
+  });
+
+  // Por defecto las tablas muestran solo talentos activos: los inactivos
+  // agregan columnas que ya no cambian y ensanchan la tabla sin aportar.
+  const activeNames = useMemo(
+    () => new Set((talents ?? []).filter((t) => t.status === 'ACTIVE').map((t) => t.name)),
+    [talents],
+  );
+  const inactiveCount = (talents ?? []).length - activeNames.size;
+
+  const pickColumns = (list: { name: string }[]) =>
+    list.map((p) => p.name).filter((name) => showInactive || activeNames.size === 0 || activeNames.has(name));
+
+  const incomeColumns = useMemo(
+    () => (data ? pickColumns(data.incomeByPerson) : []),
+    [data, activeNames, showInactive],
+  );
+  const expenseColumns = useMemo(
+    () => (data ? pickColumns(data.expenseByPerson) : []),
+    [data, activeNames, showInactive],
+  );
 
   if (isLoading || !data) {
     return (
@@ -192,7 +228,6 @@ function GlobalReportContent() {
           <TabsTrigger value="empresa">Por empresa</TabsTrigger>
           <TabsTrigger value="cliente">Por cliente</TabsTrigger>
           <TabsTrigger value="pago">Planilla vs RxH</TabsTrigger>
-          <TabsTrigger value="categoria">Egresos por categoría</TabsTrigger>
           <TabsTrigger value="serie">Serie temporal</TabsTrigger>
           <TabsTrigger value="egresos">Egresos por persona</TabsTrigger>
           <TabsTrigger value="pivot-ingresos">Ingresos por mes</TabsTrigger>
@@ -302,8 +337,9 @@ function GlobalReportContent() {
 
         <TabsContent value="pivot-ingresos" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Ingresos (recibí) por mes y talento</CardTitle>
+              <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
             </CardHeader>
             <CardContent>
               <PivotTable periods={data.incomePivot} columns={incomeColumns} />
@@ -313,8 +349,9 @@ function GlobalReportContent() {
 
         <TabsContent value="pivot-egresos" className="mt-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Egresos (pagado) por mes y talento</CardTitle>
+              <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
             </CardHeader>
             <CardContent>
               <PivotTable periods={data.expensePivot} columns={expenseColumns} />
@@ -453,38 +490,6 @@ function GlobalReportContent() {
                       </td>
                       <td className="p-3 text-right tabular-nums">{formatMoney(p.kept, 'PEN')}</td>
                       <td className="p-3 text-right text-xs text-muted-foreground">{p.count}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="categoria" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Egresos por categoría</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Categoría</th>
-                    <th className="p-3 text-right">Pagado</th>
-                    <th className="p-3 text-right">Deuda</th>
-                    <th className="p-3 text-right">Falta pagar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.expenseByCategory.map((c) => (
-                    <tr key={c.name} className="border-b last:border-0">
-                      <td className="p-3 font-medium">{c.name}</td>
-                      <td className="p-3 text-right font-medium tabular-nums text-success">
-                        {formatMoney(c.paid, 'PEN')}
-                      </td>
-                      <td className="p-3 text-right tabular-nums text-warning">{formatMoney(c.debt, 'PEN')}</td>
-                      <td className="p-3 text-right tabular-nums text-destructive">{formatMoney(c.pending, 'PEN')}</td>
                     </tr>
                   ))}
                 </tbody>

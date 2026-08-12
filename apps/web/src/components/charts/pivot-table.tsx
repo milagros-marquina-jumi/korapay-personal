@@ -26,16 +26,16 @@ export function PivotTable({ periods, columns, totalLabel = 'Total' }: Props) {
 
   return (
     <div className="overflow-x-auto rounded-lg border">
-      <Table>
+      <Table className="min-w-max">
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 bg-card">Mes</TableHead>
+            <TableHead className="sticky left-0 z-10 min-w-36 bg-card">Mes</TableHead>
             {columns.map((name) => (
-              <TableHead key={name} className="whitespace-nowrap text-right">
+              <TableHead key={name} className="min-w-32 whitespace-nowrap px-4 text-right">
                 {name}
               </TableHead>
             ))}
-            <TableHead className="whitespace-nowrap text-right font-semibold">{totalLabel}</TableHead>
+            <TableHead className="min-w-32 whitespace-nowrap px-4 text-right font-semibold">{totalLabel}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -43,11 +43,13 @@ export function PivotTable({ periods, columns, totalLabel = 'Total' }: Props) {
             const byName = new Map(p.cells.map((c) => [c.name, c.amount]));
             return (
               <TableRow key={`${p.year}-${p.month}`}>
-                <TableCell className="sticky left-0 whitespace-nowrap bg-card text-sm capitalize">{p.label}</TableCell>
+                <TableCell className="sticky left-0 z-10 whitespace-nowrap bg-card text-sm capitalize">
+                  {p.label}
+                </TableCell>
                 {columns.map((name) => {
                   const value = byName.get(name);
                   return (
-                    <TableCell key={name} className="text-right tabular-nums">
+                    <TableCell key={name} className="whitespace-nowrap px-4 text-right tabular-nums">
                       {value && Number(value) > 0 ? (
                         formatMoney(value, 'PEN')
                       ) : (
@@ -56,14 +58,16 @@ export function PivotTable({ periods, columns, totalLabel = 'Total' }: Props) {
                     </TableCell>
                   );
                 })}
-                <TableCell className="text-right font-semibold tabular-nums">{formatMoney(p.total, 'PEN')}</TableCell>
+                <TableCell className="whitespace-nowrap px-4 text-right font-semibold tabular-nums">
+                  {formatMoney(p.total, 'PEN')}
+                </TableCell>
               </TableRow>
             );
           })}
           <TableRow className="border-t-2 bg-muted/40">
-            <TableCell className="sticky left-0 bg-muted/40 text-sm font-semibold">Total</TableCell>
+            <TableCell className="sticky left-0 z-10 bg-muted/40 text-sm font-semibold">Total</TableCell>
             {columns.map((name) => (
-              <TableCell key={name} className="text-right font-semibold tabular-nums">
+              <TableCell key={name} className="whitespace-nowrap px-4 text-right font-semibold tabular-nums">
                 {formatMoney(String(columnTotals.get(name) ?? 0), 'PEN')}
               </TableCell>
             ))}

@@ -1,26 +1,30 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { EmptyState, KPICard } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ArrowLeft, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import { ArrowLeft, Eye, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { StatusToggle } from '@/components/data-table/status-toggle';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { TransactionDetailDialog } from '@/components/transactions/transaction-detail-dialog';
 import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Paginated, Person, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
 import { formatDate } from '@/lib/utils';
 
 const STATUS_LABELS: Record<string, string> = {
@@ -40,6 +44,8 @@ function PagosEquipoContent() {
   const [status, setStatus] = useState<string>(FILTER_ALL);
   const [personId, setPersonId] = useState<string>(FILTER_ALL);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [detailTx, setDetailTx] = useState<Transaction | null>(null);
+  const [month, setMonth] = useState<string>(FILTER_ALL);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(ws, { type: 'TEAM_PAYMENT', all: true }),
@@ -79,14 +85,24 @@ function PagosEquipoContent() {
   const personOptions = useMemo(() => (peopleData ?? []).map((p) => ({ value: p.id, label: p.name })), [peopleData]);
   const personName = (id?: string | null) => peopleData?.find((p) => p.id === id)?.name;
 
+  const availableYears = useMemo(() => {
+    const set = new Set((data?.data ?? []).map((tx) => new Date(tx.date).getUTCFullYear()));
+    return [...set].sort((a, b) => b - a);
+  }, [data?.data]);
+
+  const [year, setYear] = useDefaultYear(availableYears);
+
   const rows = useMemo(
     () =>
       (data?.data ?? []).filter((tx) => {
         if (status !== FILTER_ALL && tx.status !== status) return false;
         if (personId !== FILTER_ALL && tx.personId !== personId) return false;
+        const d = new Date(tx.date);
+        if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
+        if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
         return true;
       }),
-    [data?.data, status, personId],
+    [data?.data, status, personId, year, month],
   );
 
   const totalPagado = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
@@ -131,13 +147,16 @@ function PagosEquipoContent() {
       {
         accessorKey: 'status',
         header: 'Estado',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <StatusToggle transactionId={row.original.id} workspaceId={ws} status={row.original.status} />
+        ),
       },
       {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-0.5">
+            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetailTx(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditingTx(row.original)} />
             <IconAction
               icon={Trash2}
@@ -183,14 +202,29 @@ function PagosEquipoContent() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar pagos..."
-        showClear={search !== '' || status !== FILTER_ALL || personId !== FILTER_ALL}
+        showClear={
+          search !== '' ||
+          status !== FILTER_ALL ||
+          personId !== FILTER_ALL ||
+          year !== FILTER_ALL ||
+          month !== FILTER_ALL
+        }
         onClear={() => {
           setSearch('');
           setStatus(FILTER_ALL);
           setPersonId(FILTER_ALL);
+          setYear(FILTER_ALL);
+          setMonth(FILTER_ALL);
         }}
         filters={
           <>
+            <MonthYearFilter
+              year={year}
+              month={month}
+              onYearChange={setYear}
+              onMonthChange={setMonth}
+              years={availableYears}
+            />
             <FilterSelect
               value={personId}
               onValueChange={setPersonId}
@@ -218,6 +252,14 @@ function PagosEquipoContent() {
         emptyState={
           <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el botón de arriba." />
         }
+      />
+
+      <TransactionDetailDialog
+        transaction={detailTx}
+        workspaceId={ws}
+        categoryLabel="Colaborador"
+        categoryName={() => detailTx?.person?.name ?? personName(detailTx?.personId) ?? '—'}
+        onOpenChange={(next) => !next && setDetailTx(null)}
       />
 
       {ws && editingTx && (

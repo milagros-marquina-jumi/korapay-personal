@@ -1,9 +1,9 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BarChart3, Pencil, Plus, Receipt, Trash2, Users, Wallet } from 'lucide-react';
+import { BarChart3, Eye, Pencil, Plus, Receipt, Trash2, Users, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -12,6 +12,7 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { PersonDetailDialog } from '@/components/team/person-detail-dialog';
 import { PersonFormDialog, type PersonFormValues } from '@/components/team/person-form-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -40,8 +41,9 @@ function ColaboradoresContent() {
   const { highlightClass } = useHighlightNew();
   const ws = activeWorkspaceId ?? '';
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<string>(FILTER_ALL);
+  const [status, setStatus] = useState<string>('ACTIVE');
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
+  const [detailPerson, setDetailPerson] = useState<Person | null>(null);
 
   const { data: peopleData, isLoading } = useQuery({
     queryKey: queryKeys.people(ws),
@@ -82,7 +84,11 @@ function ColaboradoresContent() {
   const team = peopleData ?? [];
 
   const statusOptions = useMemo(
-    () => [...new Set(team.map((p) => p.status).filter(Boolean) as string[])].map((v) => ({ value: v, label: v })),
+    () =>
+      [...new Set(team.map((p) => p.status).filter(Boolean) as string[])].map((v) => ({
+        value: v,
+        label: statusLabel(v),
+      })),
     [team],
   );
 
@@ -127,10 +133,10 @@ function ColaboradoresContent() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar colaboradores..."
-        showClear={search !== '' || status !== FILTER_ALL}
+        showClear={search !== '' || status !== 'ACTIVE'}
         onClear={() => {
           setSearch('');
-          setStatus(FILTER_ALL);
+          setStatus('ACTIVE');
         }}
         filters={
           statusOptions.length > 0 ? (
@@ -186,6 +192,7 @@ function ColaboradoresContent() {
                     <span className="font-semibold tabular-nums">{formatMoney(String(pagado), 'PEN')}</span>
                   </div>
                   <div className="mt-auto flex justify-end gap-0.5 pt-2">
+                    <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetailPerson(person)} />
                     <IconAction icon={Pencil} label="Editar" onClick={() => setEditingPerson(person)} />
                     <IconAction
                       icon={Trash2}
@@ -210,6 +217,12 @@ function ColaboradoresContent() {
       ) : (
         <EmptyState title="Sin colaboradores" description="Registra tu primer colaborador con el botón de arriba." />
       )}
+
+      <PersonDetailDialog
+        person={detailPerson}
+        payments={payments?.data ?? []}
+        onOpenChange={(next) => !next && setDetailPerson(null)}
+      />
 
       {editingPerson && (
         <PersonFormDialog

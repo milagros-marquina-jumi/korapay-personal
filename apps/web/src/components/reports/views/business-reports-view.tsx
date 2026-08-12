@@ -3,14 +3,12 @@
 import { formatMoney } from '@korapay/domain';
 import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, Landmark, ReceiptText, Users } from 'lucide-react';
-import Link from 'next/link';
+import { ArrowDownRight, ArrowUpRight, Landmark, Users } from 'lucide-react';
 import { CategoryDonut } from '@/components/charts/category-donut';
 import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
 import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MONTH_SHORT } from '@/components/reports/report-constants';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -114,7 +112,7 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           value={formatMoney(data.income, 'PEN')}
           icon={ArrowUpRight}
           color="text-success"
-          tooltip="Total facturado por MIMOTECH en el periodo"
+          tooltip="Facturación de los talentos colocados en clientes (NTT DATA, Seidor, Indra, etc.). Su detalle está en MIMOTALENTS."
         />
         <KPICard
           label="Costos"
@@ -145,8 +143,6 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           <TabsTrigger value="costos">Por aplicación</TabsTrigger>
           <TabsTrigger value="proyectos">Por proyecto</TabsTrigger>
           <TabsTrigger value="detalle">Costos por mes</TabsTrigger>
-          <TabsTrigger value="equipo">Equipo</TabsTrigger>
-          <TabsTrigger value="talentos">Talentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="flujo" className="mt-4">
@@ -261,73 +257,6 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="equipo" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pagos de equipo por persona</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {data.teamByPerson.length ? (
-                <div className="space-y-2">
-                  {data.teamByPerson.map((p) => {
-                    const max = Math.max(...data.teamByPerson.map((x) => Number(x.total)), 1);
-                    return (
-                      <div key={p.name} className="flex items-center gap-3">
-                        <span className="w-36 shrink-0 truncate text-sm">{p.name}</span>
-                        <div className="h-4 flex-1 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-info transition-all duration-500 ease-out-soft"
-                            style={{ width: `${(Number(p.total) / max) * 100}%` }}
-                          />
-                        </div>
-                        <span className="w-28 shrink-0 text-right text-sm font-medium tabular-nums">
-                          {formatMoney(p.total, 'PEN')}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="py-12 text-center text-sm text-muted-foreground">Sin pagos registrados</p>
-              )}
-              <Button asChild variant="outline" size="sm" className="mt-4">
-                <Link href="/mimotech/equipo/reporte">
-                  Ver reporte completo de colaboradores <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="talentos" className="mt-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KPICard label="Pagado" value={formatMoney(data.talent.paid, 'PEN')} icon={Users} color="text-success" />
-            <KPICard
-              label="Deuda"
-              value={formatMoney(data.talent.debt, 'PEN')}
-              icon={ReceiptText}
-              color="text-warning"
-            />
-            <KPICard
-              label="Falta pagar"
-              value={formatMoney(data.talent.pending, 'PEN')}
-              icon={AlertTriangle}
-              color="text-destructive"
-            />
-            <KPICard
-              label="Balance"
-              value={formatMoney(data.talent.balance, 'PEN')}
-              icon={Landmark}
-              color="text-brand"
-            />
-          </div>
-          <Button asChild variant="outline" size="sm" className="mt-4">
-            <Link href="/mimotech/talentos/reporte">
-              Ver reporte completo de talentos <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
         </TabsContent>
       </Tabs>
     </div>

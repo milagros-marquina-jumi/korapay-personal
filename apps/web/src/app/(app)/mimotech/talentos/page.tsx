@@ -16,6 +16,7 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { TalentWorkedTime } from '@/components/team/talent-worked-time';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -450,12 +451,7 @@ function TalentosContent() {
                     <span className="text-muted-foreground">Tiempo conmigo</span>
                     <span className="font-medium">{formatDuration(talent.startedWithMeAt, talent.endedWithMeAt)}</span>
                   </div>
-                  {talent.firstJobAt && (
-                    <div className="pointer-events-none flex items-center justify-between">
-                      <span className="text-muted-foreground">Tiempo trabajando</span>
-                      <span className="font-medium">{formatDuration(talent.firstJobAt)}</span>
-                    </div>
-                  )}
+                  <TalentWorkedTime talent={talent} />
                   {talent.studyPlace && (
                     <div className="pointer-events-none flex items-center gap-1.5 text-muted-foreground">
                       <GraduationCap className="size-3.5" />

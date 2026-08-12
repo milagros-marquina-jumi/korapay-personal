@@ -172,6 +172,9 @@ export function TransactionFormDialog({
   const currentStatus = watch('status');
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
+  // Los costos de MIMOTECH se clasifican por aplicacion y proyecto, y los pagos
+  // al equipo por persona: en ninguno de los dos se usan categorias.
+  const showCategory = !showBusinessFields && !showTeamFields;
   const showDueDate = currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE';
   const { data: applications } = useQuery({
     queryKey: queryKeys.applications(workspaceId),
@@ -251,6 +254,13 @@ export function TransactionFormDialog({
       });
       const isBusinessCost = rest.type === 'BUSINESS_COST';
       const isTeamPayment = rest.type === 'TEAM_PAYMENT';
+      // En MIMOTECH el concepto no se pide: se toma de la aplicacion o de la persona.
+      if (isBusinessCost) {
+        rest.concept = applications?.find((a) => a.id === rest.applicationId)?.name || 'Costo';
+      } else if (isTeamPayment) {
+        const persona = people?.find((x) => x.id === personId)?.name;
+        rest.concept = persona ? `Pago ${persona}` : 'Pago equipo';
+      }
       if (editing && transaction) {
         const editPayload = {
           type: rest.type,
@@ -350,17 +360,19 @@ export function TransactionFormDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Concepto</Label>
-            <SearchSelect
-              placeholder="Selecciona un concepto"
-              searchPlaceholder="Buscar concepto..."
-              value={watch('concept') ?? ''}
-              onValueChange={(v) => setValue('concept', v, { shouldValidate: true })}
-              options={(categories ?? []).map((c) => ({ value: c.name, label: c.name }))}
-            />
-            {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
-          </div>
+          {showCategory && (
+            <div className="space-y-1.5">
+              <Label>Concepto</Label>
+              <SearchSelect
+                placeholder="Selecciona un concepto"
+                searchPlaceholder="Buscar concepto..."
+                value={watch('concept') ?? ''}
+                onValueChange={(v) => setValue('concept', v, { shouldValidate: true })}
+                options={(categories ?? []).map((c) => ({ value: c.name, label: c.name }))}
+              />
+              {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -398,17 +410,19 @@ export function TransactionFormDialog({
                 />
               </div>
             )}
-            <div className="space-y-1.5">
-              <Label>Categoría</Label>
-              <SearchSelect
-                placeholder="Opcional"
-                searchPlaceholder="Buscar categoría..."
-                value={watch('categoryId') ?? ''}
-                onValueChange={(v) => setValue('categoryId', v)}
-                options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
-                clearable
-              />
-            </div>
+            {showCategory && (
+              <div className="space-y-1.5">
+                <Label>Categoría</Label>
+                <SearchSelect
+                  placeholder="Opcional"
+                  searchPlaceholder="Buscar categoría..."
+                  value={watch('categoryId') ?? ''}
+                  onValueChange={(v) => setValue('categoryId', v)}
+                  options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                  clearable
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -505,7 +519,11 @@ export function TransactionFormDialog({
                     placeholder="Opcional"
                     searchPlaceholder="Buscar aplicación..."
                     value={watch('applicationId') ?? ''}
-                    onValueChange={(v) => setValue('applicationId', v)}
+                    onValueChange={(v) => {
+                      setValue('applicationId', v);
+                      const name = applications?.find((a) => a.id === v)?.name;
+                      if (name) setValue('concept', name, { shouldValidate: true });
+                    }}
                     options={(applications ?? []).map((a) => ({ value: a.id, label: a.name }))}
                   />
                 </div>

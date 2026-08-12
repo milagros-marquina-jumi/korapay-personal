@@ -59,10 +59,10 @@ const BUSINESS: NavItem[] = [
       { href: '/mimotech/equipo', label: 'Colaboradores', icon: Users },
       { href: '/mimotech/equipo/pagos', label: 'Pagos al equipo', icon: Banknote },
       { href: '/mimotech/equipo/reporte', label: 'Reporte de equipo', icon: BarChart3 },
-      { href: '/mimotech/costos', label: 'Costos', icon: Receipt },
-      { href: '/reportes', label: 'Reportes', icon: TrendingUp },
       { href: '/proyectos', label: 'Proyectos', icon: Boxes },
       { href: '/aplicaciones', label: 'Aplicaciones', icon: Rocket },
+      { href: '/mimotech/costos', label: 'Costos', icon: Receipt },
+      { href: '/reportes', label: 'Reporte de operación', icon: TrendingUp },
     ],
   },
   {

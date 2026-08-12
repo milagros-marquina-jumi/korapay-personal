@@ -5,6 +5,7 @@ export const queryKeys = {
   detectedSummary: () => ['detected-summary'] as const,
   reconciliationRules: () => ['reconciliation-rules'] as const,
   workspaces: () => ['workspaces'] as const,
+  calendar: (filters?: Record<string, unknown>) => ['calendar', filters ?? {}] as const,
   dashboard: (workspaceId: string) => ['dashboard', workspaceId] as const,
   transactions: (workspaceId: string, filters?: Record<string, unknown>) =>
     ['transactions', workspaceId, filters ?? {}] as const,

@@ -8,6 +8,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { ScheduledTasksModule } from './common/scheduled-tasks/scheduled-tasks.module';
 import { AccountModule } from './modules/account/account.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { CategoryModule } from './modules/category/category.module';
 import { ClientModule } from './modules/client/client.module';
@@ -49,6 +50,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     PersonModule,
     CompanyModule,
     ClientModule,
+    CalendarModule,
     DashboardModule,
     PendingItemModule,
     DebtModule,

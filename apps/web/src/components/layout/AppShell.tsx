@@ -2,6 +2,7 @@
 
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
+import { CalendarHeaderPanel } from '@/components/calendar/calendar-header-panel';
 import { ScrollToTop } from '@/components/layout/scroll-to-top';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
@@ -48,6 +49,7 @@ export function AppShell({ children }: { readonly children: React.ReactNode }) {
           </Sheet>
 
           <div className="flex-1" />
+          <CalendarHeaderPanel />
           <ThemeToggle />
           <UserMenu />
         </header>

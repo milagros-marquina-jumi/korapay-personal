@@ -3,13 +3,14 @@
 import { Download, RefreshCw, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useInstallPrompt, usePWAUpdate } from '@/lib/use-pwa';
+import { useInstallPrompt, useIsOnline, usePWAUpdate } from '@/lib/use-pwa';
 
 const DISMISS_KEY = 'korapay.pwaInstallDismissed';
 
 export function PWABanner() {
   const { showReload, reloadPage } = usePWAUpdate();
   const { isInstallable, installApp } = useInstallPrompt();
+  const isOnline = useIsOnline();
   const [installDismissed, setInstallDismissed] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem(DISMISS_KEY) === '1';
@@ -37,7 +38,9 @@ export function PWABanner() {
     );
   }
 
-  if (!isInstallable || installDismissed) return null;
+  // Sin conexion no se puede instalar y el aviso de "Sin conexion" ya ocupa
+  // esa esquina: mostrar los dos a la vez solo estorba.
+  if (!isInstallable || installDismissed || !isOnline) return null;
 
   return (
     <div className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-card sm:left-auto sm:right-4">

@@ -110,6 +110,38 @@ export function usePWAUpdate(): PwaUpdateState {
   return { waitingWorker, showReload, reloadPage };
 }
 
+export function useIsOnline(): boolean {
+  // Arranca en true siempre: Node 22 define `navigator` pero sin `onLine`, asi
+  // que leerlo en el servidor da undefined (falsy) y el SSR pintaria el aviso
+  // de "sin conexion" a todo el mundo. El valor real se lee ya montado.
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    // Al volver a la pestana se revalida: si el evento se perdio con la pestana
+    // en segundo plano, el aviso quedaria mostrando un estado que ya no es real.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') setIsOnline(navigator.onLine);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
+
+  return isOnline;
+}
+
 export function useIsPWA(): boolean {
   const [isPwa, setIsPwa] = useState(false);
 

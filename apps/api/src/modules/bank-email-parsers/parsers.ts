@@ -25,6 +25,7 @@ function extractMerchant(text: string): string | undefined {
     /(?:realizaste una compra en|compra en)\s+([A-Z0-9][A-Za-z0-9 ,.&*'-]{2,40})/i,
     /(?:enviaste|envio|envió)\s+(?:un pago de\s+)?(?:\$|USD|S\/)\s*[\d.,]+\s*(?:USD\s*)?(?:a|por)\s+([A-Z0-9][A-Za-z0-9 .&*'-]{3,60})/i,
     /(?:pago de|por el pago de)\s+(intereses(?:\s+y\/o\s+comisiones)?|comisiones)/i,
+    /Empresa:\s*\d+\s*-\s*([A-Za-z0-9ÁÉÍÓÚÑáéíóúñ .&'-]{2,40})/i,
   ];
   for (const p of patterns) {
     const m = text.match(p);

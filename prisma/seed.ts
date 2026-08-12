@@ -212,7 +212,7 @@ async function main() {
       name: 'Personal',
       type: 'PERSONAL',
       description: 'Finanzas personales de Milagros',
-      emoji: '🏠',
+      emoji: 'Home',
       currency: 'PEN',
     },
   });
@@ -221,7 +221,7 @@ async function main() {
       name: 'Ingresos Laborales',
       type: 'EMPLOYMENT',
       description: 'Empresas donde trabaja Milagros e ingresos por trabajos',
-      emoji: '💼',
+      emoji: 'Briefcase',
       currency: 'PEN',
     },
   });
@@ -230,7 +230,7 @@ async function main() {
       name: 'MIMOTECH',
       type: 'BUSINESS',
       description: 'Costos, pagos de equipo y talentos tercerizados',
-      emoji: '🚀',
+      emoji: 'Rocket',
       currency: 'PEN',
     },
   });
@@ -239,7 +239,7 @@ async function main() {
       name: 'Qoryx',
       type: 'SHARED',
       description: 'Empresa tecnologica 50/50 con socio. Finanzas compartidas.',
-      emoji: '🤝',
+      emoji: 'Users',
       currency: 'PEN',
     },
   });
@@ -250,8 +250,10 @@ async function main() {
   }
 
   // ---- Helpers por workspace ----
+  // Sin emoji: las categorias se muestran como texto plano, asi que un icono
+  // aqui saldria como caracter suelto delante del nombre.
   const categoryIcon: Record<string, { emoji: string; color: string }> = {
-    default: { emoji: '📁', color: 'bg-slate-100 text-slate-900' },
+    default: { emoji: '', color: 'bg-slate-100 text-slate-900' },
   };
   const catByWorkspace: Record<string, Record<string, string>> = {};
   async function ensureCategory(workspaceId: string, name: string): Promise<string> {

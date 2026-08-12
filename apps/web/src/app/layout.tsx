@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { NetworkStatus } from '@/components/layout/network-status';
 import { PWABanner } from '@/components/layout/pwa-banner';
+import { API_ORIGIN, SITE_DESCRIPTION, SITE_LOCALE, SITE_NAME, SITE_TAGLINE, SITE_URL } from '@/lib/seo';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -15,14 +16,39 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'KoraPay — Gestión financiera inteligente',
-  description: 'Organiza tus finanzas personales y empresariales con KoraPay',
-  applicationName: 'KoraPay',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   manifest: '/manifest.json',
+  // App privada de finanzas: no hay pagina publica que indexar. La raiz
+  // redirige a /dashboard, que exige sesion, asi que se marca noindex global.
+  // Los metadatos OG/Twitter siguen sirviendo para previsualizar enlaces
+  // compartidos internamente.
+  robots: { index: false, follow: false },
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    locale: SITE_LOCALE,
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: `${SITE_NAME} — ${SITE_TAGLINE}` }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    images: ['/og-image.png'],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'KoraPay',
+    title: SITE_NAME,
   },
   icons: {
     icon: '/favicon.ico',
@@ -43,6 +69,37 @@ export const viewport: Viewport = {
   ],
 };
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'MIMOTECH',
+      url: SITE_URL,
+      logo: `${SITE_URL}/icons/icon-512x512.png`,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+      inLanguage: 'es-PE',
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: SITE_NAME,
+      applicationCategory: 'FinanceApplication',
+      operatingSystem: 'Web, Android, iOS',
+      description: SITE_DESCRIPTION,
+      url: SITE_URL,
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning className={`${inter.variable} ${plusJakarta.variable}`}>
@@ -50,6 +107,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Next 15 solo emite mobile-web-app-capable; iOS antiguo sigue leyendo
             la variante con prefijo apple para abrir en modo standalone. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        {/* La API vive en otro origen: adelantar DNS y TLS ahorra el handshake
+            en la primera peticion de datos de cada carga. */}
+        {API_ORIGIN && (
+          <>
+            <link rel="preconnect" href={API_ORIGIN} crossOrigin="anonymous" />
+            <link rel="dns-prefetch" href={API_ORIGIN} />
+          </>
+        )}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

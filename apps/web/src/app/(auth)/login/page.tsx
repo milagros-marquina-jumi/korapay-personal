@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Logo } from '@/components/layout/logo';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -44,7 +44,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <Logo size={48} withWordmark={false} className="mb-2" />
-          <CardTitle className="font-display text-2xl">KoraPay</CardTitle>
+          <h1 className="font-display text-2xl font-semibold leading-none tracking-tight">KoraPay</h1>
           <CardDescription>Gestión financiera personal y empresarial</CardDescription>
         </CardHeader>
         <CardContent>

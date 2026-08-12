@@ -7,6 +7,7 @@ import { EventRow, SummaryCard } from '@/components/calendar/calendar-shared';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { upcomingFirst, useCalendar } from '@/lib/use-calendar';
 
 const PREVIEW_LIMIT = 8;
@@ -20,16 +21,28 @@ export function CalendarHeaderPanel() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative" aria-label="Ver calendario financiero">
-          <CalendarDays className="h-5 w-5" />
-          {pendientes > 0 && (
-            <span className="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold leading-none text-white">
-              {pendientes > 9 ? '9+' : pendientes}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <SheetTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative overflow-visible"
+              aria-label={pendientes > 0 ? `Calendario financiero, ${pendientes} vencidos` : 'Calendario financiero'}
+            >
+              <CalendarDays className="h-5 w-5" />
+              {pendientes > 0 && (
+                <span className="-right-0.5 -top-0.5 absolute flex h-4 min-w-4 items-center justify-center rounded-full border-2 border-background bg-destructive px-1 font-bold text-[10px] text-white leading-none">
+                  {pendientes > 99 ? '99+' : pendientes}
+                </span>
+              )}
+            </Button>
+          </SheetTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          {pendientes > 0 ? `${pendientes} vencimientos vencidos` : 'Calendario financiero'}
+        </TooltipContent>
+      </Tooltip>
 
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <div className="border-b px-4 py-4">

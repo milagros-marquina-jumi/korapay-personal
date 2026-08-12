@@ -402,6 +402,17 @@ async function main() {
     fechaInicio: string | null;
     fechaFin: string | null;
   }>('ingresos_empresas');
+  // El Excel pone inicio y fin en filas distintas del mismo contrato: la de
+  // inicio marca el alta y una fila posterior marca la baja. Se emparejan por
+  // variante de contrato (SOLMIT 1, SOLMIT 2) antes de crear nada; leer
+  // fechaFin de la fila de inicio perdia 30 de 31 fechas de cierre.
+  const contractEnd = new Map<string, string>();
+  for (const r of empresas) {
+    if (!r.empresaOficial) continue;
+    const variante = r.empresas?.trim() || r.empresaOficial.trim();
+    if (r.fechaFin) contractEnd.set(`${r.empresaOficial.trim()}|${variante}`, r.fechaFin);
+  }
+
   let contractCount = 0;
   const seenContracts = new Set<string>();
   const companyPeriods: Record<string, { ini: string[]; fin: string[] }> = {};
@@ -424,6 +435,8 @@ async function main() {
     const key = `${empresa}-${r.fechaInicio}`;
     if (seenContracts.has(key)) continue;
     seenContracts.add(key);
+    const variante = empresasField || empresa;
+    const fechaFinContrato = contractEnd.get(`${empresa}|${variante}`) ?? r.fechaFin;
     const companyId = await ensureCompany(empleos.id, empresa);
     await prisma.employmentContract.create({
       data: {
@@ -432,8 +445,8 @@ async function main() {
         position: isContractVariant ? empresasField : null,
         type: dominantPago(empresa),
         startDate: date(r.fechaInicio),
-        endDate: r.fechaFin ? date(r.fechaFin) : null,
-        status: r.fechaFin ? 'FINISHED' : 'ACTIVE',
+        endDate: fechaFinContrato ? date(fechaFinContrato) : null,
+        status: fechaFinContrato ? 'FINISHED' : 'ACTIVE',
       },
     });
     contractCount++;

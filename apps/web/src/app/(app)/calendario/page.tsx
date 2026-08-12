@@ -213,7 +213,7 @@ export default function CalendarioPage() {
                 {proximos.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nada pendiente.</p>
                 ) : (
-                  <div className="grid gap-2">
+                  <div className="grid max-h-128 gap-2 overflow-y-auto pr-1.5">
                     {proximos.map((event) => (
                       <EventRow key={event.id} event={event} />
                     ))}

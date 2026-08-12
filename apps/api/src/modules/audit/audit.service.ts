@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
 @Injectable()
 export class AuditService {
@@ -13,8 +14,10 @@ export class AuditService {
     ip?: string;
     userAgent?: string;
   }) {
+    const { changes, ...rest } = params;
     return this.prisma.auditLog.create({
-      data: { ...params, changes: params.changes as any },
+      // changes es una columna JSON: Prisma la tipa como InputJsonValue.
+      data: { ...rest, ...(changes ? { changes: changes as Prisma.InputJsonObject } : {}) },
     });
   }
   async findAll(workspaceId: string, page = 1, pageSize = 50) {

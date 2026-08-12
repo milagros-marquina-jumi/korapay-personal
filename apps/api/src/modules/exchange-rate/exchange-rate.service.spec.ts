@@ -18,11 +18,11 @@ describe('ExchangeRateService', () => {
     expect(await svc.getRateForDate('2026-07-20')).toBe('3.40');
   });
 
-  it('getRateForDate returns default 3.42 when nothing stored', async () => {
+  it('getRateForDate throws when nothing stored (ya no hay fallback hardcodeado)', async () => {
     const prisma = buildPrisma();
     prisma.exchangeRate.findFirst.mockResolvedValue(null);
     const svc = new ExchangeRateService(prisma as never, new ConfigService());
-    expect(await svc.getRateForDate('2026-07-20')).toBe('3.42');
+    await expect(svc.getRateForDate('2026-07-20')).rejects.toThrow('No hay tipo de cambio registrado');
   });
 
   it('refreshFromDecolecta parses sell_price and upserts by date', async () => {
@@ -30,9 +30,11 @@ describe('ExchangeRateService', () => {
     prisma.currency.findUnique.mockResolvedValueOnce({ id: 'usd' }).mockResolvedValueOnce({ id: 'pen' });
     prisma.exchangeRate.upsert.mockResolvedValue({ rate: '3.408', date: new Date('2026-07-20') });
     const config = {
-      get: jest.fn((k: string, d?: string) =>
-        k === 'DECOLECTA_API_KEY' ? 'sk_test' : (d ?? 'https://api.decolecta.com'),
-      ),
+      get: jest.fn((k: string) => {
+        if (k === 'DECOLECTA_API_KEY') return 'sk_test';
+        if (k === 'DECOLECTA_TIMEOUT_MS') return '10000';
+        return 'https://api.decolecta.com';
+      }),
     };
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
@@ -54,7 +56,13 @@ describe('ExchangeRateService', () => {
   it('refreshFromDecolecta degrades to last saved rate on API failure', async () => {
     const prisma = buildPrisma();
     prisma.exchangeRate.findFirst.mockResolvedValue({ rate: '3.42', date: new Date('2026-07-19') });
-    const config = { get: jest.fn(() => 'sk_test') };
+    const config = {
+      get: jest.fn((k: string) => {
+        if (k === 'DECOLECTA_API_KEY') return 'sk_test';
+        if (k === 'DECOLECTA_TIMEOUT_MS') return '10000';
+        return 'https://api.decolecta.com';
+      }),
+    };
     global.fetch = jest.fn().mockRejectedValue(new Error('network')) as never;
     const svc = new ExchangeRateService(prisma as never, config as never);
     const result = await svc.refreshFromDecolecta();

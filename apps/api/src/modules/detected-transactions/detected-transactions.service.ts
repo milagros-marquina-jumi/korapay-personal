@@ -2,6 +2,7 @@ import { NON_CONFIRMABLE_TYPES } from '@korapay/domain';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateDetectedDto } from './detected-transactions.dto';
 
 const INCOME_LIKE_TYPES = ['REFUND', 'REVERSAL'];
 
@@ -61,9 +62,9 @@ export class DetectedTransactionsService {
     return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
   }
 
-  async update(id: string, profileId: string, data: Record<string, unknown>) {
+  async update(id: string, profileId: string, data: UpdateDetectedDto) {
     await this.findOne(id, profileId);
-    const row = await this.prisma.detectedBankTransaction.update({ where: { id }, data: data as never });
+    const row = await this.prisma.detectedBankTransaction.update({ where: { id }, data });
     return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
   }
 

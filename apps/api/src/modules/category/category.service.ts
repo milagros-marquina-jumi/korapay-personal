@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateCategoryDto } from './category.dto';
 @Injectable()
 export class CategoryService {
   constructor(private readonly prisma: PrismaService) {}
@@ -16,18 +17,18 @@ export class CategoryService {
     if (dup) throw new ConflictException('Ya existe una categoría con ese nombre');
     return this.prisma.category.create({ data });
   }
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateCategoryDto) {
     const cat = await this.prisma.category.findFirst({
       where: { id, workspaceId, deletedAt: null },
     });
     if (!cat) throw new NotFoundException('Category not found');
-    if (typeof data.name === 'string') {
+    if (data.name) {
       const dup = await this.prisma.category.findFirst({
         where: { workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
       });
       if (dup) throw new ConflictException('Ya existe una categoría con ese nombre');
     }
-    return this.prisma.category.update({ where: { id }, data: data as any });
+    return this.prisma.category.update({ where: { id }, data });
   }
   async remove(id: string, workspaceId: string) {
     const cat = await this.prisma.category.findFirst({

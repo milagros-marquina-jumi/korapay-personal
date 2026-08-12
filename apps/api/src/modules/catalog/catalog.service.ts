@@ -1,6 +1,8 @@
 import { SALARY_CONCEPT } from '@korapay/domain';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateApplicationDto, UpdateEmploymentContractDto, UpdateProjectDto } from './catalog.dto';
 import { ContractIncomeService } from './contract-income.service';
 import { buildContractSequence, buildGrossByCompany, deriveContractState } from './contract-state';
 
@@ -32,16 +34,16 @@ export class CatalogService {
     return this.prisma.application.create({ data });
   }
 
-  async updateApplication(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async updateApplication(id: string, workspaceId: string, data: UpdateApplicationDto) {
     const found = await this.prisma.application.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Application not found');
-    if (typeof data.name === 'string') {
+    if (data.name) {
       const dup = await this.prisma.application.findFirst({
         where: { workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
       });
       if (dup) throw new ConflictException('Ya existe una aplicación con ese nombre');
     }
-    return this.prisma.application.update({ where: { id }, data: data as never });
+    return this.prisma.application.update({ where: { id }, data });
   }
 
   async removeApplication(id: string, workspaceId: string) {
@@ -65,16 +67,16 @@ export class CatalogService {
     return this.prisma.project.create({ data });
   }
 
-  async updateProject(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async updateProject(id: string, workspaceId: string, data: UpdateProjectDto) {
     const found = await this.prisma.project.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Project not found');
-    if (typeof data.name === 'string') {
+    if (data.name) {
       const dup = await this.prisma.project.findFirst({
         where: { workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
       });
       if (dup) throw new ConflictException('Ya existe un proyecto con ese nombre');
     }
-    return this.prisma.project.update({ where: { id }, data: data as never });
+    return this.prisma.project.update({ where: { id }, data });
   }
 
   async removeProject(id: string, workspaceId: string) {
@@ -143,22 +145,22 @@ export class CatalogService {
     return { ...created, salary: created.salary?.toString() ?? null };
   }
 
-  async updateEmploymentContract(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async updateEmploymentContract(id: string, workspaceId: string, data: UpdateEmploymentContractDto) {
     const found = await this.prisma.employmentContract.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Contrato no encontrado');
-    const updateData: Record<string, unknown> = {};
+    const updateData: Prisma.EmploymentContractUncheckedUpdateInput = {};
     if (data.companyId !== undefined) updateData.companyId = data.companyId;
     if (data.position !== undefined) updateData.position = data.position;
     if (data.type !== undefined) updateData.type = data.type;
-    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate as string);
+    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
     if (data.endDate !== undefined) {
-      updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
-      updateData.status = deriveContractState(data.endDate ? new Date(data.endDate as string) : null).state;
+      updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+      updateData.status = deriveContractState(data.endDate ? new Date(data.endDate) : null).state;
     }
     if (data.salary !== undefined) updateData.salary = data.salary;
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.notes !== undefined) updateData.notes = data.notes;
-    const updated = await this.prisma.employmentContract.update({ where: { id }, data: updateData as never });
+    const updated = await this.prisma.employmentContract.update({ where: { id }, data: updateData });
     await this.contractIncome.syncContractIncomes(id, workspaceId);
     return { ...updated, salary: updated.salary?.toString() ?? null };
   }
@@ -237,7 +239,7 @@ export class CatalogService {
   async updateGlobalCompany(id: string, data: { name?: string; ruc?: string }) {
     const found = await this.prisma.globalCompany.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Empresa no encontrada');
-    if (typeof data.name === 'string') {
+    if (data.name) {
       const dup = await this.prisma.globalCompany.findFirst({
         where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
       });
@@ -274,18 +276,18 @@ export class CatalogService {
   async updateGlobalClient(id: string, data: { name?: string; globalCompanyId?: string | null }) {
     const found = await this.prisma.globalClient.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Cliente no encontrado');
-    if (typeof data.name === 'string') {
+    if (data.name) {
       const dup = await this.prisma.globalClient.findFirst({
         where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null, id: { not: id } },
       });
       if (dup) throw new ConflictException('Ya existe un cliente con ese nombre');
     }
-    const updateData: Record<string, unknown> = {};
+    const updateData: Prisma.GlobalClientUncheckedUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.globalCompanyId !== undefined) updateData.globalCompanyId = data.globalCompanyId || null;
     return this.prisma.globalClient.update({
       where: { id },
-      data: updateData as never,
+      data: updateData,
       include: { globalCompany: { select: { id: true, name: true } } },
     });
   }
@@ -311,7 +313,7 @@ export class CatalogService {
   async updateBank(id: string, data: { name?: string; country?: string }) {
     const found = await this.prisma.bank.findUnique({ where: { id } });
     if (!found) throw new NotFoundException('Bank not found');
-    if (typeof data.name === 'string') {
+    if (data.name) {
       const dup = await this.prisma.bank.findFirst({
         where: { name: { equals: data.name, mode: 'insensitive' }, id: { not: id } },
       });

@@ -1,9 +1,17 @@
 import { randomBytes } from 'node:crypto';
 import { isNeverPaid } from '@korapay/domain';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type {
+  CreateTalentDistributionDto,
+  CreateTalentDto,
+  UpdateTalentContractDto,
+  UpdateTalentDistributionDto,
+  UpdateTalentDto,
+} from './talent.dto';
 
 interface MonthlyBucket {
   salary: Decimal;
@@ -620,39 +628,36 @@ export class TalentService {
     }
     return { ...talent, contracts: sortedContracts, looseDistributions };
   }
-  private mapTalentData(data: Record<string, unknown>): Record<string, unknown> {
-    const out: Record<string, unknown> = {};
-    for (const key of [
-      'name',
-      'email',
-      'phone',
-      'notes',
-      'status',
-      'terminationReason',
-      'role',
-      'studyPlace',
-      'slideUrl',
-    ] as const) {
+  private mapTalentData(data: CreateTalentDto | UpdateTalentDto): Prisma.TalentProfileUncheckedUpdateInput {
+    const out: Prisma.TalentProfileUncheckedUpdateInput = {};
+    // name y status no son anulables en el esquema: solo se escriben si traen valor.
+    if (data.name) out.name = data.name;
+    if (data.status) out.status = data.status;
+    for (const key of ['email', 'phone', 'notes', 'terminationReason', 'role', 'studyPlace', 'slideUrl'] as const) {
       if (data[key] !== undefined) out[key] = data[key] === '' ? null : data[key];
     }
     for (const key of ['startedWithMeAt', 'endedWithMeAt', 'firstJobAt', 'studyStartAt', 'studyEndAt'] as const) {
-      if (data[key] !== undefined) out[key] = data[key] ? new Date(data[key] as string) : null;
+      if (data[key] !== undefined) out[key] = data[key] ? new Date(data[key]) : null;
     }
     return out;
   }
-  async create(data: Record<string, unknown>) {
+  async create(data: CreateTalentDto) {
     return this.prisma.talentProfile.create({
-      data: { workspaceId: data.workspaceId as string, ...this.mapTalentData(data) } as never,
+      data: {
+        ...(this.mapTalentData(data) as Prisma.TalentProfileUncheckedCreateInput),
+        workspaceId: data.workspaceId,
+        name: data.name,
+      },
     });
   }
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateTalentDto) {
     const talent = await this.prisma.talentProfile.findFirst({
       where: { id, workspaceId, deletedAt: null },
     });
     if (!talent) throw new NotFoundException('Talent not found');
     return this.prisma.talentProfile.update({
       where: { id },
-      data: this.mapTalentData(data) as never,
+      data: this.mapTalentData(data),
     });
   }
   async remove(id: string, workspaceId: string) {
@@ -703,7 +708,7 @@ export class TalentService {
       },
     });
   }
-  async updateContract(contractId: string, workspaceId: string, data: Record<string, unknown>) {
+  async updateContract(contractId: string, workspaceId: string, data: UpdateTalentContractDto) {
     const contract = await this.prisma.talentContract.findFirst({
       where: { id: contractId, talentProfile: { workspaceId, deletedAt: null } },
     });
@@ -722,9 +727,9 @@ export class TalentService {
     ] as const) {
       if (data[key] !== undefined) updateData[key] = data[key] === '' ? null : data[key];
     }
-    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate as string);
-    if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
-    return this.prisma.talentContract.update({ where: { id: contractId }, data: updateData as never });
+    if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
+    if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+    return this.prisma.talentContract.update({ where: { id: contractId }, data: updateData });
   }
   async removeContract(contractId: string, workspaceId: string) {
     const contract = await this.prisma.talentContract.findFirst({
@@ -733,61 +738,61 @@ export class TalentService {
     if (!contract) throw new NotFoundException('Contract not found');
     return this.prisma.talentContract.delete({ where: { id: contractId } });
   }
-  async addDistribution(contractId: string, workspaceId: string, data: Record<string, unknown>) {
+  async addDistribution(contractId: string, workspaceId: string, data: CreateTalentDistributionDto) {
     const contract = await this.prisma.talentContract.findFirst({
       where: { id: contractId, talentProfile: { workspaceId, deletedAt: null } },
     });
     if (!contract) throw new NotFoundException('Talent contract not found');
-    const d = data.date ? new Date(data.date as string) : null;
+    const d = data.date ? new Date(data.date) : null;
     return this.prisma.talentIncomeDistribution.create({
       data: {
         contractId,
         talentId: contract.talentProfileId,
-        transactionId: (data.transactionId as string) ?? null,
+        transactionId: data.transactionId ?? null,
         date: d,
-        year: data.year != null ? (data.year as number) : (d?.getUTCFullYear() ?? null),
-        month: data.month != null ? (data.month as number) : d ? d.getUTCMonth() + 1 : null,
-        paymentType: (data.paymentType as string) ?? 'Mensual',
-        companyName: (data.companyName as string) ?? null,
-        clientName: (data.clientName as string) ?? null,
-        salary: (data.salary as string) ?? null,
-        amountWithDiscount: data.amountWithDiscount as string,
-        amountReceived: data.amountReceived as string,
-        amountRetained: data.amountRetained as string,
-        notes: (data.notes as string) ?? null,
-        status: (data.status as string) ?? 'PENDING',
+        year: data.year != null ? data.year : (d?.getUTCFullYear() ?? null),
+        month: data.month != null ? data.month : d ? d.getUTCMonth() + 1 : null,
+        paymentType: data.paymentType ?? 'Mensual',
+        companyName: data.companyName ?? null,
+        clientName: data.clientName ?? null,
+        salary: data.salary ?? null,
+        amountWithDiscount: data.amountWithDiscount,
+        amountReceived: data.amountReceived,
+        amountRetained: data.amountRetained,
+        notes: data.notes ?? null,
+        status: data.status ?? 'PENDING',
       },
     });
   }
 
-  async addLooseDistribution(talentId: string, workspaceId: string, data: Record<string, unknown>) {
+  async addLooseDistribution(talentId: string, workspaceId: string, data: CreateTalentDistributionDto) {
     const talent = await this.prisma.talentProfile.findFirst({
       where: { id: talentId, workspaceId, deletedAt: null },
     });
     if (!talent) throw new NotFoundException('Talent not found');
-    const d = data.date ? new Date(data.date as string) : null;
+    const d = data.date ? new Date(data.date) : null;
     return this.prisma.talentIncomeDistribution.create({
       data: {
         contractId: null,
         talentId,
-        transactionId: (data.transactionId as string) ?? null,
+        transactionId: data.transactionId ?? null,
         date: d,
-        year: data.year != null ? (data.year as number) : (d?.getUTCFullYear() ?? null),
-        month: data.month != null ? (data.month as number) : d ? d.getUTCMonth() + 1 : null,
-        paymentType: (data.paymentType as string) ?? 'CTS',
-        companyName: (data.companyName as string) ?? null,
-        clientName: (data.clientName as string) ?? null,
-        salary: (data.salary as string) ?? null,
-        amountWithDiscount: data.amountWithDiscount as string,
-        amountReceived: data.amountReceived as string,
-        amountRetained: data.amountRetained as string,
-        notes: (data.notes as string) ?? null,
-        status: (data.status as string) ?? 'PAID',
+        year: data.year != null ? data.year : (d?.getUTCFullYear() ?? null),
+        month: data.month != null ? data.month : d ? d.getUTCMonth() + 1 : null,
+        paymentType: data.paymentType ?? 'CTS',
+        companyName: data.companyName ?? null,
+        clientName: data.clientName ?? null,
+        salary: data.salary ?? null,
+        amountWithDiscount: data.amountWithDiscount,
+        amountReceived: data.amountReceived,
+        amountRetained: data.amountRetained,
+        notes: data.notes ?? null,
+        status: data.status ?? 'PAID',
       },
     });
   }
 
-  async updateDistribution(distId: string, workspaceId: string, data: Record<string, unknown>) {
+  async updateDistribution(distId: string, workspaceId: string, data: UpdateTalentDistributionDto) {
     const dist = await this.prisma.talentIncomeDistribution.findFirst({
       where: {
         id: distId,
@@ -814,8 +819,8 @@ export class TalentService {
     ] as const) {
       if (data[key] !== undefined) updateData[key] = data[key] === '' ? null : data[key];
     }
-    if (data.date !== undefined) updateData.date = data.date ? new Date(data.date as string) : null;
-    return this.prisma.talentIncomeDistribution.update({ where: { id: distId }, data: updateData as never });
+    if (data.date !== undefined) updateData.date = data.date ? new Date(data.date) : null;
+    return this.prisma.talentIncomeDistribution.update({ where: { id: distId }, data: updateData });
   }
   async removeDistribution(distId: string, workspaceId: string) {
     const dist = await this.prisma.talentIncomeDistribution.findFirst({

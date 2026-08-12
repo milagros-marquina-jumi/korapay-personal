@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { EMAIL_INGESTION_MAX_BODY_LENGTH, NON_EXPENSE_TYPES } from '@korapay/domain';
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { BankEmailParsersService } from '../bank-email-parsers/bank-email-parsers.service';
 import { buildFingerprint, normalizeMerchant, sanitizeRaw } from '../bank-email-parsers/parser.utils';
@@ -149,7 +150,7 @@ export class EmailIngestionService {
         fingerprint,
         status: duplicate ? 'DUPLICATE' : 'PENDING_REVIEW',
         duplicateOfId: duplicate?.id ?? null,
-        rawDataSanitized: sanitizeRaw(parsed, input.subject) as never,
+        rawDataSanitized: sanitizeRaw(parsed, input.subject) as Prisma.InputJsonObject,
       },
     });
 

@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/exchange-rate.service';
+import type { UpdateTransactionDto } from './transaction.dto';
 
 const MAX_OCCURRENCES = 120;
 
@@ -354,48 +355,46 @@ export class TransactionService {
       return first;
     });
   }
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateTransactionDto) {
     const existing = await this.findOne(id, workspaceId);
     const updateData: Prisma.TransactionUncheckedUpdateInput = {};
-    if (data.concept) updateData.concept = data.concept as string;
-    if (data.description !== undefined) updateData.description = data.description as string;
-    if (data.date) updateData.date = new Date(data.date as string);
-    if (data.type) updateData.type = data.type as string;
-    if (data.currency) updateData.currency = data.currency as string;
+    if (data.concept) updateData.concept = data.concept;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.date) updateData.date = new Date(data.date);
+    if (data.type) updateData.type = data.type;
+    if (data.currency) updateData.currency = data.currency;
     if (data.amount) {
-      updateData.amountOriginal = data.amount as string;
-      const currency = (data.currency as string) ?? existing.currency ?? 'PEN';
-      const dateForRate = (data.date as string) ?? existing.date.toISOString().slice(0, 10);
-      let rate = (data.exchangeRate as string) ?? existing.exchangeRate ?? undefined;
+      updateData.amountOriginal = data.amount;
+      const currency = data.currency ?? existing.currency ?? 'PEN';
+      const dateForRate = data.date ?? existing.date.toISOString().slice(0, 10);
+      let rate = data.exchangeRate ?? existing.exchangeRate ?? undefined;
       if (currency !== 'PEN' && !rate) {
         rate = await this.exchangeRateService.getRateForDate(dateForRate);
       }
       updateData.exchangeRate = currency !== 'PEN' ? (rate ?? null) : null;
       updateData.amountBase =
-        currency === 'PEN'
-          ? (data.amount as string)
-          : new Decimal(data.amount as string).mul(new Decimal(rate ?? '1')).toFixed(2);
+        currency === 'PEN' ? data.amount : new Decimal(data.amount).mul(new Decimal(rate ?? '1')).toFixed(2);
     }
     if (data.amountGross !== undefined) {
-      const currency = (data.currency as string) ?? existing.currency ?? 'PEN';
-      const net = (data.amount as string) ?? existing.amountOriginal.toString();
-      const rate = (data.exchangeRate as string) ?? existing.exchangeRate?.toString() ?? '1';
-      updateData.amountGross = this.grossInBase((data.amountGross as string) || undefined, net, currency, rate);
+      const currency = data.currency ?? existing.currency ?? 'PEN';
+      const net = data.amount ?? existing.amountOriginal.toString();
+      const rate = data.exchangeRate ?? existing.exchangeRate?.toString() ?? '1';
+      updateData.amountGross = this.grossInBase(data.amountGross || undefined, net, currency, rate);
     }
-    if (data.status) updateData.status = data.status as string;
-    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId as string;
-    if (data.companyId !== undefined) updateData.companyId = data.companyId as string;
-    if (data.accountId !== undefined) updateData.accountId = data.accountId as string;
-    if (data.applicationId !== undefined) updateData.applicationId = data.applicationId as string;
-    if (data.personId !== undefined) updateData.personId = (data.personId as string) || null;
-    if (data.notes !== undefined) updateData.notes = data.notes as string;
-    if (Array.isArray(data.tags)) updateData.tags = data.tags as string[];
-    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
-    if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring as boolean;
+    if (data.status) updateData.status = data.status;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.companyId !== undefined) updateData.companyId = data.companyId;
+    if (data.accountId !== undefined) updateData.accountId = data.accountId;
+    if (data.applicationId !== undefined) updateData.applicationId = data.applicationId;
+    if (data.personId !== undefined) updateData.personId = data.personId || null;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (Array.isArray(data.tags)) updateData.tags = data.tags;
+    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+    if (data.isRecurring !== undefined) updateData.isRecurring = data.isRecurring;
 
-    const projectIds = Array.isArray(data.projectIds) ? (data.projectIds as string[]).filter(Boolean) : undefined;
+    const projectIds = Array.isArray(data.projectIds) ? data.projectIds.filter(Boolean) : undefined;
     if (data.projectId !== undefined) {
-      updateData.projectId = (data.projectId as string) || null;
+      updateData.projectId = data.projectId || null;
     } else if (projectIds) {
       updateData.projectId = projectIds[0] ?? null;
     }

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { CreateRuleDto, UpdateRuleDto } from './reconciliation-rules.dto';
 
 @Injectable()
 export class ReconciliationRulesService {
@@ -12,14 +13,14 @@ export class ReconciliationRulesService {
     });
   }
 
-  create(profileId: string, data: Record<string, unknown>) {
-    return this.prisma.reconciliationRule.create({ data: { ...data, profileId } as never });
+  create(profileId: string, data: CreateRuleDto) {
+    return this.prisma.reconciliationRule.create({ data: { ...data, profileId } });
   }
 
-  async update(id: string, profileId: string, data: Record<string, unknown>) {
+  async update(id: string, profileId: string, data: UpdateRuleDto) {
     const found = await this.prisma.reconciliationRule.findFirst({ where: { id, profileId } });
     if (!found) throw new NotFoundException('Regla no encontrada');
-    return this.prisma.reconciliationRule.update({ where: { id }, data: data as never });
+    return this.prisma.reconciliationRule.update({ where: { id }, data });
   }
 
   async remove(id: string, profileId: string) {

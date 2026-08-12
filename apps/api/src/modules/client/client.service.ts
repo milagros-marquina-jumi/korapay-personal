@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateClientDto } from './client.dto';
 
 @Injectable()
 export class ClientService {
@@ -32,7 +33,7 @@ export class ClientService {
     return this.prisma.client.create({ data });
   }
 
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateClientDto) {
     const found = await this.prisma.client.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Cliente no encontrado');
     if (typeof data.name === 'string') {
@@ -47,7 +48,7 @@ export class ClientService {
       });
       if (dup) throw new ConflictException('Ya existe un cliente con ese nombre en esta empresa');
     }
-    return this.prisma.client.update({ where: { id }, data: data as never });
+    return this.prisma.client.update({ where: { id }, data });
   }
 
   async remove(id: string, workspaceId: string) {

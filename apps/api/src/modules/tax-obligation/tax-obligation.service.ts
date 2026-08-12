@@ -1,6 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateTaxObligationDto } from './tax-obligation.dto';
 
 @Injectable()
 export class TaxObligationService {
@@ -86,16 +88,16 @@ export class TaxObligationService {
     return this.findOne(created.id, data.workspaceId);
   }
 
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateTaxObligationDto) {
     const found = await this.prisma.taxObligation.findFirst({
       where: { id, workspaceId, deletedAt: null },
       include: { installmentRows: true },
     });
     if (!found) throw new NotFoundException('Obligación no encontrada');
-    const updateData: Record<string, unknown> = {};
+    const updateData: Prisma.TaxObligationUncheckedUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.year !== undefined) updateData.year = data.year;
-    if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate as string);
+    if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.installments !== undefined) updateData.installments = data.installments;

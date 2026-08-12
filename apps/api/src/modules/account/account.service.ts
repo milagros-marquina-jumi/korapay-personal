@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateAccountDto } from './account.dto';
 @Injectable()
 export class AccountService {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,9 +57,9 @@ export class AccountService {
       },
     });
   }
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateAccountDto) {
     await this.findOne(id, workspaceId);
-    return this.prisma.account.update({ where: { id }, data: data as any });
+    return this.prisma.account.update({ where: { id }, data });
   }
   async remove(id: string, workspaceId: string) {
     await this.findOne(id, workspaceId);

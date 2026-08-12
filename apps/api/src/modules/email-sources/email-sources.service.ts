@@ -1,6 +1,7 @@
 import { EmailProvider } from '@korapay/domain';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateEmailSourceDto } from './email-sources.dto';
 import { generateIngestionToken } from './ingestion-token';
 
 function serialize(source: {
@@ -89,9 +90,9 @@ export class EmailSourcesService {
     return { source: serialize(source), ingestionToken: token };
   }
 
-  async update(id: string, profileId: string, data: Record<string, unknown>) {
+  async update(id: string, profileId: string, data: UpdateEmailSourceDto) {
     await this.findOne(id, profileId);
-    const updated = await this.prisma.emailSource.update({ where: { id }, data: data as never });
+    const updated = await this.prisma.emailSource.update({ where: { id }, data });
     return serialize(updated);
   }
 

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateSavingGoalDto } from './saving-goal.dto';
 @Injectable()
 export class SavingGoalService {
   constructor(private readonly prisma: PrismaService) {}
@@ -43,12 +44,12 @@ export class SavingGoalService {
       },
     });
   }
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateSavingGoalDto) {
     const goal = await this.prisma.savingGoal.findFirst({
       where: { id, workspaceId, deletedAt: null },
     });
     if (!goal) throw new NotFoundException('Saving goal not found');
-    return this.prisma.savingGoal.update({ where: { id }, data: data as any });
+    return this.prisma.savingGoal.update({ where: { id }, data });
   }
   async addEntry(
     id: string,

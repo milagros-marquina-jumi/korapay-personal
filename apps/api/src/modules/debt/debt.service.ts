@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import type { UpdateDebtDto } from './debt.dto';
 @Injectable()
 export class DebtService {
   constructor(private readonly prisma: PrismaService) {}
@@ -53,16 +55,15 @@ export class DebtService {
       },
     });
   }
-  async update(id: string, workspaceId: string, data: Record<string, unknown>) {
+  async update(id: string, workspaceId: string, data: UpdateDebtDto) {
     const debt = await this.prisma.debt.findFirst({
       where: { id, workspaceId, deletedAt: null },
     });
     if (!debt) throw new NotFoundException('Debt not found');
-    const updateData: Record<string, unknown> = { ...data };
-    if (typeof updateData.dueDate === 'string') {
-      updateData.dueDate = new Date(updateData.dueDate as string);
-    }
-    return this.prisma.debt.update({ where: { id }, data: updateData as any });
+    const { dueDate, ...rest } = data;
+    const updateData: Prisma.DebtUpdateInput = { ...rest };
+    if (dueDate) updateData.dueDate = new Date(dueDate);
+    return this.prisma.debt.update({ where: { id }, data: updateData });
   }
   async addPayment(id: string, workspaceId: string, data: { amount: string; date: string; method?: string }) {
     const debt = await this.prisma.debt.findFirst({

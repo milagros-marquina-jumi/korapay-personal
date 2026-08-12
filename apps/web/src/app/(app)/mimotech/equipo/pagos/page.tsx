@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard } from '@korapay/ui';
+import { EmptyState, KPICard, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ArrowLeft, Eye, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
@@ -26,14 +26,6 @@ import type { Paginated, Person, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
 import { formatDate } from '@/lib/utils';
-
-const STATUS_LABELS: Record<string, string> = {
-  PAID: 'Pagado',
-  PENDING: 'Pendiente',
-  OVERDUE: 'Vencido',
-  PARTIAL: 'Parcial',
-  CANCELLED: 'Cancelado',
-};
 
 function PagosEquipoContent() {
   const { activeWorkspaceId } = useWorkspace();
@@ -79,7 +71,7 @@ function PagosEquipoContent() {
 
   const statusOptions = useMemo(() => {
     const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
-    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+    return distinct.map((value) => ({ value, label: statusLabel(value) }));
   }, [data?.data]);
 
   const personOptions = useMemo(() => (peopleData ?? []).map((p) => ({ value: p.id, label: p.name })), [peopleData]);

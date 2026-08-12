@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { CheckCircle2, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -25,14 +25,6 @@ import type { TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { formatDate } from '@/lib/utils';
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pendiente',
-  PAID: 'Pagado',
-  PARTIAL: 'Parcial',
-  OVERDUE: 'Vencido',
-  CANCELLED: 'Cancelado',
-};
 
 function RentaContent() {
   const { activeWorkspaceId } = useWorkspace();
@@ -65,7 +57,7 @@ function RentaContent() {
     () =>
       [...new Set(allObligations.map((o) => o.status).filter(Boolean) as string[])].map((v) => ({
         value: v,
-        label: STATUS_LABELS[v] ?? v,
+        label: statusLabel(v),
       })),
     [allObligations],
   );

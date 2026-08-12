@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { KPICard, StatusBadge } from '@korapay/ui';
+import { KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Eye, Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -31,14 +31,6 @@ const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'secondary' | 'des
   OVERDUE: 'destructive',
   PARTIAL: 'warning',
   CANCELLED: 'secondary',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  PAID: 'Pagado',
-  PENDING: 'Pendiente',
-  OVERDUE: 'Vencido',
-  PARTIAL: 'Parcial',
-  CANCELLED: 'Cancelado',
 };
 
 function CostosContent() {
@@ -108,7 +100,7 @@ function CostosContent() {
 
   const statusOptions = useMemo(() => {
     const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
-    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+    return distinct.map((value) => ({ value, label: statusLabel(value) }));
   }, [data?.data]);
 
   const applicationOptions = useMemo(
@@ -375,7 +367,7 @@ function CostosContent() {
                               tx.status === 'PENDING' || tx.status === 'PAID' ? 'cursor-pointer hover:opacity-80' : ''
                             }
                           >
-                            {STATUS_LABELS[tx.status] ?? tx.status}
+                            {statusLabel(tx.status)}
                           </Badge>
                         </button>
                         <div className="flex shrink-0 gap-0.5">

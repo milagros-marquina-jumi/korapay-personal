@@ -74,6 +74,12 @@ export const STATUS_VARIANTS: Record<string, 'warning' | 'success' | 'secondary'
   FAILED: 'destructive',
 };
 
+export const NEVER_PAID_STATUSES: ReadonlySet<string> = new Set(['NUNCA_PAGO', 'NUNCA PAGO']);
+
+export function isNeverPaid(status: string | null | undefined): boolean {
+  return NEVER_PAID_STATUSES.has((status ?? '').trim().toUpperCase());
+}
+
 export const NON_CONFIRMABLE_TYPES: ReadonlySet<string> = new Set(['DECLINED_TRANSACTION']);
 
 export const INCOME_STATUS_LABELS: Record<string, string> = {

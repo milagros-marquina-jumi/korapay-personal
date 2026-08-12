@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-
+import { isNeverPaid } from '@korapay/domain';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
@@ -186,7 +186,7 @@ export class TalentService {
     }
 
     const fraudLoss = ledger
-      .filter((e) => e.status === 'NUNCA_PAGO' || e.status === 'NUNCA PAGO')
+      .filter((e) => isNeverPaid(e.status))
       .reduce(
         (s, e) => s.plus(new Decimal(String(e.paidAmount))).plus(new Decimal(String(e.pendingAmount))),
         new Decimal(0),
@@ -441,7 +441,7 @@ export class TalentService {
         catRow.paid = catRow.paid.add(new Decimal(String(e.paidAmount)));
         catRow.debt = catRow.debt.add(new Decimal(String(e.debtAmount)));
         catRow.pending = catRow.pending.add(new Decimal(String(e.pendingAmount)));
-        if (e.status === 'NUNCA_PAGO' || e.status === 'NUNCA PAGO') {
+        if (isNeverPaid(e.status)) {
           totalFraudLoss = totalFraudLoss
             .plus(new Decimal(String(e.paidAmount)))
             .plus(new Decimal(String(e.pendingAmount)));

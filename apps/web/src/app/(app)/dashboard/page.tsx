@@ -1,6 +1,6 @@
 'use client';
 
-import { formatMoney, WorkspaceType } from '@korapay/domain';
+import { formatMoney, MONTH_SHORT, WorkspaceType } from '@korapay/domain';
 import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Wallet } from 'lucide-react';
@@ -15,7 +15,6 @@ import type { DashboardSummary, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
-const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const SIN_CATEGORIA = 'Sin categoría';
 
 export default function DashboardPage() {
@@ -42,7 +41,7 @@ export default function DashboardPage() {
   for (const t of transactions) {
     const d = new Date(t.date);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
-    const label = `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+    const label = `${MONTH_SHORT[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
     const point = monthly.get(key) ?? { label, ingresos: 0, egresos: 0 };
     const amount = Number(t.amountBase);
     if (t.type === 'INCOME') point.ingresos += amount;

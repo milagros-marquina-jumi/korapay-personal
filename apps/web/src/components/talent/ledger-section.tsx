@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Banknote, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -16,14 +16,6 @@ import { formatDate } from '@/lib/utils';
 import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
 
 const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
-const STATUS_LABELS: Record<string, string> = {
-  PAID: 'Pagado',
-  PENDING: 'Pendiente',
-  PARTIAL: 'Parcial',
-  OVERDUE: 'Vencido',
-  CANCELLED: 'Cancelado',
-  NUNCA_PAGO: 'Nunca pagó',
-};
 const CATEGORY_LABELS: Record<string, string> = {
   EDUCACION: 'Educación',
   SUSCRIPCION: 'Suscripción',
@@ -71,7 +63,7 @@ export function LedgerSection({
 
   const cur = currency as 'PEN' | 'USD';
   const statusOptions = useMemo(
-    () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: STATUS_LABELS[v] ?? v })),
+    () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: statusLabel(v) })),
     [entries],
   );
   const categoryOptions = useMemo(

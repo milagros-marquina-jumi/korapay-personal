@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -1014,13 +1014,6 @@ function normalize(values: LedgerFormValues) {
   };
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  PAID: 'Pagado',
-  PENDING: 'Pendiente',
-  PARTIAL: 'Parcial',
-  OVERDUE: 'Vencido',
-  CANCELLED: 'Cancelado',
-};
 const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
 
 interface LedgerSnapshot {
@@ -1040,7 +1033,7 @@ function snapshotLines(snap: LedgerSnapshot): string[] {
   if (snap.paidAmount !== undefined) lines.push(`Pagado: ${formatMoney(snap.paidAmount, 'PEN')}`);
   if (snap.debtAmount !== undefined) lines.push(`Deuda: ${formatMoney(snap.debtAmount, 'PEN')}`);
   if (snap.pendingAmount !== undefined) lines.push(`Falta pagar: ${formatMoney(snap.pendingAmount, 'PEN')}`);
-  if (snap.status) lines.push(`Estado: ${STATUS_LABELS[snap.status] ?? snap.status}`);
+  if (snap.status) lines.push(`Estado: ${statusLabel(snap.status)}`);
   if (snap.description) lines.push(`Descripción: ${snap.description}`);
   return lines;
 }

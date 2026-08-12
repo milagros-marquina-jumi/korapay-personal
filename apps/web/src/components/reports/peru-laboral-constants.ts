@@ -1,7 +1,9 @@
+import { EXPIRING_WINDOW_DAYS } from '@korapay/domain';
+
 export const ESSALUD_BONUS = 0.09;
 export const CTS_SALARY_FACTOR = 0.5;
 export const CTS_GRATIFICACION_FRACTION = 6;
-export const UPCOMING_WINDOW_DAYS = 45;
+export const UPCOMING_WINDOW_DAYS = EXPIRING_WINDOW_DAYS;
 
 export type LaborEventKind = 'gratificacion' | 'cts' | 'utilidades';
 export type LaborEventStatus = 'pasado' | 'proximo' | 'futuro';

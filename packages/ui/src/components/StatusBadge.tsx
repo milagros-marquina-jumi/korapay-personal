@@ -22,6 +22,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   INACTIVE: { label: 'Inactivo', className: NEUTRAL },
   FINISHED: { label: 'Finalizado', className: NEUTRAL },
   EXPIRING: { label: 'Por vencer', className: 'border border-warning/25 bg-warning/10 text-warning' },
+  NUNCA_PAGO: { label: 'Nunca pagó', className: 'border border-destructive/25 bg-destructive/10 text-destructive' },
 };
 export function statusLabel(status: string): string {
   return statusConfig[status]?.label ?? status;

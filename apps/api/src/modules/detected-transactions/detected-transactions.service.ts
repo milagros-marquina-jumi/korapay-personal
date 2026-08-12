@@ -1,9 +1,9 @@
+import { NON_CONFIRMABLE_TYPES } from '@korapay/domain';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
-const BLOCKED_TYPES = ['DECLINED_TRANSACTION'];
-const NON_EXPENSE_TYPES = ['REFUND', 'REVERSAL'];
+const INCOME_LIKE_TYPES = ['REFUND', 'REVERSAL'];
 
 interface ConfirmData {
   workspaceId: string;
@@ -96,7 +96,7 @@ export class DetectedTransactionsService {
     if (!detected) throw new NotFoundException('Movimiento detectado no encontrado');
     if (detected.status === 'CONFIRMED') throw new ConflictException('Este movimiento ya fue confirmado');
     if (detected.status === 'DUPLICATE') throw new BadRequestException('No se puede confirmar un duplicado');
-    if (BLOCKED_TYPES.includes(detected.transactionType)) {
+    if (NON_CONFIRMABLE_TYPES.has(detected.transactionType)) {
       throw new BadRequestException('No se puede confirmar una operación rechazada');
     }
 
@@ -105,7 +105,7 @@ export class DetectedTransactionsService {
     });
     if (!membership) throw new BadRequestException('Workspace inválido');
 
-    const type = NON_EXPENSE_TYPES.includes(detected.transactionType)
+    const type = INCOME_LIKE_TYPES.includes(detected.transactionType)
       ? 'INCOME'
       : detected.transactionType === 'TRANSFER_RECEIVED'
         ? 'INCOME'

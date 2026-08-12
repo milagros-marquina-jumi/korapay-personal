@@ -2,6 +2,9 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 500;
+
 interface DecolectaExchange {
   buy_price: string;
   sell_price: string;
@@ -92,12 +95,7 @@ export class ExchangeRateService {
     }
     const timeout = Number(this.config.get<string>('DECOLECTA_TIMEOUT_MS') ?? '10000');
     try {
-      const res = await fetch(`${apiUrl}/v1/tipo-cambio/sunat`, {
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(timeout),
-      });
-      if (!res.ok) throw new Error(`Decolecta respondio ${res.status}`);
-      const data = (await res.json()) as DecolectaExchange;
+      const data = await this.fetchWithRetry(apiUrl, apiKey, timeout);
       return this.upsert(data.date, data.sell_price);
     } catch (err) {
       this.logger.error(`Error consultando Decolecta: ${(err as Error).message}`);
@@ -105,5 +103,33 @@ export class ExchangeRateService {
       if (fallback) return fallback;
       throw new ServiceUnavailableException('No se pudo obtener el tipo de cambio de SUNAT');
     }
+  }
+
+  private async fetchWithRetry(apiUrl: string, apiKey: string, timeout: number): Promise<DecolectaExchange> {
+    let lastError: Error = new Error('Sin respuesta de Decolecta');
+
+    for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(`${apiUrl}/v1/tipo-cambio/sunat`, {
+          headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(timeout),
+        });
+        if (res.ok) return (await res.json()) as DecolectaExchange;
+
+        const retryable = res.status >= 500 || res.status === 429;
+        lastError = new Error(`Decolecta respondio ${res.status}`);
+        if (!retryable) throw lastError;
+      } catch (err) {
+        lastError = err as Error;
+        if (lastError.message.startsWith('Decolecta respondio 4')) throw lastError;
+      }
+
+      if (attempt < RETRY_ATTEMPTS) {
+        this.logger.warn(`Reintentando Decolecta (${attempt}/${RETRY_ATTEMPTS}): ${lastError.message}`);
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+      }
+    }
+
+    throw lastError;
   }
 }

@@ -68,4 +68,44 @@ describe('ExchangeRateService', () => {
     const result = await svc.refreshFromDecolecta();
     expect(result?.rate).toBe('3.42');
   });
+
+  it('refreshFromDecolecta reintenta ante un 500 y luego tiene exito', async () => {
+    const prisma = buildPrisma();
+    prisma.currency.findUnique.mockResolvedValueOnce({ id: 'usd' }).mockResolvedValueOnce({ id: 'pen' });
+    prisma.exchangeRate.upsert.mockResolvedValue({ rate: '3.500', date: new Date('2026-08-12') });
+    const config = {
+      get: jest.fn((k: string) => {
+        if (k === 'DECOLECTA_API_KEY') return 'sk_test';
+        if (k === 'DECOLECTA_TIMEOUT_MS') return '10000';
+        return 'https://api.decolecta.com';
+      }),
+    };
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 500 })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ buy_price: '3.49', sell_price: '3.500', date: '2026-08-12' }),
+      }) as never;
+    const svc = new ExchangeRateService(prisma as never, config as never);
+    const result = await svc.refreshFromDecolecta();
+    expect(result?.rate).toBe('3.500');
+    expect((global.fetch as jest.Mock).mock.calls.length).toBe(2);
+  });
+
+  it('refreshFromDecolecta NO reintenta ante un 401 (credenciales)', async () => {
+    const prisma = buildPrisma();
+    prisma.exchangeRate.findFirst.mockResolvedValue({ rate: '3.42', date: new Date('2026-08-11') });
+    const config = {
+      get: jest.fn((k: string) => {
+        if (k === 'DECOLECTA_API_KEY') return 'sk_test';
+        if (k === 'DECOLECTA_TIMEOUT_MS') return '10000';
+        return 'https://api.decolecta.com';
+      }),
+    };
+    global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 401 }) as never;
+    const svc = new ExchangeRateService(prisma as never, config as never);
+    await svc.refreshFromDecolecta();
+    expect((global.fetch as jest.Mock).mock.calls.length).toBe(1);
+  });
 });

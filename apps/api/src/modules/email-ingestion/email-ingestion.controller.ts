@@ -1,5 +1,6 @@
 import { Body, Controller, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { IngestMessageDto } from './email-ingestion.dto';
 import { EmailIngestionService } from './email-ingestion.service';
 import { IngestionGuard } from './ingestion.guard';
@@ -15,6 +16,9 @@ interface RequestWithSource {
 }
 
 @ApiTags('EmailIngestion')
+// Endpoint publico protegido solo por token: limite mas estrecho que el global
+// para que un token no valido no se pueda tantear a 100 intentos por minuto.
+@Throttle({ default: { ttl: 60_000, limit: 20 } })
 @UseGuards(IngestionGuard)
 @Controller('email-ingestion')
 export class EmailIngestionController {

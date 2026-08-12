@@ -82,9 +82,13 @@ export class DashboardService {
 
     const distributions = await this.prisma.talentIncomeDistribution.findMany({
       where: { contract: { talentProfile: { workspaceId } } },
-      select: { amountRetained: true },
+      select: { amountRetained: true, amountReceived: true },
     });
     const saldoMimotalents = distributions.reduce((s, d) => s.plus(new Decimal(d.amountRetained)), new Decimal(0));
+    // Los ingresos por talentos se registran con el sueldo que paga el cliente, pero
+    // MIMOTECH solo recibe una parte: el resto se lo queda el talento.
+    const recibidoTalentos = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
+    const ingresoReal = recibidoTalentos.gt(0) ? recibidoTalentos : ingresos;
 
     const patrimonio = disponible.plus(savings).plus(porCobrar).minus(debtTotal.minus(paidDebts));
 
@@ -99,7 +103,8 @@ export class DashboardService {
       vencido: overdue.toFixed(2),
       costosMimotech: businessCosts.toFixed(2),
       pagosEquipo: teamPayments.toFixed(2),
-      utilidadMimotech: ingresos.minus(businessCosts).minus(teamPayments).toFixed(2),
+      ingresoRealMimotech: ingresoReal.toFixed(2),
+      utilidadMimotech: ingresoReal.minus(businessCosts).minus(teamPayments).toFixed(2),
       saldoMimotalents: saldoMimotalents.toFixed(2),
       debtTotal: debtTotal.toFixed(2),
       debtPaid: paidDebts.toFixed(2),

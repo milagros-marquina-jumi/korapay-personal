@@ -109,10 +109,10 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <KPICard
           label="Ingresos"
-          value={formatMoney(data.income, 'PEN')}
+          value={formatMoney(data.receivedIncome ?? data.income, 'PEN')}
           icon={ArrowUpRight}
           color="text-success"
-          tooltip="Facturación de los talentos colocados en clientes (NTT DATA, Seidor, Indra, etc.). Su detalle está en MIMOTALENTS."
+          tooltip="Lo que realmente recibe MIMOTECH de los talentos colocados. El sueldo total que pagan los clientes es mayor: la diferencia se la queda cada talento."
         />
         <KPICard
           label="Costos"

@@ -225,6 +225,7 @@ export interface DashboardSummary {
   vencido: string;
   costosMimotech: string;
   pagosEquipo: string;
+  ingresoRealMimotech: string;
   utilidadMimotech: string;
   saldoMimotalents: string;
   debtTotal: string;
@@ -412,6 +413,7 @@ export interface EmploymentReports {
 }
 
 export interface BusinessReports {
+  receivedIncome: string;
   years: number[];
   income: string;
   cost: string;

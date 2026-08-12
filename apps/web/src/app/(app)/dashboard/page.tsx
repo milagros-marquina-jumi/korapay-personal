@@ -84,10 +84,14 @@ export default function DashboardPage() {
           <>
             <KPICard
               label="Ingresos"
-              value={formatMoney(summary.ingresos, 'PEN')}
+              value={formatMoney(isBusiness ? summary.ingresoRealMimotech : summary.ingresos, 'PEN')}
               icon={ArrowUpRight}
               color="text-success"
-              tooltip="Suma de todos los movimientos de tipo Ingreso en el periodo"
+              tooltip={
+                isBusiness
+                  ? 'Lo que realmente recibe MIMOTECH de los talentos colocados. El sueldo total que pagan los clientes es mayor: la diferencia se la queda cada talento.'
+                  : 'Suma de todos los movimientos de tipo Ingreso en el periodo'
+              }
             />
             {isBusiness ? (
               <>

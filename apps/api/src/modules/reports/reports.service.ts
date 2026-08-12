@@ -400,7 +400,7 @@ export class ReportsService {
   }
 
   async business(workspaceId: string, year?: number) {
-    const [transactions, applications, people, ledger, allTransactions, projects] = await Promise.all([
+    const [transactions, applications, people, ledger, allTransactions, projects, distributions] = await Promise.all([
       this.prisma.transaction.findMany({
         where: { workspaceId, deletedAt: null, ...this.yearFilter(year) },
         include: { projects: { select: { name: true } } },
@@ -413,6 +413,10 @@ export class ReportsService {
         select: { date: true, type: true, amountBase: true, applicationId: true },
       }),
       this.prisma.project.findMany({ where: { workspaceId, deletedAt: null } }),
+      this.prisma.talentIncomeDistribution.findMany({
+        where: { contract: { talentProfile: { workspaceId } }, ...(year ? { year } : {}) },
+        select: { amountReceived: true },
+      }),
     ]);
 
     const years = [...new Set(allTransactions.map((t) => t.date.getUTCFullYear()))].sort((a, b) => b - a);
@@ -537,12 +541,18 @@ export class ReportsService {
       talentPending = talentPending.add(new Decimal(e.pendingAmount));
     }
 
+    // Los ingresos por talentos se registran con el sueldo del cliente; MIMOTECH
+    // solo recibe una parte. La utilidad se calcula sobre lo realmente recibido.
+    const received = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
+    const realIncome = received.gt(0) ? received : income;
+
     return {
       years,
       income: income.toFixed(2),
+      receivedIncome: realIncome.toFixed(2),
       cost: cost.toFixed(2),
       teamPayment: teamPayment.toFixed(2),
-      utility: income.minus(cost).minus(teamPayment).toFixed(2),
+      utility: realIncome.minus(cost).minus(teamPayment).toFixed(2),
       costByApp,
       costByProject,
       costByAppMonth,

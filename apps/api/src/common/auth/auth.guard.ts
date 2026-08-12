@@ -30,7 +30,7 @@ export class AuthGuard implements CanActivate {
   }
 
   private async resolveUser(): Promise<AuthUser> {
-    const email = this.configService.get<string>('DEMO_USER_EMAIL', 'demo@korapay.local');
+    const email = this.configService.get<string>('DEMO_USER_EMAIL', '');
     let current = this.cachedProfileId
       ? await this.prisma.profile.findUnique({ where: { id: this.cachedProfileId } })
       : null;

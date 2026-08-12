@@ -48,7 +48,7 @@ pnpm db:seed
 ## Credenciales demo
 
 ```
-demo@korapay.local / KoraPay123!
+mila@korapay.demo / KoraPayAsesino1000
 ```
 
 Autenticacion local en modo demo (`DEMO_MODE=true`). El `AuthGuard` resuelve el

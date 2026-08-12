@@ -29,7 +29,7 @@ export default function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: 'demo@korapay.local', password: 'KoraPay123!' },
+    defaultValues: { email: 'mila@korapay.demo', password: '' },
   });
 
   const onSubmit = async (_values: FormValues) => {

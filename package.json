@@ -29,7 +29,7 @@
 		"husky": "^9.1.7",
 		"prisma": "6.19.3",
 		"turbo": "^2.5.0",
-		"typescript": "^5.8.3"
+		"typescript": "~5.8.3"
 	},
 	"dependencies": {
 		"@prisma/client": "6.19.3"

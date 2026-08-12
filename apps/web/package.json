@@ -13,6 +13,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@ducanh2912/next-pwa": "catalog:",
 		"@korapay/domain": "workspace:*",
 		"@korapay/ui": "workspace:*",
 		"next": "catalog:",
@@ -64,6 +65,7 @@
 		"@testing-library/user-event": "catalog:",
 		"jsdom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
-		"@biomejs/biome": "2.4.13"
+		"@biomejs/biome": "2.4.13",
+		"webpack": "catalog:"
 	}
 }

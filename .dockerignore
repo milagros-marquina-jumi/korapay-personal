@@ -1,0 +1,11 @@
+node_modules/
+.turbo/
+.git/
+.next/
+dist/
+coverage/
+.tmp/
+*.log
+.DS_Store
+Thumbs.db
+**/node_modules/

@@ -16,6 +16,7 @@ import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
 const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const SIN_CATEGORIA = 'Sin categoría';
 
 export default function DashboardPage() {
   const { activeWorkspaceId, activeWorkspace } = useWorkspace();
@@ -56,13 +57,17 @@ export default function DashboardPage() {
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
     if (t.type !== 'EXPENSE' && t.type !== 'BUSINESS_COST' && t.type !== 'TEAM_PAYMENT') continue;
-    const name = t.category?.name ?? 'Sin categoría';
+    const name = t.category?.name ?? SIN_CATEGORIA;
     byCategory.set(name, (byCategory.get(name) ?? 0) + Number(t.amountBase));
   }
-  const donutData = [...byCategory.entries()]
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 8);
+  // Sin categorias reales el donut solo muestra "Sin categoria": no aporta nada.
+  const categorized = [...byCategory.keys()].some((name) => name !== SIN_CATEGORIA);
+  const donutData = categorized
+    ? [...byCategory.entries()]
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8)
+    : [];
 
   const recent = transactions.slice(0, 6);
 

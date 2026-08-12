@@ -13,6 +13,7 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { ProjectFormDialog } from '@/components/forms/project-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
+import { WorkspaceIcon } from '@/components/layout/workspace-icon';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
@@ -74,7 +75,7 @@ function ProyectosContent() {
         header: ({ column }) => <SortableHeader column={column} label="Nombre" />,
         cell: ({ row }) => (
           <span className="flex items-center gap-2 font-medium">
-            {row.original.emoji && <span className="text-lg">{row.original.emoji}</span>}
+            <WorkspaceIcon name={row.original.emoji} className="h-4 w-4 shrink-0 text-muted-foreground" />
             {row.original.name}
           </span>
         ),

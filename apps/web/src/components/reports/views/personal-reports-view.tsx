@@ -96,10 +96,13 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
   const totalFixedVar = fixed + variable;
   const fixedPct = totalFixedVar > 0 ? (fixed / totalFixedVar) * 100 : 0;
 
+  // Sin categorias registradas la pestaña queda vacia: no se muestra.
+  const hasCategories = (data.expenseByCategory ?? []).length > 0;
+
   return (
-    <Tabs defaultValue="categoria">
+    <Tabs defaultValue={hasCategories ? 'categoria' : 'mes'}>
       <TabsList>
-        <TabsTrigger value="categoria">Gastos por categoría</TabsTrigger>
+        {hasCategories && <TabsTrigger value="categoria">Gastos por categoría</TabsTrigger>}
         <TabsTrigger value="mes">Ingresos vs egresos</TabsTrigger>
         <TabsTrigger value="fijo">Fijo vs no fijo</TabsTrigger>
       </TabsList>

@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { KPICard } from '@korapay/ui';
+import { KPICard, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Eye, Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -450,6 +450,20 @@ function CostosContent() {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Fecha</span>
                 <span className="font-medium">{formatMonthYear(detailOpen.date)}</span>
+              </div>
+              {(detailOpen.projects ?? []).length > 0 && (
+                <div className="flex items-start justify-between gap-4">
+                  <span className="shrink-0 text-muted-foreground">
+                    {(detailOpen.projects ?? []).length > 1 ? 'Proyectos' : 'Proyecto'}
+                  </span>
+                  <span className="text-right font-medium">
+                    {(detailOpen.projects ?? []).map((p) => p.name).join(', ')}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Estado</span>
+                <StatusBadge status={detailOpen.status} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Monto</span>

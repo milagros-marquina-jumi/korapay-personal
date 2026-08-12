@@ -15,6 +15,7 @@ import {
   TrendingUp,
   UserCircle,
   Users,
+  UsersRound,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -51,24 +52,28 @@ const EMPLOYMENT: NavItem[] = [
 const BUSINESS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   {
-    href: '/mimotech/costos',
-    label: 'Movimientos',
-    icon: ArrowLeftRight,
+    href: '/mimotech/equipo',
+    label: 'MIMOTECH',
+    icon: Building2,
     children: [
-      { href: '/mimotech/costos', label: 'Costos', icon: Boxes },
-      { href: '/mimotech/equipo', label: 'Pagos equipo', icon: Users },
-      {
-        href: '/mimotech/talentos',
-        label: 'Talentos',
-        icon: Rocket,
-        linkable: true,
-        children: [{ href: '/mimotech/talentos/reporte', label: 'Reporte general', icon: BarChart3 }],
-      },
+      { href: '/mimotech/equipo', label: 'Colaboradores', icon: Users },
+      { href: '/mimotech/equipo/pagos', label: 'Pagos al equipo', icon: Banknote },
+      { href: '/mimotech/equipo/reporte', label: 'Reporte de equipo', icon: BarChart3 },
+      { href: '/mimotech/costos', label: 'Costos', icon: Receipt },
+      { href: '/reportes', label: 'Reportes', icon: TrendingUp },
+      { href: '/proyectos', label: 'Proyectos', icon: Boxes },
+      { href: '/aplicaciones', label: 'Aplicaciones', icon: Rocket },
     ],
   },
-  { href: '/proyectos', label: 'Proyectos', icon: Boxes },
-  { href: '/aplicaciones', label: 'Aplicaciones', icon: Rocket },
-  { href: '/reportes', label: 'Reportes', icon: TrendingUp },
+  {
+    href: '/mimotech/talentos',
+    label: 'MIMOTALENTS',
+    icon: UsersRound,
+    children: [
+      { href: '/mimotech/talentos', label: 'Talentos', icon: Users },
+      { href: '/mimotech/talentos/reporte', label: 'Reportes', icon: BarChart3 },
+    ],
+  },
 ];
 
 const SHARED: NavItem[] = [

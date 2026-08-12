@@ -1,0 +1,269 @@
+'use client';
+
+import { formatMoney } from '@korapay/domain';
+import { EmptyState, KPICard, StatusBadge } from '@korapay/ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
+import { ArrowLeft, Pencil, Plus, Trash2, Wallet } from 'lucide-react';
+import Link from 'next/link';
+import { useMemo, useState } from 'react';
+import { DataTable } from '@/components/data-table/data-table';
+import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
+import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { SortableHeader } from '@/components/data-table/sortable-header';
+import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
+import { PageShell } from '@/components/layout/page-shell';
+import { WorkspaceGate } from '@/components/layout/workspace-gate';
+import { useConfirm } from '@/components/providers/confirm-provider';
+import { useWorkspace } from '@/components/providers/workspace-provider';
+import { Button } from '@/components/ui/button';
+import { IconAction } from '@/components/ui/icon-action';
+import { apiFetch, buildQuery } from '@/lib/api';
+import type { Paginated, Person, Transaction } from '@/lib/api.types';
+import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
+
+const STATUS_LABELS: Record<string, string> = {
+  PAID: 'Pagado',
+  PENDING: 'Pendiente',
+  OVERDUE: 'Vencido',
+  PARTIAL: 'Parcial',
+  CANCELLED: 'Cancelado',
+};
+
+function PagosEquipoContent() {
+  const { activeWorkspaceId } = useWorkspace();
+  const queryClient = useQueryClient();
+  const confirm = useConfirm();
+  const ws = activeWorkspaceId ?? '';
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<string>(FILTER_ALL);
+  const [personId, setPersonId] = useState<string>(FILTER_ALL);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: queryKeys.transactions(ws, { type: 'TEAM_PAYMENT', all: true }),
+    queryFn: () =>
+      apiFetch<Paginated<Transaction>>(
+        `/transactions${buildQuery({
+          workspaceId: ws,
+          type: 'TEAM_PAYMENT',
+          page: 1,
+          pageSize: 500,
+          sortBy: 'date',
+          sortOrder: 'desc',
+        })}`,
+      ),
+    enabled: !!ws,
+  });
+
+  const { data: peopleData } = useQuery({
+    queryKey: queryKeys.people(ws),
+    queryFn: () => apiFetch<Person[]>(`/people?workspaceId=${ws}&kind=TEAM`),
+    enabled: !!ws,
+  });
+
+  const removeTxMutation = useMutation({
+    mutationFn: (id: string) => apiFetch(`/transactions/${id}?workspaceId=${ws}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions', ws] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(ws) });
+    },
+  });
+
+  const statusOptions = useMemo(() => {
+    const distinct = [...new Set((data?.data ?? []).map((tx) => tx.status))];
+    return distinct.map((value) => ({ value, label: STATUS_LABELS[value] ?? value }));
+  }, [data?.data]);
+
+  const personOptions = useMemo(() => (peopleData ?? []).map((p) => ({ value: p.id, label: p.name })), [peopleData]);
+  const personName = (id?: string | null) => peopleData?.find((p) => p.id === id)?.name;
+
+  const rows = useMemo(
+    () =>
+      (data?.data ?? []).filter((tx) => {
+        if (status !== FILTER_ALL && tx.status !== status) return false;
+        if (personId !== FILTER_ALL && tx.personId !== personId) return false;
+        return true;
+      }),
+    [data?.data, status, personId],
+  );
+
+  const totalPagado = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
+
+  const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'date',
+        header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
+        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
+      },
+      {
+        id: 'person',
+        header: ({ column }) => <SortableHeader column={column} label="Colaborador" />,
+        accessorFn: (r) => r.person?.name ?? r.concept,
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.person?.name ?? personName(row.original.personId) ?? row.original.concept}
+          </span>
+        ),
+      },
+      {
+        id: 'notes',
+        header: 'Notas',
+        cell: ({ row }) => (
+          <p className="max-w-88 truncate text-muted-foreground" title={row.original.description ?? undefined}>
+            {row.original.description || '—'}
+          </p>
+        ),
+      },
+      {
+        id: 'amount',
+        accessorFn: (r) => Number(r.amountBase),
+        sortingFn: 'basic',
+        header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
+        cell: ({ row }) => (
+          <div className="text-right font-semibold tabular-nums text-destructive">
+            {formatMoney(row.original.amountBase, 'PEN')}
+          </div>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: 'Estado',
+        cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      },
+      {
+        id: 'actions',
+        header: '',
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-0.5">
+            <IconAction icon={Pencil} label="Editar" onClick={() => setEditingTx(row.original)} />
+            <IconAction
+              icon={Trash2}
+              label="Eliminar"
+              destructive
+              onClick={async () => {
+                const ok = await confirm({
+                  title: 'Eliminar pago',
+                  description: 'Se eliminará este pago. Esta acción no se puede deshacer.',
+                  confirmLabel: 'Eliminar',
+                  destructive: true,
+                });
+                if (ok) removeTxMutation.mutate(row.original.id);
+              }}
+            />
+          </div>
+        ),
+      },
+    ],
+    [confirm, removeTxMutation, peopleData],
+  );
+
+  return (
+    <>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <KPICard
+          label="Total en pantalla"
+          value={formatMoney(String(totalPagado), 'PEN')}
+          icon={Wallet}
+          color="text-destructive"
+          tooltip="Suma de los pagos que cumplen los filtros activos"
+        />
+        <KPICard
+          label="Pagos registrados"
+          value={String(rows.length)}
+          icon={Wallet}
+          color="text-info"
+          tooltip="Cantidad de pagos en el listado"
+        />
+      </div>
+
+      <DataTableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        placeholder="Buscar pagos..."
+        showClear={search !== '' || status !== FILTER_ALL || personId !== FILTER_ALL}
+        onClear={() => {
+          setSearch('');
+          setStatus(FILTER_ALL);
+          setPersonId(FILTER_ALL);
+        }}
+        filters={
+          <>
+            <FilterSelect
+              value={personId}
+              onValueChange={setPersonId}
+              options={personOptions}
+              placeholder="Colaborador"
+              allLabel="Todo colaborador"
+            />
+            <FilterSelect
+              value={status}
+              onValueChange={setStatus}
+              options={statusOptions}
+              placeholder="Estado"
+              allLabel="Todo estado"
+            />
+          </>
+        }
+      />
+
+      <DataTable
+        columns={columns}
+        data={rows}
+        isLoading={isLoading}
+        globalFilter={search}
+        onGlobalFilterChange={setSearch}
+        emptyState={
+          <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el botón de arriba." />
+        }
+      />
+
+      {ws && editingTx && (
+        <TransactionFormDialog
+          workspaceId={ws}
+          defaultType="TEAM_PAYMENT"
+          transaction={editingTx}
+          open={!!editingTx}
+          onOpenChange={(next) => !next && setEditingTx(null)}
+        />
+      )}
+    </>
+  );
+}
+
+export default function PagosEquipoPage() {
+  const { activeWorkspaceId } = useWorkspace();
+
+  return (
+    <WorkspaceGate type="BUSINESS">
+      <PageShell
+        title="Pagos al equipo"
+        description="Pagos realizados a los colaboradores de MIMOTECH"
+        action={
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline">
+              <Link href="/mimotech/equipo">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Colaboradores
+              </Link>
+            </Button>
+            {activeWorkspaceId && (
+              <TransactionFormDialog
+                workspaceId={activeWorkspaceId}
+                defaultType="TEAM_PAYMENT"
+                trigger={
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" /> Nuevo pago
+                  </Button>
+                }
+              />
+            )}
+          </div>
+        }
+      >
+        <PagosEquipoContent />
+      </PageShell>
+    </WorkspaceGate>
+  );
+}

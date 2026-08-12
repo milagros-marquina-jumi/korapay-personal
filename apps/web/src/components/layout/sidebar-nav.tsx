@@ -3,7 +3,7 @@
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Logo } from '@/components/layout/logo';
 import { WorkspaceSwitcher } from '@/components/layout/workspace-switcher';
 import { useWorkspace } from '@/components/providers/workspace-provider';
@@ -22,7 +22,24 @@ export function SidebarNav({ onNavigate, collapsed = false, onToggleCollapse }: 
   const { activeWorkspace } = useWorkspace();
   const items = navForType(activeWorkspace?.type);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const matches = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  // Solo el href mas especifico que coincide queda activo: sin esto, estando en
+  // /mimotech/talentos/reporte se marcarian a la vez "Talentos" y "Reportes".
+  const bestMatch = useMemo(() => {
+    const hrefs: string[] = [];
+    const collect = (list: NavItem[]) => {
+      for (const item of list) {
+        hrefs.push(item.href);
+        if (item.children?.length) collect(item.children);
+      }
+    };
+    collect(items);
+    collect(footerNavItems);
+    return hrefs.filter(matches).sort((a, b) => b.length - a.length)[0];
+  }, [items, pathname]);
+
+  const isActive = (href: string) => href === bestMatch;
 
   const renderLink = (item: NavItem, depth = 0, exact = false, index = 0) => (
     <NavLink
@@ -46,6 +63,7 @@ export function SidebarNav({ onNavigate, collapsed = false, onToggleCollapse }: 
         index={index}
         collapsed={collapsed}
         isActive={isActive}
+        matches={matches}
         renderLink={renderLink}
       />
     );
@@ -182,12 +200,15 @@ interface NavGroupProps {
   index: number;
   collapsed: boolean;
   isActive: (href: string) => boolean;
+  matches: (href: string) => boolean;
   renderLink: (item: NavItem, depth?: number, exact?: boolean, index?: number) => React.ReactNode;
 }
 
-function NavGroup({ item, index, collapsed, isActive, renderLink }: Readonly<NavGroupProps>) {
+function NavGroup({ item, index, collapsed, isActive, matches, renderLink }: Readonly<NavGroupProps>) {
   const children = item.children ?? [];
-  const groupActive = children.some((c) => isActive(c.href)) || isActive(item.href);
+  // El grupo se resalta y se abre si la ruta cae en cualquiera de sus hijos,
+  // aunque el enlace activo sea solo uno de ellos.
+  const groupActive = children.some((c) => matches(c.href)) || matches(item.href);
   const [open, setOpen] = useState(groupActive);
   const ItemIcon = item.icon;
 
@@ -258,6 +279,7 @@ function NavGroup({ item, index, collapsed, isActive, renderLink }: Readonly<Nav
                 index={index + i + 1}
                 collapsed={collapsed}
                 isActive={isActive}
+                matches={matches}
                 renderLink={renderLink}
               />
             ) : (

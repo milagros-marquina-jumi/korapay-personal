@@ -3,12 +3,14 @@
 import { formatMoney } from '@korapay/domain';
 import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Landmark, ReceiptText, Users } from 'lucide-react';
+import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, Landmark, ReceiptText, Users } from 'lucide-react';
+import Link from 'next/link';
 import { CategoryDonut } from '@/components/charts/category-donut';
 import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
 import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MONTH_SHORT } from '@/components/reports/report-constants';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -290,6 +292,11 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin pagos registrados</p>
               )}
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href="/mimotech/equipo/reporte">
+                  Ver reporte completo de colaboradores <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -316,6 +323,11 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
               color="text-brand"
             />
           </div>
+          <Button asChild variant="outline" size="sm" className="mt-4">
+            <Link href="/mimotech/talentos/reporte">
+              Ver reporte completo de talentos <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
         </TabsContent>
       </Tabs>
     </div>

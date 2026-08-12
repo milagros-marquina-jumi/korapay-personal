@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { IconPicker } from '@/components/ui/icon-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -59,10 +60,12 @@ export function ProjectFormDialog({
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', description: '', emoji: '' },
+    defaultValues: { name: '', description: '', emoji: 'Boxes' },
   });
 
   useEffect(() => {
@@ -118,8 +121,8 @@ export function ProjectFormDialog({
 
           <CollapsibleSection label="Ver más opciones">
             <div className="space-y-2">
-              <Label htmlFor="emoji">Emoji</Label>
-              <Input id="emoji" placeholder="Ej. 🚀" {...register('emoji')} />
+              <Label>Icono</Label>
+              <IconPicker value={watch('emoji')} onChange={(icon) => setValue('emoji', icon)} />
             </div>
 
             <div className="space-y-2">

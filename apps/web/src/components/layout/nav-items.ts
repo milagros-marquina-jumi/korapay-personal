@@ -58,11 +58,11 @@ const BUSINESS: NavItem[] = [
     children: [
       { href: '/mimotech/equipo', label: 'Colaboradores', icon: Users },
       { href: '/mimotech/equipo/pagos', label: 'Pagos al equipo', icon: Banknote },
-      { href: '/mimotech/equipo/reporte', label: 'Reporte de equipo', icon: BarChart3 },
       { href: '/proyectos', label: 'Proyectos', icon: Boxes },
       { href: '/aplicaciones', label: 'Aplicaciones', icon: Rocket },
       { href: '/mimotech/costos', label: 'Costos', icon: Receipt },
       { href: '/reportes', label: 'Reporte de operación', icon: TrendingUp },
+      { href: '/mimotech/equipo/reporte', label: 'Reporte de equipo', icon: BarChart3 },
     ],
   },
   {
@@ -71,7 +71,7 @@ const BUSINESS: NavItem[] = [
     icon: UsersRound,
     children: [
       { href: '/mimotech/talentos', label: 'Talentos', icon: Users },
-      { href: '/mimotech/talentos/reporte', label: 'Reportes', icon: BarChart3 },
+      { href: '/mimotech/talentos/reporte', label: 'Reporte de talentos', icon: BarChart3 },
     ],
   },
 ];

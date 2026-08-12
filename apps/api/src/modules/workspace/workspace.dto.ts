@@ -1,6 +1,7 @@
 import { IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 const WORKSPACE_TYPES = ['PERSONAL', 'EMPLOYMENT', 'BUSINESS', 'SHARED', 'SAVINGS', 'DEBTS'];
+const WORKSPACE_STATUSES = ['ACTIVE', 'INACTIVE', 'ARCHIVED'];
 
 export class CreateWorkspaceDto {
   @IsString()
@@ -18,7 +19,7 @@ export class CreateWorkspaceDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(8)
+  @MaxLength(40)
   emoji?: string;
 
   @IsOptional()
@@ -29,6 +30,10 @@ export class CreateWorkspaceDto {
   @IsOptional()
   @IsIn(['PEN', 'USD'])
   currency?: string;
+
+  @IsOptional()
+  @IsIn(WORKSPACE_STATUSES)
+  status?: string;
 }
 
 export class UpdateWorkspaceDto {
@@ -49,7 +54,7 @@ export class UpdateWorkspaceDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(8)
+  @MaxLength(40)
   emoji?: string;
 
   @IsOptional()
@@ -60,4 +65,8 @@ export class UpdateWorkspaceDto {
   @IsOptional()
   @IsIn(['PEN', 'USD'])
   currency?: string;
+
+  @IsOptional()
+  @IsIn(WORKSPACE_STATUSES)
+  status?: string;
 }

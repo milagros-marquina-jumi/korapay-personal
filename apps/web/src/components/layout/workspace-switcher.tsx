@@ -16,6 +16,10 @@ export function WorkspaceSwitcher({ collapsed = false }: Readonly<WorkspaceSwitc
   const { workspaces, activeWorkspaceId, activeWorkspace, setActiveWorkspaceId, isLoading } = useWorkspace();
   const router = useRouter();
 
+  // Los inactivos se ocultan, salvo el que este seleccionado: si no, el Select
+  // quedaria sin opcion valida y se veria vacio.
+  const visibles = workspaces.filter((w) => (w.status ?? 'ACTIVE') !== 'INACTIVE' || w.id === activeWorkspaceId);
+
   if (isLoading || !activeWorkspaceId) {
     return <Skeleton className={cn('h-10', collapsed ? 'w-10 rounded-xl' : 'w-full')} />;
   }
@@ -62,7 +66,7 @@ export function WorkspaceSwitcher({ collapsed = false }: Readonly<WorkspaceSwitc
         <SelectValue placeholder="Selecciona workspace" />
       </SelectTrigger>
       <SelectContent>
-        {workspaces.map((w) => (
+        {visibles.map((w) => (
           <SelectItem key={w.id} value={w.id}>
             <span className="flex items-center gap-2">
               <WorkspaceIcon name={w.emoji} className="size-4 shrink-0 text-muted-foreground" />

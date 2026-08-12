@@ -209,21 +209,24 @@ export default function ConfiguracionPage() {
             workspace en el selector para gestionar los de otro.
           </p>
           <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardContent className="pt-6">
-                <CatalogManager
-                  title="Categorías"
-                  endpoint="/categories"
-                  queryKey={queryKeys.categories(ws)}
-                  extraBody={{ workspaceId: ws }}
-                  fields={[
-                    { name: 'name', label: 'Nombre', required: true },
-                    { name: 'emoji', label: 'Emoji', placeholder: '📁' },
-                  ]}
-                  display={(c) => `${c.emoji ?? ''} ${c.name}`}
-                />
-              </CardContent>
-            </Card>
+            {/* MIMOTECH clasifica por aplicacion y proyecto, no por categorias. */}
+            {activeWorkspace?.type !== 'BUSINESS' && (
+              <Card>
+                <CardContent className="pt-6">
+                  <CatalogManager
+                    title="Categorías"
+                    endpoint="/categories"
+                    queryKey={queryKeys.categories(ws)}
+                    extraBody={{ workspaceId: ws }}
+                    fields={[
+                      { name: 'name', label: 'Nombre', required: true },
+                      { name: 'emoji', label: 'Emoji', placeholder: '📁' },
+                    ]}
+                    display={(c) => `${c.emoji ?? ''} ${c.name}`}
+                  />
+                </CardContent>
+              </Card>
+            )}
             {(activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED') && (
               <Card>
                 <CardContent className="pt-6">

@@ -1,5 +1,6 @@
 'use client';
 
+import { StatusBadge } from '@korapay/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
@@ -27,6 +28,7 @@ interface FormState {
   emoji: string;
   description: string;
   currency: string;
+  status: string;
 }
 
 const WORKSPACE_ICONS = [
@@ -48,7 +50,14 @@ const WORKSPACE_ICONS = [
   'GraduationCap',
 ] as const;
 
-const EMPTY: FormState = { name: '', type: 'PERSONAL', emoji: 'Home', description: '', currency: 'PEN' };
+const EMPTY: FormState = {
+  name: '',
+  type: 'PERSONAL',
+  emoji: 'Home',
+  description: '',
+  currency: 'PEN',
+  status: 'ACTIVE',
+};
 
 export function WorkspaceManager() {
   const { workspaces } = useWorkspace();
@@ -87,6 +96,7 @@ export function WorkspaceManager() {
       emoji: w.emoji ?? 'Home',
       description: w.description ?? '',
       currency: (w as { currency?: string }).currency ?? 'PEN',
+      status: w.status ?? 'ACTIVE',
     });
     setOpen(true);
   };
@@ -189,6 +199,22 @@ export function WorkspaceManager() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">Activo</SelectItem>
+                    <SelectItem value="INACTIVE">Inactivo</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Los workspaces inactivos no aparecen en el selector del menú lateral.
+                </p>
+              </div>
+
               <DialogFooter>
                 <Button type="submit" disabled={save.isPending}>
                   {save.isPending ? 'Guardando...' : 'Guardar'}
@@ -216,6 +242,7 @@ export function WorkspaceManager() {
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="secondary">{workspaceTypeLabel(w.type)}</Badge>
+              <StatusBadge status={w.status ?? 'ACTIVE'} />
               <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(w)} />
             </div>
           </div>

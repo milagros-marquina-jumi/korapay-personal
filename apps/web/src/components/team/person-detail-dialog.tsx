@@ -29,13 +29,13 @@ export function PersonDetailDialog({ person, payments, onOpenChange }: PersonDet
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 text-sm">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-lg border bg-muted/30 p-3">
+        <div className="min-w-0 space-y-4 text-sm">
+          <div className="grid min-w-0 grid-cols-2 gap-3">
+            <div className="min-w-0 rounded-lg border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">Total pagado</p>
               <p className="mt-0.5 text-lg font-bold tabular-nums">{formatMoney(String(total), 'PEN')}</p>
             </div>
-            <div className="rounded-lg border bg-muted/30 p-3">
+            <div className="min-w-0 rounded-lg border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">Pendiente</p>
               <p className="mt-0.5 text-lg font-bold tabular-nums text-warning">
                 {formatMoney(String(pendiente), 'PEN')}
@@ -77,21 +77,23 @@ export function PersonDetailDialog({ person, payments, onOpenChange }: PersonDet
           {propios.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-medium text-muted-foreground">Últimos pagos</p>
-              <div className="max-h-56 overflow-y-auto rounded-lg border">
-                <table className="w-full text-sm">
+              <div className="max-h-56 overflow-auto rounded-lg border">
+                <table className="w-full table-fixed text-sm">
                   <tbody>
                     {propios.slice(0, 10).map((t) => (
                       <tr key={t.id} className="border-b last:border-0">
-                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{formatDate(t.date)}</td>
-                        <td className="px-3 py-2">
-                          <p className="max-w-52 truncate" title={t.description ?? undefined}>
+                        <td className="w-24 whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
+                          {formatDate(t.date)}
+                        </td>
+                        <td className="px-2 py-2">
+                          <p className="truncate" title={t.description ?? undefined}>
                             {t.description || '—'}
                           </p>
                         </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums">
+                        <td className="w-24 whitespace-nowrap px-2 py-2 text-right font-medium tabular-nums">
                           {formatMoney(t.amountBase, 'PEN')}
                         </td>
-                        <td className="px-3 py-2">
+                        <td className="w-20 px-2 py-2">
                           <StatusBadge status={t.status} />
                         </td>
                       </tr>

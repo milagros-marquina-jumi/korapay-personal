@@ -1,6 +1,6 @@
 'use client';
 
-import { formatMoney } from '@korapay/domain';
+import { formatMoney, WorkspaceType } from '@korapay/domain';
 import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, PiggyBank, Wallet } from 'lucide-react';
@@ -69,6 +69,7 @@ export default function DashboardPage() {
         .slice(0, 8)
     : [];
 
+  const isBusiness = activeWorkspace?.type === WorkspaceType.BUSINESS;
   const recent = transactions.slice(0, 6);
 
   return (
@@ -88,27 +89,55 @@ export default function DashboardPage() {
               color="text-success"
               tooltip="Suma de todos los movimientos de tipo Ingreso en el periodo"
             />
-            <KPICard
-              label="Egresos"
-              value={formatMoney(summary.egresos, 'PEN')}
-              icon={ArrowDownRight}
-              color="text-destructive"
-              tooltip="Suma de todos los movimientos de tipo Egreso en el periodo"
-            />
-            <KPICard
-              label="Disponible"
-              value={formatMoney(summary.disponible, 'PEN')}
-              icon={Wallet}
-              color="text-info"
-              tooltip="Saldo actual de tus cuentas (balance inicial + ingresos pagados - egresos pagados)"
-            />
-            <KPICard
-              label="Ahorro"
-              value={formatMoney(summary.ahorro, 'PEN')}
-              icon={PiggyBank}
-              color="text-brand"
-              tooltip="Suma de todos los movimientos de tipo Ahorro en el periodo"
-            />
+            {isBusiness ? (
+              <>
+                <KPICard
+                  label="Costos"
+                  value={formatMoney(summary.costosMimotech, 'PEN')}
+                  icon={ArrowDownRight}
+                  color="text-coral"
+                  tooltip="Servicios e infraestructura (AWS, Render, Fly, Cloudflare)"
+                />
+                <KPICard
+                  label="Pagos equipo"
+                  value={formatMoney(summary.pagosEquipo, 'PEN')}
+                  icon={Wallet}
+                  color="text-info"
+                  tooltip="Pagos realizados a los colaboradores de MIMOTECH"
+                />
+                <KPICard
+                  label="Utilidad"
+                  value={formatMoney(summary.utilidadMimotech, 'PEN')}
+                  icon={PiggyBank}
+                  color="text-brand"
+                  tooltip="Ingresos menos costos y pagos al equipo"
+                />
+              </>
+            ) : (
+              <>
+                <KPICard
+                  label="Egresos"
+                  value={formatMoney(summary.egresos, 'PEN')}
+                  icon={ArrowDownRight}
+                  color="text-destructive"
+                  tooltip="Suma de todos los movimientos de tipo Egreso en el periodo"
+                />
+                <KPICard
+                  label="Disponible"
+                  value={formatMoney(summary.disponible, 'PEN')}
+                  icon={Wallet}
+                  color="text-info"
+                  tooltip="Saldo actual de tus cuentas (balance inicial + ingresos pagados - egresos pagados)"
+                />
+                <KPICard
+                  label="Ahorro"
+                  value={formatMoney(summary.ahorro, 'PEN')}
+                  icon={PiggyBank}
+                  color="text-brand"
+                  tooltip="Suma de todos los movimientos de tipo Ahorro en el periodo"
+                />
+              </>
+            )}
           </>
         )}
       </div>

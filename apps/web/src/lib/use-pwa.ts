@@ -18,8 +18,6 @@ export function usePWAUpdate(): PwaUpdateState {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
 
-    // En desarrollo el SW esta deshabilitado; si quedo uno registrado de un
-    // build previo, secuestra el hot reload hasta que se desregistre.
     if (process.env.NODE_ENV === 'development') {
       void navigator.serviceWorker.getRegistrations().then((regs) => {
         for (const reg of regs) void reg.unregister();
@@ -35,8 +33,6 @@ export function usePWAUpdate(): PwaUpdateState {
     let cancelled = false;
 
     const handleStateChange = (worker: ServiceWorker) => () => {
-      // Solo hay actualizacion si ya habia un SW controlando la pagina;
-      // en la primera instalacion no se muestra el banner.
       if (worker.state === 'installed' && navigator.serviceWorker.controller) {
         setWaitingWorker(worker);
         setShowReload(true);
@@ -71,9 +67,7 @@ export function usePWAUpdate(): PwaUpdateState {
         intervalId = setInterval(() => {
           void reg.update();
         }, UPDATE_CHECK_INTERVAL_MS);
-      } catch {
-        // Sin SW disponible no hay nada que actualizar.
-      }
+      } catch {}
     };
 
     void setup();
@@ -111,9 +105,6 @@ export function usePWAUpdate(): PwaUpdateState {
 }
 
 export function useIsOnline(): boolean {
-  // Arranca en true siempre: Node 22 define `navigator` pero sin `onLine`, asi
-  // que leerlo en el servidor da undefined (falsy) y el SSR pintaria el aviso
-  // de "sin conexion" a todo el mundo. El valor real se lee ya montado.
   const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
@@ -123,8 +114,6 @@ export function useIsOnline(): boolean {
 
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    // Al volver a la pestana se revalida: si el evento se perdio con la pestana
-    // en segundo plano, el aviso quedaria mostrando un estado que ya no es real.
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') setIsOnline(navigator.onLine);
     };

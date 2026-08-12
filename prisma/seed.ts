@@ -250,8 +250,6 @@ async function main() {
   }
 
   // ---- Helpers por workspace ----
-  // Sin emoji: las categorias se muestran como texto plano, asi que un icono
-  // aqui saldria como caracter suelto delante del nombre.
   const categoryIcon: Record<string, { emoji: string; color: string }> = {
     default: { emoji: '', color: 'bg-slate-100 text-slate-900' },
   };

@@ -3,20 +3,16 @@ services:
     name: korapay-web
     plan: free
     runtime: node
-    rootDir: apps/web
     buildCommand: |
-      cd ../.. &&
       pnpm install --frozen-lockfile &&
       pnpm --filter @korapay/web build
-    startCommand: pnpm start
+    startCommand: cd apps/web && pnpm start
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
         value: https://korapay-api.fly.dev/api/v1
-      # Dominio publico: alimenta canonical, Open Graph y JSON-LD.
-      # Cambiar si se conecta un dominio propio.
       - key: NEXT_PUBLIC_SITE_URL
         value: https://korapay-web.onrender.com
       - key: HOSTNAME

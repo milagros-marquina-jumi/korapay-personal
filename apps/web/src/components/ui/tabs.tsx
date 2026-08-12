@@ -8,8 +8,6 @@ const Tabs = TabsPrimitive.Root;
 
 function TabsList({ className, ...props }: ComponentPropsWithoutRef<typeof TabsPrimitive.List>) {
   return (
-    // max-w-full + overflow-x-auto: en movil los tabs no caben en 375px y con
-    // inline-flex estiraban la pagina entera; asi el strip scrollea solo.
     <TabsPrimitive.List
       className={cn(
         'inline-flex h-11 max-w-full items-center justify-start gap-1 overflow-x-auto scrollbar-none rounded-xl border border-border/60 bg-muted/60 p-1 text-muted-foreground sm:justify-center',

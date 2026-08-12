@@ -21,8 +21,6 @@ export function PWABanner() {
     window.localStorage.setItem(DISMISS_KEY, '1');
   };
 
-  // La actualizacion tiene prioridad: si hay version nueva esperando, se ofrece
-  // recargar antes que instalar.
   if (showReload) {
     return (
       <div className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-sm items-start gap-3 rounded-xl border border-border bg-card p-3 shadow-card sm:left-auto sm:right-4">
@@ -38,8 +36,6 @@ export function PWABanner() {
     );
   }
 
-  // Sin conexion no se puede instalar y el aviso de "Sin conexion" ya ocupa
-  // esa esquina: mostrar los dos a la vez solo estorba.
   if (!isInstallable || installDismissed || !isOnline) return null;
 
   return (

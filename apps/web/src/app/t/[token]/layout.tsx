@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Logo } from '@/components/layout/logo';
 
-// Portal de talento accesible por token: expone pagos y deudas de una persona.
-// noindex + nofollow + noarchive para que no quede rastro en buscadores.
 export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true, noarchive: true },
 };

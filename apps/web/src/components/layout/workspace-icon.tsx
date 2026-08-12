@@ -6,10 +6,6 @@ interface Props {
   className?: string;
 }
 
-/**
- * Los workspaces guardan el nombre de un icono de Lucide en `emoji`.
- * Si el valor no coincide con ninguno se muestra tal cual (soporta emojis reales).
- */
 export function WorkspaceIcon({ name, className }: Readonly<Props>) {
   if (!name) return null;
   const IconComponent = (Icons as unknown as Record<string, ComponentType<{ className?: string }>>)[name];

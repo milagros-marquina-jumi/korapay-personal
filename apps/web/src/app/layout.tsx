@@ -24,10 +24,6 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   manifest: '/manifest.json',
-  // App privada de finanzas: no hay pagina publica que indexar. La raiz
-  // redirige a /dashboard, que exige sesion, asi que se marca noindex global.
-  // Los metadatos OG/Twitter siguen sirviendo para previsualizar enlaces
-  // compartidos internamente.
   robots: { index: false, follow: false },
   alternates: { canonical: '/' },
   openGraph: {
@@ -61,12 +57,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  // El tema claro usa crema y el oscuro azul profundo: la barra del navegador
-  // sigue al tema activo en vez de quedarse fija en uno.
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FCFAF7' },
-    { media: '(prefers-color-scheme: dark)', color: '#161A28' },
-  ],
+  themeColor: '#FCFAF7',
 };
 
 const jsonLd = {
@@ -104,11 +95,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning className={`${inter.variable} ${plusJakarta.variable}`}>
       <head>
-        {/* Next 15 solo emite mobile-web-app-capable; iOS antiguo sigue leyendo
-            la variante con prefijo apple para abrir en modo standalone. */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        {/* La API vive en otro origen: adelantar DNS y TLS ahorra el handshake
-            en la primera peticion de datos de cada carga. */}
         {API_ORIGIN && (
           <>
             <link rel="preconnect" href={API_ORIGIN} crossOrigin="anonymous" />
@@ -118,7 +105,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <Providers>
             {children}
             <Toaster richColors closeButton position="top-right" />

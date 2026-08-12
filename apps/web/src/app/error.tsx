@@ -5,9 +5,6 @@ import { Button } from '@/components/ui/button';
 
 const RELOAD_FLAG = 'korapay.chunkReloaded';
 
-// Tras un deploy, el navegador puede seguir pidiendo chunks con el hash viejo
-// que ya no existen en el servidor. No es un fallo de la app: basta recargar
-// para tomar el build nuevo. Se recarga una sola vez para no entrar en bucle.
 function isStaleChunkError(error: Error) {
   return /ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module/i.test(
     `${error.name} ${error.message}`,

@@ -15,11 +15,18 @@ async function bootstrap() {
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(compress);
-  await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024 } });
+  const maxFileSize = Number(process.env.MAX_FILE_SIZE ?? '10485760');
+  await app.register(multipart, { limits: { fileSize: maxFileSize } });
+
+  const corsOrigins = process.env.CORS_ORIGINS;
+  if (!corsOrigins) {
+    logger.error('CORS_ORIGINS no configurado');
+    process.exit(1);
+  }
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({
-    origin: process.env.CORS_ORIGINS?.split(',') ?? ['http://localhost:3060'],
+    origin: corsOrigins.split(','),
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -58,9 +65,14 @@ async function bootstrap() {
     }
   });
 
-  const port = process.env.API_PORT ?? 3061;
-  await app.listen(port, '0.0.0.0');
-  logger.log(`API running on http://localhost:${port}`);
-  logger.log(`Swagger at http://localhost:${port}/api/docs`);
+  const port = process.env.API_PORT;
+  if (!port) {
+    logger.error('API_PORT no configurado');
+    process.exit(1);
+  }
+  const publicUrl = process.env.PUBLIC_URL ?? `http://localhost:${port}`;
+  await app.listen(Number(port), '0.0.0.0');
+  logger.log(`API running on ${publicUrl}`);
+  logger.log(`Swagger at ${publicUrl}/api/docs`);
 }
 bootstrap();

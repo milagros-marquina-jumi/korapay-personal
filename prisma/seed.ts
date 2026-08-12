@@ -1,12 +1,36 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { mapExcelStatus, redactSensitiveData } from '@korapay/domain';
+import { mapExcelStatus, redactSensitiveData, SALARY_CONCEPT, TALENT_TAG, WorkspaceRole } from '@korapay/domain';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 const DATA_DIR = join(__dirname, 'data');
-const USD_TO_PEN = '3.42';
+
+const SEED_USD_TO_PEN = process.env.SEED_USD_TO_PEN;
+const SEED_EXCHANGE_DATE = process.env.SEED_EXCHANGE_DATE ?? new Date().toISOString().slice(0, 10);
+const SEED_USER_AUTH_ID = process.env.DEMO_USER_AUTH_ID;
+const SEED_USER_NAME = process.env.DEMO_USER_NAME;
+const SEED_USER_EMAIL = process.env.DEMO_USER_EMAIL;
+
+const REQUIRED_SEED_VARS = {
+  SEED_USD_TO_PEN,
+  DEMO_USER_AUTH_ID: SEED_USER_AUTH_ID,
+  DEMO_USER_NAME: SEED_USER_NAME,
+  DEMO_USER_EMAIL: SEED_USER_EMAIL,
+};
+
+const missingSeedVars = Object.entries(REQUIRED_SEED_VARS)
+  .filter(([, value]) => !value)
+  .map(([name]) => name);
+
+if (missingSeedVars.length) {
+  console.error(`Faltan variables de entorno para el seed: ${missingSeedVars.join(', ')}`);
+  console.error(
+    'Ejemplo: SEED_USD_TO_PEN=3.75 DEMO_USER_AUTH_ID=... DEMO_USER_NAME=... DEMO_USER_EMAIL=... pnpm run seed',
+  );
+  process.exit(1);
+}
 
 function load<T>(name: string): T[] {
   const path = join(DATA_DIR, `${name}.json`);
@@ -28,7 +52,7 @@ function money(v: number | null | undefined): string {
 
 function toBase(amount: number | null | undefined, currency: string): string {
   const amt = Number(amount ?? 0);
-  if (currency === 'USD') return (amt * Number(USD_TO_PEN)).toFixed(2);
+  if (currency === 'USD') return (amt * Number(SEED_USD_TO_PEN)).toFixed(2);
   return amt.toFixed(2);
 }
 
@@ -147,9 +171,9 @@ async function main() {
 
   const profile = await prisma.profile.create({
     data: {
-      authId: 'demo-user-id',
-      name: 'Milagros Marquina',
-      email: process.env.DEMO_USER_EMAIL ?? 'demo@korapay.local',
+      authId: SEED_USER_AUTH_ID,
+      name: SEED_USER_NAME,
+      email: SEED_USER_EMAIL,
       currency: 'PEN',
       theme: 'system',
     },
@@ -161,12 +185,13 @@ async function main() {
       { code: 'PEN', symbol: 'S/', name: 'Sol peruano' },
       { code: 'USD', symbol: '$', name: 'Dolar estadounidense' },
     ],
+    skipDuplicates: true,
   });
   const usd = await prisma.currency.findUnique({ where: { code: 'USD' } });
   const pen = await prisma.currency.findUnique({ where: { code: 'PEN' } });
   if (usd && pen) {
     await prisma.exchangeRate.create({
-      data: { fromCurrencyId: usd.id, toCurrencyId: pen.id, rate: USD_TO_PEN, date: new Date('2026-07-20') },
+      data: { fromCurrencyId: usd.id, toCurrencyId: pen.id, rate: SEED_USD_TO_PEN, date: new Date(SEED_EXCHANGE_DATE) },
     });
   }
   const excelMixed = [...catalogs.tipo_pagos, ...catalogs.medios_pago];
@@ -219,7 +244,9 @@ async function main() {
     },
   });
   for (const ws of [personal, empleos, mimotech, qoryx]) {
-    await prisma.workspaceMember.create({ data: { workspaceId: ws.id, profileId: profile.id, role: 'OWNER' } });
+    await prisma.workspaceMember.create({
+      data: { workspaceId: ws.id, profileId: profile.id, role: WorkspaceRole.OWNER },
+    });
   }
 
   // ---- Helpers por workspace ----
@@ -278,7 +305,7 @@ async function main() {
     const key = name.trim();
     if (appByName[key]) return appByName[key];
     const a = await prisma.application.create({
-      data: { workspaceId: mimotech.id, name: key, category: 'Infraestructura' },
+      data: { workspaceId: mimotech.id, name: key },
     });
     appByName[key] = a.id;
     return a.id;
@@ -290,7 +317,7 @@ async function main() {
     const key = name.trim();
     if (!key) return null;
     if (projectByName[key]) return projectByName[key];
-    const p = await prisma.project.create({ data: { workspaceId: mimotech.id, name: key, emoji: '📦' } });
+    const p = await prisma.project.create({ data: { workspaceId: mimotech.id, name: key } });
     projectByName[key] = p.id;
     return p.id;
   }
@@ -314,9 +341,9 @@ async function main() {
   for (const empresa of catalogs.empresas) await ensureCompany(empleos.id, empresa);
   for (const cat of catalogs.categorias_ingreso) await ensureCategory(empleos.id, cat);
 
-  const INCOME_CATEGORY_ALIASES: Record<string, string> = { Empresas: 'Sueldo' };
+  const INCOME_CATEGORY_ALIASES: Record<string, string> = { Empresas: SALARY_CONCEPT };
   const normalizeIncomeCategory = (concepto: string | null | undefined): string =>
-    INCOME_CATEGORY_ALIASES[(concepto ?? '').trim()] ?? concepto ?? 'Sueldo';
+    INCOME_CATEGORY_ALIASES[(concepto ?? '').trim()] ?? concepto ?? SALARY_CONCEPT;
 
   const ingresosTrabajos = load<{
     fecha: string;
@@ -352,7 +379,7 @@ async function main() {
         date: date(r.fecha),
         amountOriginal: money(original),
         currency,
-        exchangeRate: currency === 'USD' ? USD_TO_PEN : null,
+        exchangeRate: currency === 'USD' ? SEED_USD_TO_PEN : null,
         amountBase: toBase(original, currency),
         categoryId,
         companyId,
@@ -582,7 +609,7 @@ async function main() {
         date: date(r.fecha),
         amountOriginal: money(r.monto),
         currency,
-        exchangeRate: currency === 'USD' ? USD_TO_PEN : null,
+        exchangeRate: currency === 'USD' ? SEED_USD_TO_PEN : null,
         amountBase: r.importeTotal != null ? money(r.importeTotal) : toBase(r.monto, currency),
         applicationId,
         projectId: projectIds[0] ?? null,
@@ -774,7 +801,7 @@ async function main() {
         currency: 'PEN',
         amountBase: money(r.sueldo),
         status: mapExcelStatus(r.estado),
-        tags: [r.cargo ?? '', 'TALENTO'].filter(Boolean),
+        tags: [r.cargo ?? '', TALENT_TAG].filter(Boolean),
       },
     });
     talentIncomeCount++;

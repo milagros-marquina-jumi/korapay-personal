@@ -50,7 +50,8 @@ export class ExchangeRateService {
     });
     if (previous) return String(previous.rate);
     const latest = await this.prisma.exchangeRate.findFirst({ orderBy: { date: 'desc' } });
-    return latest ? String(latest.rate) : '3.42';
+    if (latest) return String(latest.rate);
+    throw new ServiceUnavailableException('No hay tipo de cambio registrado en la base de datos');
   }
 
   async history(page = 1, limit = 10) {
@@ -82,14 +83,18 @@ export class ExchangeRateService {
 
   async refreshFromDecolecta() {
     const apiKey = this.config.get<string>('DECOLECTA_API_KEY');
-    const apiUrl = this.config.get<string>('DECOLECTA_API_URL', 'https://api.decolecta.com');
+    const apiUrl = this.config.get<string>('DECOLECTA_API_URL');
     if (!apiKey || apiKey === 'REEMPLAZAR') {
       throw new ServiceUnavailableException('DECOLECTA_API_KEY no configurado');
     }
+    if (!apiUrl) {
+      throw new ServiceUnavailableException('DECOLECTA_API_URL no configurado');
+    }
+    const timeout = Number(this.config.get<string>('DECOLECTA_TIMEOUT_MS') ?? '10000');
     try {
       const res = await fetch(`${apiUrl}/v1/tipo-cambio/sunat`, {
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(timeout),
       });
       if (!res.ok) throw new Error(`Decolecta respondio ${res.status}`);
       const data = (await res.json()) as DecolectaExchange;

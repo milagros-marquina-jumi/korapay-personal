@@ -1,3 +1,4 @@
+import { SALARY_CONCEPT } from '@korapay/domain';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { ContractIncomeService } from './contract-income.service';
@@ -93,7 +94,7 @@ export class CatalogService {
         select: { id: true, name: true },
       }),
       this.prisma.transaction.findMany({
-        where: { workspaceId, deletedAt: null, type: 'INCOME', concept: 'Sueldo', companyId: { not: null } },
+        where: { workspaceId, deletedAt: null, type: 'INCOME', concept: SALARY_CONCEPT, companyId: { not: null } },
         select: { companyId: true, date: true, amountGross: true, amountBase: true },
       }),
     ]);

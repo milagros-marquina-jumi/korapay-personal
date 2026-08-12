@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { EMAIL_INGESTION_MAX_BODY_LENGTH, NON_EXPENSE_TYPES } from '@korapay/domain';
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { BankEmailParsersService } from '../bank-email-parsers/bank-email-parsers.service';
@@ -20,8 +21,6 @@ interface IngestInput {
   textBody: string;
 }
 
-const NON_EXPENSE_TYPES = ['DECLINED_TRANSACTION', 'REVERSAL', 'REFUND'];
-
 function sanitizeText(raw: string): string {
   const normalized = raw.replace(/\r\n/g, '\n');
   let out = '';
@@ -29,7 +28,7 @@ function sanitizeText(raw: string): string {
     const code = ch.charCodeAt(0);
     if (code === 9 || code === 10 || code >= 32) out += ch;
   }
-  return out.slice(0, 50000);
+  return out.slice(0, EMAIL_INGESTION_MAX_BODY_LENGTH);
 }
 
 function buildDescription(subject: string, bankName: string): string {

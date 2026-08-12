@@ -1,13 +1,7 @@
+import { INCOME_STATUS_LABELS as DOMAIN_STATUS_LABELS } from '@korapay/domain';
 import type { Transaction } from '@/lib/api.types';
 
-export const INCOME_STATUS_LABELS: Record<string, string> = {
-  PAID: 'Pagado',
-  PENDING: 'Pendiente',
-  OVERDUE: 'Vencido',
-  PARTIAL: 'Parcial',
-  CANCELLED: 'Cancelado',
-  PENDING_REVIEW: 'Revisión',
-};
+export const INCOME_STATUS_LABELS: Record<string, string> = DOMAIN_STATUS_LABELS;
 
 export interface MonthSummary {
   key: string;
@@ -17,13 +11,11 @@ export interface MonthSummary {
   paid: number;
 }
 
-// La migracion dejo numeros de cuenta dentro de notes; el resto son notas escritas por el usuario.
 export function looksLikeAccount(notes?: string | null): boolean {
   if (!notes) return false;
   return /\d[\d\s-]{5,}/.test(notes);
 }
 
-// Las notas de cuenta traen etiquetas del banco y a veces tambien el CCI.
 export function accountNumber(notes?: string | null): string | null {
   if (!looksLikeAccount(notes) || !notes) return null;
   const labeled =

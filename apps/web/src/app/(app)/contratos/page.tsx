@@ -166,7 +166,7 @@ function ContratosContent() {
         cell: ({ row }) => {
           const days = row.original.daysRemaining;
           return (
-            <div className="flex flex-col gap-0.5">
+            <div className="flex flex-col items-start gap-0.5">
               <StatusBadge status={row.original.state ?? row.original.status} />
               {row.original.state === 'EXPIRING' && days !== null && days !== undefined && (
                 <span className="text-xs text-warning">{days === 0 ? 'vence hoy' : `faltan ${days} días`}</span>

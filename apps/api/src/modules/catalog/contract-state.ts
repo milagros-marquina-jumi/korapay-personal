@@ -1,5 +1,6 @@
+import { EXPIRING_WINDOW_DAYS } from '@korapay/domain';
+
 const DAY_MS = 86_400_000;
-const EXPIRING_WINDOW_DAYS = 45;
 
 export type ContractState = 'ACTIVE' | 'EXPIRING' | 'FINISHED';
 
@@ -18,7 +19,6 @@ interface SequenceRow {
   startDate: Date;
 }
 
-// Numera los contratos de cada empresa por orden cronologico para distinguir reingresos.
 export function buildContractSequence(rows: SequenceRow[]): Map<string, { sequence: number; sequenceTotal: number }> {
   const byCompany = new Map<string, SequenceRow[]>();
   for (const row of rows) {
@@ -45,7 +45,6 @@ interface SalaryRow {
   amountBase: unknown;
 }
 
-// El sueldo pactado se infiere del bruto mas reciente que pago esa empresa.
 export function buildGrossByCompany(rows: SalaryRow[]): Map<string, string> {
   const latest = new Map<string, { date: Date; gross: number }>();
 
@@ -60,7 +59,6 @@ export function buildGrossByCompany(rows: SalaryRow[]): Map<string, string> {
   return new Map([...latest.entries()].map(([id, v]) => [id, v.gross.toFixed(2)]));
 }
 
-// El estado se calcula al leer: un contrato guardado como ACTIVE vence solo con el paso del tiempo.
 export function deriveContractState(endDate: Date | null, today = new Date()): ContractStateInfo {
   if (!endDate) return { state: 'ACTIVE', daysRemaining: null };
 

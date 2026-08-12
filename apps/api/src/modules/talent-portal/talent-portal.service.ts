@@ -1,3 +1,4 @@
+import { LEDGER_ACTOR_PREFIX, WorkspaceRole } from '@korapay/domain';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { type LedgerActor, type LedgerFilters, TalentLedgerService } from '../talent-ledger/talent-ledger.service';
@@ -18,12 +19,12 @@ export class TalentPortalService {
   }
 
   private actor(talentId: string, ownerProfileId: string): LedgerActor {
-    return { profileId: ownerProfileId, label: `TALENT:${talentId}` };
+    return { profileId: ownerProfileId, label: `${LEDGER_ACTOR_PREFIX}${talentId}` };
   }
 
   private async ownerProfileId(workspaceId: string): Promise<string> {
     const member = await this.prisma.workspaceMember.findFirst({
-      where: { workspaceId, role: 'OWNER' },
+      where: { workspaceId, role: WorkspaceRole.OWNER },
     });
     if (!member) throw new NotFoundException('Workspace sin propietario');
     return member.profileId;

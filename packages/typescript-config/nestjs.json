@@ -11,8 +11,7 @@
 		"removeComments": true,
 		"outDir": "./dist",
 		"paths": {
-			"@/*": ["./src/*"],
-			"@korapay/domain": ["../../packages/domain/src/index.ts"]
+			"@/*": ["./src/*"]
 		}
 	}
 }

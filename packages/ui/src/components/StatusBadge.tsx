@@ -1,25 +1,27 @@
 import { cn } from '../lib/utils';
 
+const NEUTRAL = 'border border-border bg-muted/60 text-muted-foreground';
+
 const statusConfig: Record<string, { label: string; className: string }> = {
-  PAID: { label: 'Pagado', className: 'bg-success/10 text-success' },
-  PENDING: { label: 'Pendiente', className: 'bg-warning/10 text-warning' },
+  PAID: { label: 'Pagado', className: 'border border-success/25 bg-success/10 text-success' },
+  PENDING: { label: 'Pendiente', className: 'border border-warning/25 bg-warning/10 text-warning' },
   OVERDUE: {
     label: 'Vencido',
-    className: 'bg-destructive/10 text-destructive',
+    className: 'border border-destructive/25 bg-destructive/10 text-destructive',
   },
-  PARTIAL: { label: 'Parcial', className: 'bg-info/10 text-info' },
+  PARTIAL: { label: 'Parcial', className: 'border border-info/25 bg-info/10 text-info' },
   CANCELLED: {
     label: 'Cancelado',
-    className: 'bg-muted text-muted-foreground',
+    className: NEUTRAL,
   },
   PENDING_REVIEW: {
     label: 'Revisión',
-    className: 'bg-warning/10 text-warning',
+    className: 'border border-warning/25 bg-warning/10 text-warning',
   },
-  ACTIVE: { label: 'Activo', className: 'bg-success/10 text-success' },
-  INACTIVE: { label: 'Inactivo', className: 'bg-muted text-muted-foreground' },
-  FINISHED: { label: 'Finalizado', className: 'bg-muted text-muted-foreground' },
-  EXPIRING: { label: 'Por vencer', className: 'bg-warning/10 text-warning' },
+  ACTIVE: { label: 'Activo', className: 'border border-success/25 bg-success/10 text-success' },
+  INACTIVE: { label: 'Inactivo', className: NEUTRAL },
+  FINISHED: { label: 'Finalizado', className: NEUTRAL },
+  EXPIRING: { label: 'Por vencer', className: 'border border-warning/25 bg-warning/10 text-warning' },
 };
 export function statusLabel(status: string): string {
   return statusConfig[status]?.label ?? status;
@@ -37,7 +39,7 @@ export function StatusBadge({ status, className }: Readonly<StatusBadgeProps>) {
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+        'inline-flex w-fit shrink-0 items-center self-start whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium',
         config.className,
         className,
       )}

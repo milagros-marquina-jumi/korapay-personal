@@ -1,17 +1,6 @@
-export const MONTH_NAMES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
+import { MONTH_NAMES } from '@korapay/domain';
+
+export { MONTH_NAMES };
 
 export const MONTH_OPTIONS = MONTH_NAMES.map((label, index) => ({
   value: String(index + 1),

@@ -1,9 +1,7 @@
+import { MONTH_SHORT, TOP_CATEGORIES } from '@korapay/domain';
 import type { PersonalReports } from '@/lib/api.types';
-import { MONTH_NAMES } from '@/lib/months';
 
-export const MONTH_SHORT = MONTH_NAMES.map((m) => m.slice(0, 3));
-
-export const TOP_CATEGORIES = 10;
+export { MONTH_SHORT };
 
 export const DURATION_LIMITS = [
   { value: '5', label: 'Top 5' },

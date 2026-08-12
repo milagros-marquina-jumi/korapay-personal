@@ -1,4 +1,4 @@
-const DEFAULT_PAY_DAY = 1;
+import { DEFAULT_PAY_DAY, SALARY_CONCEPT } from '@korapay/domain';
 
 export interface ScheduledIncome {
   date: Date;
@@ -45,7 +45,7 @@ export function buildContractSchedule({
     if (date > limit) break;
     out.push({
       date,
-      concept: 'Sueldo',
+      concept: SALARY_CONCEPT,
       amountBase: net.toFixed(2),
       amountGross: gross && gross !== net ? gross.toFixed(2) : null,
     });

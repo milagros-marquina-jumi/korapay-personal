@@ -1,3 +1,4 @@
+import { EmailProvider } from '@korapay/domain';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { generateIngestionToken } from './ingestion-token';
@@ -65,7 +66,11 @@ export class EmailSourcesService {
     data: { name: string; email: string; defaultWorkspaceId?: string; defaultAccountId?: string },
   ) {
     const existing = await this.prisma.emailSource.findFirst({
-      where: { profileId, provider: 'GMAIL_APPS_SCRIPT', email: { equals: data.email, mode: 'insensitive' } },
+      where: {
+        profileId,
+        provider: EmailProvider.GMAIL_APPS_SCRIPT,
+        email: { equals: data.email, mode: 'insensitive' },
+      },
     });
     if (existing) throw new ConflictException('Ese correo ya está conectado');
     const { token, hash, prefix } = generateIngestionToken();
@@ -74,7 +79,7 @@ export class EmailSourcesService {
         profileId,
         name: data.name,
         email: data.email,
-        provider: 'GMAIL_APPS_SCRIPT',
+        provider: EmailProvider.GMAIL_APPS_SCRIPT,
         defaultWorkspaceId: data.defaultWorkspaceId ?? null,
         defaultAccountId: data.defaultAccountId ?? null,
         tokenHash: hash,

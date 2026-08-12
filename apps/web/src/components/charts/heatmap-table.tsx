@@ -12,7 +12,7 @@ export interface HeatmapRow {
 }
 
 interface Props {
-  columns: string[];
+  columns: readonly string[];
   rows: HeatmapRow[];
   rowHeader?: string;
   totalLabel?: string;

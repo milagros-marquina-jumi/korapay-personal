@@ -1,3 +1,4 @@
+import { SALARY_CONCEPT } from '@korapay/domain';
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { buildContractSchedule } from './contract-schedule';
@@ -8,7 +9,6 @@ export class ContractIncomeService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // Los sueldos ya cobrados no se tocan: solo se recalculan los pendientes futuros.
   async syncContractIncomes(contractId: string, workspaceId: string) {
     const contract = await this.prisma.employmentContract.findFirst({
       where: { id: contractId, workspaceId, deletedAt: null },
@@ -77,7 +77,7 @@ export class ContractIncomeService {
 
   private async latestNetSalary(workspaceId: string, companyId: string) {
     const last = await this.prisma.transaction.findFirst({
-      where: { workspaceId, companyId, deletedAt: null, type: 'INCOME', concept: 'Sueldo' },
+      where: { workspaceId, companyId, deletedAt: null, type: 'INCOME', concept: SALARY_CONCEPT },
       orderBy: { date: 'desc' },
       select: { amountBase: true },
     });
@@ -86,7 +86,14 @@ export class ContractIncomeService {
 
   private async latestGrossSalary(workspaceId: string, companyId: string) {
     const last = await this.prisma.transaction.findFirst({
-      where: { workspaceId, companyId, deletedAt: null, type: 'INCOME', concept: 'Sueldo', amountGross: { not: null } },
+      where: {
+        workspaceId,
+        companyId,
+        deletedAt: null,
+        type: 'INCOME',
+        concept: SALARY_CONCEPT,
+        amountGross: { not: null },
+      },
       orderBy: { date: 'desc' },
       select: { amountGross: true },
     });

@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3061/api/v1';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+
+if (!API_URL && typeof window !== 'undefined') {
+  throw new Error('NEXT_PUBLIC_API_URL no configurado');
+}
 
 let authToken: string | null = null;
 

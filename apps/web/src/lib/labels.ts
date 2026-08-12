@@ -1,10 +1,15 @@
+import { TransactionType } from '@korapay/domain';
+
 export const TRANSACTION_TYPE_LABELS: Record<string, string> = {
-  INCOME: 'Ingreso',
-  EXPENSE: 'Egreso',
-  SAVING: 'Ahorro',
-  BUSINESS_COST: 'Costo',
-  TEAM_PAYMENT: 'Pago equipo',
-  TRANSFER: 'Transferencia',
+  [TransactionType.INCOME]: 'Ingreso',
+  [TransactionType.EXPENSE]: 'Egreso',
+  [TransactionType.SAVING]: 'Ahorro',
+  [TransactionType.BUSINESS_COST]: 'Costo',
+  [TransactionType.TEAM_PAYMENT]: 'Pago equipo',
+  [TransactionType.TRANSFER]: 'Transferencia',
+  [TransactionType.DEBT]: 'Deuda',
+  [TransactionType.DEBT_PAYMENT]: 'Pago de deuda',
+  [TransactionType.ADJUSTMENT]: 'Ajuste',
 };
 
 export const RECURRENCE_LABELS: Record<string, string> = {

@@ -51,7 +51,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           if (!next) settle(false);
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{options.title ?? 'Confirmar acción'}</DialogTitle>
             <DialogDescription className="max-h-40 overflow-y-auto whitespace-pre-wrap [overflow-wrap:anywhere]">

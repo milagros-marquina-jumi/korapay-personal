@@ -229,6 +229,16 @@ select:not(:disabled),
 	background: transparent;
 }
 
+/* La scrollbar global de 10px se comeria el alto de los strips que scrollean
+   en horizontal (tabs en movil). Aqui se oculta sin perder el scroll. */
+@utility scrollbar-none {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @keyframes korapay-highlight {
 	0% {
 		background-color: oklch(0.769 0.149 57 / 0.3);

@@ -58,7 +58,7 @@ export function DuplicateTransactionDialog({ workspaceId, transaction, onOpenCha
 
   return (
     <Dialog open={transaction !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Copiar movimiento</DialogTitle>
           <DialogDescription>

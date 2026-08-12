@@ -27,7 +27,7 @@ export function CompaniesMonthDialog({ selection, onOpenChange }: Readonly<Props
 
   return (
     <Dialog open={!!selection} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="capitalize">{title}</DialogTitle>
           <DialogDescription>

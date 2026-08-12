@@ -22,7 +22,7 @@ Gestion financiera personal y empresarial. Evolucion de Mi Bolsillo.
 cp .env.example .env    # DEMO_MODE=true por defecto
 pnpm install
 pnpm docker:up          # PostgreSQL en puerto 5435
-pnpm db:push            # Sincronizar esquema
+pnpm db:migrate         # Migraciones iniciales
 pnpm db:seed            # Cargar datos reales (desde prisma/data/*.json)
 pnpm dev                # Web :3060 + API :3061
 ```

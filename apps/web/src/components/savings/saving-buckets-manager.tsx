@@ -174,7 +174,7 @@ export function SavingBucketsManager() {
           setCreating(false);
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{creating ? 'Nueva cuenta de ahorro' : 'Editar cuenta de ahorro'}</DialogTitle>
             <DialogDescription>

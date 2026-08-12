@@ -89,7 +89,7 @@ export function SavingAccountDialog({ open, onOpenChange, year, month, periodLab
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{account ? 'Editar saldo' : 'Agregar cuenta'}</DialogTitle>
           <DialogDescription className="capitalize">{periodLabel}</DialogDescription>

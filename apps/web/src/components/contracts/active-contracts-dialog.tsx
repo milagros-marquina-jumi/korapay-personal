@@ -44,7 +44,7 @@ export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
           </span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Contratos vigentes</DialogTitle>
           <DialogDescription>

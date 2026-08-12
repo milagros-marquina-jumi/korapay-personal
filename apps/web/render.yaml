@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: korapay-web
+    plan: free
+    runtime: node
+    rootDir: apps/web
+    buildCommand: |
+      cd ../.. &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @korapay/web build
+    startCommand: pnpm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: HOSTNAME
+        value: 0.0.0.0

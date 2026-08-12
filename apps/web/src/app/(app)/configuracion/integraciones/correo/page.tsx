@@ -385,7 +385,7 @@ export default function CorreoIntegracionesPage() {
       <AddSourceDialog open={addOpen} onOpenChange={setAddOpen} onCreated={setTokenShown} />
 
       <Dialog open={tokenShown !== null} onOpenChange={(next) => !next && setTokenShown(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Token de ingesta</DialogTitle>
             <DialogDescription>Configura Google Apps Script con este token.</DialogDescription>

@@ -120,7 +120,6 @@ export class ReportsService {
 
     const { yearlyTotals, yearlyByCategory } = this.aggregateByYear(allTransactions);
 
-    // 1. Gastos por categoría
     const byCategory = new Map<string, Decimal>();
     for (const t of transactions) {
       if (t.type !== 'EXPENSE') continue;
@@ -131,7 +130,6 @@ export class ReportsService {
       .map(([name, total]) => ({ name, total: total.toFixed(2) }))
       .sort((a, b) => Number(b.total) - Number(a.total));
 
-    // 2. Ingresos vs egresos por mes
     const monthly = new Map<string, { income: Decimal; expense: Decimal }>();
     for (const t of transactions) {
       const key = `${t.date.getUTCFullYear()}-${t.date.getUTCMonth() + 1}`;
@@ -155,7 +153,6 @@ export class ReportsService {
       })
       .sort((a, b) => a.year - b.year || a.month - b.month);
 
-    // 3. Evolución de ahorros por mes (suma de saldos del mes)
     const savingsMap = new Map<string, Decimal>();
     for (const b of balances) {
       const key = `${b.year}-${b.month}`;
@@ -168,7 +165,7 @@ export class ReportsService {
       })
       .sort((a, b) => a.year - b.year || a.month - b.month);
 
-    // 4. Gasto fijo vs no fijo (tag Fijo/No fijo del Excel)
+    // La clasificacion fijo/no fijo viene de un tag heredado del Excel, no de un campo.
     let fixed = new Decimal(0);
     let variable = new Decimal(0);
     const monthlyFixedVar = new Map<string, { fixed: Decimal; variable: Decimal }>();

@@ -21,7 +21,7 @@ export function PersonDetailDialog({ person, payments, onOpenChange }: PersonDet
 
   return (
     <Dialog open={!!person} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {person.name}

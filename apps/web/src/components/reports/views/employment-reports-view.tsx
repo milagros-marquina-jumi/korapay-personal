@@ -16,6 +16,7 @@ import { CompanyProfitabilityPanel } from '@/components/reports/company-profitab
 import { EmploymentBreakdownTab } from '@/components/reports/employment-breakdown-tab';
 import { MonthlySummaryPanel } from '@/components/reports/monthly-summary-panel';
 import { OwnCompanyToggle, useOwnCompanyVisibility } from '@/components/reports/own-company-toggle';
+import { PeruLaboralCalendar } from '@/components/reports/peru-laboral-calendar';
 import { DURATION_LIMITS, MONTH_SHORT } from '@/components/reports/report-constants';
 import { TaxBurdenPanel } from '@/components/reports/tax-burden-panel';
 import { TrendDelta } from '@/components/reports/trend-delta';
@@ -23,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
-import type { EmploymentReports, TaxObligation } from '@/lib/api.types';
+import type { EmploymentContract, EmploymentReports, TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
 
@@ -67,6 +68,12 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const { data: renta } = useQuery({
     queryKey: queryKeys.taxObligations(workspaceId),
     queryFn: () => apiFetch<TaxObligation[]>(`/tax-obligations?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+  });
+
+  const { data: contratos } = useQuery({
+    queryKey: queryKeys.employmentContracts(workspaceId),
+    queryFn: () => apiFetch<EmploymentContract[]>(`/employment-contracts?workspaceId=${workspaceId}`),
     enabled: !!workspaceId,
   });
 
@@ -121,6 +128,13 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
 
   const rentaRows = renta ?? [];
   const rentaPending = rentaRows.filter((r) => r.status !== 'PAID').reduce((s, r) => s + Number(r.amount), 0);
+
+  // Gratificacion y CTS solo aplican a planilla, asi que se proyectan sobre el sueldo
+  // del contrato en planilla mas reciente, no sobre el promedio de todos los ingresos.
+  const payrollSalary = (contratos ?? [])
+    .filter((c) => c.type === 'Planilla' && (c.salary ?? c.grossSalary))
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))
+    .map((c) => Number(c.salary ?? c.grossSalary))[0];
 
   const amountHeatmap: HeatmapRow[] = (data.breakdown?.monthlyAll ?? []).map((r) => ({
     key: String(r.year),
@@ -185,15 +199,18 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
       </div>
 
       <Tabs defaultValue="evolucion">
-        <TabsList>
-          <TabsTrigger value="evolucion">Evolución</TabsTrigger>
-          <TabsTrigger value="periodos">Trimestres y meses</TabsTrigger>
-          <TabsTrigger value="empresa">Por empresa</TabsTrigger>
-          <TabsTrigger value="concepto">Por concepto</TabsTrigger>
-          <TabsTrigger value="actividad">Empresas por mes</TabsTrigger>
-          <TabsTrigger value="duracion">Duración por empresa</TabsTrigger>
-          <TabsTrigger value="renta">Renta anual</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <TabsList>
+            <TabsTrigger value="evolucion">Evolución</TabsTrigger>
+            <TabsTrigger value="periodos">Trimestres y meses</TabsTrigger>
+            <TabsTrigger value="empresa">Por empresa</TabsTrigger>
+            <TabsTrigger value="concepto">Por concepto</TabsTrigger>
+            <TabsTrigger value="actividad">Empresas por mes</TabsTrigger>
+            <TabsTrigger value="duracion">Duración por empresa</TabsTrigger>
+            <TabsTrigger value="renta">Renta anual</TabsTrigger>
+          </TabsList>
+          <PeruLaboralCalendar latestMonthlySalary={payrollSalary ?? 0} />
+        </div>
 
         <TabsContent value="evolucion" className="mt-4">
           <Card>

@@ -13,6 +13,13 @@ function startOfDayUtc(date: Date) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
+// Las fechas de contrato se guardan a medianoche UTC, pero "hoy" hay que leerlo
+// en hora local: en Peru (UTC-5) despues de las 19:00 el UTC ya avanzo de dia y
+// un contrato que vence hoy se marcaria como vencido antes de tiempo.
+function startOfLocalDay(date: Date) {
+  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 interface SequenceRow {
   id: string;
   companyId: string | null;
@@ -62,7 +69,7 @@ export function buildGrossByCompany(rows: SalaryRow[]): Map<string, string> {
 export function deriveContractState(endDate: Date | null, today = new Date()): ContractStateInfo {
   if (!endDate) return { state: 'ACTIVE', daysRemaining: null };
 
-  const days = Math.round((startOfDayUtc(endDate) - startOfDayUtc(today)) / DAY_MS);
+  const days = Math.round((startOfDayUtc(endDate) - startOfLocalDay(today)) / DAY_MS);
   if (days < 0) return { state: 'FINISHED', daysRemaining: days };
   if (days <= EXPIRING_WINDOW_DAYS) return { state: 'EXPIRING', daysRemaining: days };
   return { state: 'ACTIVE', daysRemaining: days };

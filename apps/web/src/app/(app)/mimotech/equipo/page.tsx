@@ -268,7 +268,7 @@ export default function ColaboradoresPage() {
         title="Colaboradores"
         description="Equipo directo de MIMOTECH"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button asChild variant="outline">
               <Link href="/mimotech/equipo/pagos">
                 <Receipt className="mr-2 h-4 w-4" /> Pagos

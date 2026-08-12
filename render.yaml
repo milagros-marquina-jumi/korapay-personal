@@ -14,7 +14,7 @@ services:
       - key: NEXT_PUBLIC_API_URL
         value: https://korapay-api.fly.dev/api/v1
       - key: NEXT_PUBLIC_SITE_URL
-        value: https://korapay-web.onrender.com
+        value: https://korapay-web.vercel.app
       - key: HOSTNAME
         value: 0.0.0.0
       - key: PORT

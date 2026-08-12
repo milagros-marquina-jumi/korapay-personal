@@ -15,7 +15,7 @@ async function bootstrap() {
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(compress);
-  const maxFileSize = Number(process.env.MAX_FILE_SIZE ?? '10485760');
+  const maxFileSize = Number(process.env.MAX_FILE_SIZE);
   await app.register(multipart, { limits: { fileSize: maxFileSize } });
 
   const corsOrigins = process.env.CORS_ORIGINS;
@@ -70,7 +70,7 @@ async function bootstrap() {
     logger.error('API_PORT no configurado');
     process.exit(1);
   }
-  const publicUrl = process.env.PUBLIC_URL ?? `http://localhost:${port}`;
+  const publicUrl = process.env.PUBLIC_URL;
   await app.listen(Number(port), '0.0.0.0');
   logger.log(`API running on ${publicUrl}`);
   logger.log(`Swagger at ${publicUrl}/api/docs`);

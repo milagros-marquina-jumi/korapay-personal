@@ -27,6 +27,9 @@ catalogs:
     '@fastify/static':
       specifier: ^8.2.0
       version: 8.3.0
+    '@gsap/react':
+      specifier: ^2.1.2
+      version: 2.1.2
     '@hookform/resolvers':
       specifier: ^5.2.2
       version: 5.4.0
@@ -153,6 +156,9 @@ catalogs:
     decimal.js:
       specifier: ^10.5.0
       version: 10.6.0
+    gsap:
+      specifier: ^3.13.0
+      version: 3.15.0
     jest:
       specifier: ^30.0.0
       version: 30.4.2
@@ -361,6 +367,9 @@ importers:
       '@ducanh2912/next-pwa':
         specifier: 'catalog:'
         version: 10.2.9(@types/babel__core@7.20.5)(next@15.5.23(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(webpack@5.106.2(lightningcss@1.32.0))
+      '@gsap/react':
+        specifier: 'catalog:'
+        version: 2.1.2(gsap@3.15.0)(react@19.2.7)
       '@hookform/resolvers':
         specifier: 'catalog:'
         version: 5.4.0(react-hook-form@7.82.0(react@19.2.7))
@@ -439,6 +448,9 @@ importers:
       decimal.js:
         specifier: 'catalog:'
         version: 10.6.0
+      gsap:
+        specifier: 'catalog:'
+        version: 3.15.0
       lucide-react:
         specifier: 'catalog:'
         version: 0.575.0(react@19.2.7)
@@ -1587,6 +1599,12 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@gsap/react@2.1.2':
+    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
+    peerDependencies:
+      gsap: ^3.12.5
+      react: '>=17'
 
   '@hookform/resolvers@5.4.0':
     resolution: {integrity: sha512-EIsqr/t/qbinPIhGjMdtvutIN1Kk4uwbROE9/UQ93CAVGR7GkA7Y92+fX80OzXi/OB67jVFYwKGO1WzkxmkFZw==}
@@ -4475,6 +4493,9 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   handlebars@4.7.9:
     resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
@@ -7806,6 +7827,11 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
+  '@gsap/react@2.1.2(gsap@3.15.0)(react@19.2.7)':
+    dependencies:
+      gsap: 3.15.0
+      react: 19.2.7
+
   '@hookform/resolvers@5.4.0(react-hook-form@7.82.0(react@19.2.7))':
     dependencies:
       '@standard-schema/utils': 0.3.0
@@ -10758,6 +10784,8 @@ snapshots:
   gopd@1.2.0: {}
 
   graceful-fs@4.2.11: {}
+
+  gsap@3.15.0: {}
 
   handlebars@4.7.9:
     dependencies:

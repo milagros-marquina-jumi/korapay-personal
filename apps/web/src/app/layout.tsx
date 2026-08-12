@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   manifest: '/manifest.json',
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large' } },
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',

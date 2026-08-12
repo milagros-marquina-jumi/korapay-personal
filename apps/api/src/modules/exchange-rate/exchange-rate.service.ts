@@ -93,7 +93,7 @@ export class ExchangeRateService {
     if (!apiUrl) {
       throw new ServiceUnavailableException('DECOLECTA_API_URL no configurado');
     }
-    const timeout = Number(this.config.get<string>('DECOLECTA_TIMEOUT_MS') ?? '10000');
+    const timeout = Number(this.config.get<string>('DECOLECTA_TIMEOUT_MS'));
     try {
       const data = await this.fetchWithRetry(apiUrl, apiKey, timeout);
       return this.upsert(data.date, data.sell_price);

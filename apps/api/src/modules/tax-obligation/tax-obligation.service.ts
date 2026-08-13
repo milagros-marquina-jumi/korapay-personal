@@ -33,8 +33,6 @@ export class TaxObligationService {
         principalAmount: r.principalAmount?.toString() ?? null,
         interestAmount: r.interestAmount?.toString() ?? null,
       })),
-      // Totales del fraccionamiento: cuanto es capital, cuanto interes y
-      // que porcentaje de mas se termina pagando.
       totals: filas.length
         ? {
             principal: principal.toFixed(2),
@@ -64,12 +62,6 @@ export class TaxObligationService {
     return this.serialize(found);
   }
 
-  /**
-   * Cronograma uniforme, sin interes: reparte el capital en cuotas iguales.
-   * Es solo un punto de partida; el cronograma real de SUNAT se carga con
-   * `schedule`, porque su amortizacion sube cada mes y el interes baja, y eso
-   * no se puede derivar de una tasa.
-   */
   private buildInstallments(taxObligationId: string, count: number, totalAmount: string, dueDate: Date) {
     const total = new Decimal(totalAmount || '0');
     const amortizacion = count > 0 ? total.div(count) : total;
@@ -81,7 +73,6 @@ export class TaxObligationService {
       const due = new Date(dueDate);
       due.setUTCMonth(due.getUTCMonth() - (count - i));
 
-      // La ultima cuota absorbe el redondeo para que la suma cuadre al centimo.
       const principal = i === count ? saldo : new Decimal(amortizacion.toFixed(2));
 
       rows.push({
@@ -99,10 +90,6 @@ export class TaxObligationService {
     return rows;
   }
 
-  /**
-   * Convierte el cronograma que emite SUNAT (Anexo N.º 2) en filas de cuota.
-   * Cada fila trae su propia amortizacion e interes; el total es la suma.
-   */
   private mapSchedule(taxObligationId: string, schedule: ScheduleRowDto[], fallbackDueDate: Date) {
     return schedule.map((r) => {
       const principal = new Decimal(r.principalAmount || '0');
@@ -168,16 +155,11 @@ export class TaxObligationService {
     return this.findOne(created.id, data.workspaceId);
   }
 
-  /**
-   * Una obligacion ya pagada no debe generar cuotas pendientes: producia
-   * estados imposibles como "Pagado" con 12 cuotas por pagar.
-   */
   private debeGenerarCuotas(status: string, installments?: number | null): boolean {
     if (!installments || installments <= 0) return false;
     return status !== 'PAID';
   }
 
-  /** No se puede haber pagado mas cuotas de las que tiene el fraccionamiento. */
   private validarPagadas(pagadas?: number | null, totales?: number | null): void {
     if (pagadas == null) return;
     if (!totales || totales <= 0) {
@@ -193,11 +175,6 @@ export class TaxObligationService {
     }
   }
 
-  /**
-   * Rehace el cronograma. Si viene `schedule` se copia tal cual el anexo de
-   * SUNAT; si no, se reparte el capital en cuotas iguales. Nunca toca cuotas
-   * ya pagadas.
-   */
   private async regenerarCuotas(
     id: string,
     found: {
@@ -259,7 +236,6 @@ export class TaxObligationService {
     if (data.installments !== undefined) updateData.installments = data.installments;
     if (data.schedule?.length) {
       updateData.installments = data.schedule.length;
-      // El cronograma manda: el monto de la obligacion es su total con interes.
       updateData.amount = this.totalDelCronograma(data.schedule);
     }
     if (data.paidInstallments !== undefined) updateData.paidInstallments = data.paidInstallments;

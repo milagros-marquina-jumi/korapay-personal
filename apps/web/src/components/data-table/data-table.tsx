@@ -60,7 +60,17 @@ export function DataTable<T>({
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange,
-    onExpandedChange: setExpanded,
+    onExpandedChange: (updater) => {
+      const next = typeof updater === 'function' ? updater(expanded) : updater;
+      if (typeof next !== 'object' || next === null) {
+        setExpanded(next);
+        return;
+      }
+      const abiertas = Object.keys(next).filter((k) => next[k as keyof typeof next]);
+      const previas = new Set(Object.keys(expanded).filter((k) => expanded[k as keyof typeof expanded]));
+      const recien = abiertas.find((k) => !previas.has(k));
+      setExpanded(recien ? { [recien]: true } : {});
+    },
     getRowCanExpand,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),

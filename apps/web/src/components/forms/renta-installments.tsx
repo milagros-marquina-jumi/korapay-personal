@@ -96,7 +96,6 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
               className={cn('flex items-center justify-between gap-3 px-3 py-2 text-sm', pagada && 'bg-muted/30')}
             >
               <span className="min-w-0">
-                {/* Una cuota saldada se tacha: se ve de un vistazo que ya no se debe. */}
                 <span className={cn('block tabular-nums', pagada && 'text-muted-foreground line-through')}>
                   Cuota {r.number}
                 </span>

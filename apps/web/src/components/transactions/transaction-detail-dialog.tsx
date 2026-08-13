@@ -1,15 +1,14 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { statusLabel } from '@korapay/ui';
+import { StatusBadge } from '@korapay/ui';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
-import { DetailRow } from '@/components/transactions/due-date-hint';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Transaction } from '@/lib/api.types';
 import { accountNumber, looksLikeAccount } from '@/lib/employment-income';
 import { RECURRENCE_LABELS, TRANSACTION_TYPE_LABELS } from '@/lib/labels';
 import { isFixedExpense, meaningfulTags } from '@/lib/transaction-tags';
-import { formatDate, formatDateLong } from '@/lib/utils';
+import { cn, formatDate, formatDateLong } from '@/lib/utils';
 
 function paymentMethods(tags?: string[]) {
   const methods = meaningfulTags(tags);
@@ -43,54 +42,88 @@ export function TransactionDetailDialog({
   const account = looksLikeAccount(notes) ? accountNumber(notes) : null;
   const freeNotes = account ? '' : notes;
 
+  const esIngreso = transaction?.type === 'INCOME';
+  const descuento = showGross ? String(Number(gross) - Number(transaction?.amountOriginal)) : null;
+  const moneda = (transaction?.currency ?? 'PEN') as 'PEN' | 'USD';
+
   return (
     <Dialog open={transaction !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{transaction?.concept}</DialogTitle>
-          <DialogDescription>Detalle del movimiento</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         {transaction && (
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-            <DetailRow label="Fecha" value={formatDateLong(transaction.date)} />
-            <DetailRow label="Tipo" value={TRANSACTION_TYPE_LABELS[transaction.type] ?? transaction.type} />
-            <DetailRow label="Monto" value={amountLabel(transaction)} />
-            {showGross && (
-              <DetailRow
-                label="Monto bruto"
-                value={`${formatMoney(gross, transaction.currency as 'PEN' | 'USD')} (descuento ${formatMoney(
-                  String(Number(gross) - Number(transaction.amountOriginal)),
-                  transaction.currency as 'PEN' | 'USD',
-                )})`}
+          <>
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="pr-6 text-lg leading-tight">{transaction.concept}</DialogTitle>
+              <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span>{TRANSACTION_TYPE_LABELS[transaction.type] ?? transaction.type}</span>
+                <span aria-hidden="true">·</span>
+                <span>{formatDateLong(transaction.date)}</span>
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Monto</p>
+                <p
+                  className={cn('font-semibold text-2xl tabular-nums', esIngreso ? 'text-success' : 'text-foreground')}
+                >
+                  {esIngreso ? '+' : ''}
+                  {amountLabel(transaction)}
+                </p>
+                {descuento && gross && (
+                  <p className="mt-0.5 text-muted-foreground text-xs tabular-nums">
+                    Bruto {formatMoney(gross, moneda)} · descuento {formatMoney(descuento, moneda)}
+                  </p>
+                )}
+              </div>
+              <StatusBadge status={transaction.status} />
+            </div>
+
+            <dl className="divide-y rounded-xl border text-sm">
+              <DetailLine label={categoryLabel} value={categoryName(transaction.categoryId)} />
+              {transaction.type === 'EXPENSE' && (
+                <DetailLine label="Tipo de gasto" value={isFixedExpense(transaction.tags) ? 'Fijo' : 'No fijo'} />
+              )}
+              <DetailLine label="Forma de pago" value={paymentMethods(transaction.tags)} />
+              {account && <DetailLine label="Número de cuenta" value={account} />}
+              <DetailLine label="Vencimiento" value={transaction.dueDate ? formatDateLong(transaction.dueDate) : '—'} />
+              <DetailLine
+                label="Se repite"
+                value={
+                  transaction.isRecurring
+                    ? (RECURRENCE_LABELS[transaction.recurrenceRule?.frequency ?? ''] ?? 'Sí')
+                    : 'No'
+                }
               />
-            )}
-            <DetailRow label="Estado" value={statusLabel(transaction.status)} />
-            <DetailRow label={categoryLabel} value={categoryName(transaction.categoryId)} />
-            {transaction.type === 'EXPENSE' && (
-              <DetailRow label="Tipo de gasto" value={isFixedExpense(transaction.tags) ? 'Fijo' : 'No fijo'} />
-            )}
-            <DetailRow label="Forma de pago" value={paymentMethods(transaction.tags)} />
-            {account && <DetailRow label="Número de cuenta" value={account} />}
-            <DetailRow label="Vencimiento" value={transaction.dueDate ? formatDateLong(transaction.dueDate) : '—'} />
-            <DetailRow
-              label="Recurrencia"
-              value={
-                transaction.isRecurring
-                  ? (RECURRENCE_LABELS[transaction.recurrenceRule?.frequency ?? ''] ?? 'Sí')
-                  : 'No'
-              }
-            />
+            </dl>
+
             {transaction.isRecurring && transaction.recurrenceRule && workspaceId && (
               <RecurrenceHistory workspaceId={workspaceId} ruleId={transaction.recurrenceRule.id} />
             )}
-            <div className="col-span-2">
-              <dt className="text-xs text-muted-foreground">Notas</dt>
-              <dd className="mt-0.5 whitespace-pre-wrap">{freeNotes || '—'}</dd>
-            </div>
-          </dl>
+
+            {freeNotes && (
+              <div className="rounded-xl border px-4 py-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Notas</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm">{freeNotes}</p>
+              </div>
+            )}
+          </>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DetailLine({ label, value }: Readonly<{ label: string; value: string }>) {
+  const vacio = !value || value === '—';
+  return (
+    <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+      <dt className="shrink-0 text-muted-foreground text-xs">{label}</dt>
+      <dd
+        className={cn('min-w-0 text-right font-medium tabular-nums', vacio && 'font-normal text-muted-foreground/60')}
+      >
+        {value || '—'}
+      </dd>
+    </div>
   );
 }
 
@@ -106,20 +139,19 @@ export function UsdConversionDialog({
           <DialogDescription>{transaction?.concept}</DialogDescription>
         </DialogHeader>
         {transaction && (
-          <div className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Monto en dólares</span>
-              <span className="font-semibold tabular-nums">{formatMoney(transaction.amountOriginal, 'USD')}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Tipo de cambio del {formatDate(transaction.date)}</span>
-              <span className="font-medium tabular-nums">S/ {Number(transaction.exchangeRate ?? 0).toFixed(3)}</span>
-            </div>
-            <div className="flex items-center justify-between border-t pt-3">
-              <span className="font-medium">Total en soles</span>
-              <span className="font-semibold tabular-nums text-brand">
+          <div className="space-y-3">
+            <dl className="divide-y rounded-xl border text-sm">
+              <DetailLine label="Monto en dólares" value={formatMoney(transaction.amountOriginal, 'USD')} />
+              <DetailLine
+                label={`Tipo de cambio del ${formatDate(transaction.date)}`}
+                value={`S/ ${Number(transaction.exchangeRate ?? 0).toFixed(3)}`}
+              />
+            </dl>
+            <div className="flex items-end justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total en soles</p>
+              <p className="font-semibold text-2xl text-brand tabular-nums">
                 {formatMoney(transaction.amountBase, 'PEN')}
-              </span>
+              </p>
             </div>
           </div>
         )}

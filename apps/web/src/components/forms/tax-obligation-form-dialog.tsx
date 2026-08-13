@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoneyField } from '@/components/ui/money-field';
+import { MoneyField } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
@@ -37,7 +37,6 @@ const schema = z
     paidInstallments: z.string().optional(),
     notes: z.string().optional(),
   })
-  // No se puede haber pagado mas cuotas de las que existen.
   .refine(
     (v) => {
       const total = Number(v.installments || 0);

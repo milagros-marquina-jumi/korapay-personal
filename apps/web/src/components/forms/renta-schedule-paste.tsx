@@ -29,8 +29,6 @@ interface Props {
 const EJEMPLO = `1   31/07/2025   1,419.00   144.00   1,563.00
 2   29/08/2025   1,429.00   117.00   1,546.00`;
 
-// Un fraccionamiento puede llegar a 72 cuotas (~55 caracteres cada una) y el
-// texto del PDF arrastra cabecera y notas.
 const MAX_CRONOGRAMA = 8000;
 
 export function RentaSchedulePaste({ workspaceId, obligation }: Readonly<Props>) {
@@ -84,7 +82,6 @@ export function RentaSchedulePaste({ workspaceId, obligation }: Readonly<Props>)
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           rows={14}
-          // El limite por defecto (500) corta un cronograma de 12 cuotas.
           maxLength={MAX_CRONOGRAMA}
           placeholder={EJEMPLO}
           className="max-h-[40vh] min-h-56 resize-y whitespace-pre font-mono text-xs leading-relaxed"
@@ -129,7 +126,6 @@ export function RentaSchedulePaste({ workspaceId, obligation }: Readonly<Props>)
 
                 <div className="max-h-56 overflow-y-auto rounded-lg border">
                   <table className="w-full text-xs">
-                    {/* Opaco: si no, las filas se transparentan por debajo al hacer scroll. */}
                     <thead className="sticky top-0 bg-card shadow-[inset_0_-1px_0_var(--color-border)]">
                       <tr className="text-left text-muted-foreground">
                         <th className="px-2 py-1.5 font-medium">#</th>

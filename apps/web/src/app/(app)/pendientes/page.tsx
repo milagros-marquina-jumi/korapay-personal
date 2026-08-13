@@ -29,7 +29,7 @@ import {
 import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MoneyField } from '@/components/ui/money-field';
+import { MoneyField } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';

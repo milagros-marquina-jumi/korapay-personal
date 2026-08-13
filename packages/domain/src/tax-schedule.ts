@@ -18,7 +18,6 @@ function esMonto(token: string): boolean {
   return MONTO.test(token) && /\d/.test(token);
 }
 
-/** "1,419.00" y "1.419,00" son el mismo numero segun de donde se copie. */
 function aNumero(token: string): string {
   let t = token.trim();
   const ultimaComa = t.lastIndexOf(',');
@@ -49,7 +48,6 @@ function esInicioDeCuota(tokens: string[], i: number): boolean {
   return !!siguiente && !!aIso(siguiente);
 }
 
-/** Toma los montos que siguen a la fecha, hasta que empieza la cuota siguiente. */
 function montosDeLaCuota(tokens: string[], desde: number): { montos: string[]; fin: number } {
   const montos: string[] = [];
   let j = desde;
@@ -61,37 +59,18 @@ function montosDeLaCuota(tokens: string[], desde: number): { montos: string[]; f
   return { montos, fin: j };
 }
 
-/**
- * Decide cuales de los montos son amortizacion, interes y total. El cronograma
- * trae una columna de saldo que no forma parte de la cuota, y segun como se
- * copie puede quedar antes o despues. Se elige la combinacion donde
- * amortizacion + interes == total; si ninguna cuadra, se asume el orden normal.
- */
 function elegirMontos(montos: string[]): { principal: string; interes: string; total: string } {
   const n = montos.map((m) => aNumero(m));
   const principal = n[0] as string;
   const interes = n[1] as string;
   const esperado = (Number(principal) + Number(interes)).toFixed(2);
 
-  // El total es el monto que cuadra con amortizacion + interes. Si aparece,
-  // lo demas (el saldo) se descarta sin importar en que columna vino.
   const total = n.slice(2).find((m) => m === esperado) ?? n[2] ?? esperado;
   return { principal, interes, total };
 }
 
-/**
- * Lee el cronograma de fraccionamiento de SUNAT pegado como texto. Acepta lo
- * que salga del PDF (un valor por linea o columnas con un solo espacio), de
- * una tabla web o Excel (tabs) y de una tabla markdown.
- *
- * Estructura esperada por cuota: numero, vencimiento, amortizacion, interes,
- * total y, opcionalmente, saldo. El saldo se ignora: es informativo.
- */
 export function parseTaxSchedule(texto: string): ParsedSchedule {
   const warnings: string[] = [];
-  // Cualquier espacio separa: SUNAT a veces pega las columnas con un solo
-  // espacio y a veces con tabs. Los tokens que no son numero ni fecha
-  // (titulos, notas, "N°") se descartan al buscar el inicio de cada cuota.
   const tokens = texto
     .split(/[\s|]+/)
     .map((t) => t.trim())

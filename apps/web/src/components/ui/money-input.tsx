@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { type Control, Controller, type FieldValues, type Path } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 
 interface MoneyInputProps {
@@ -11,6 +12,11 @@ interface MoneyInputProps {
   maxIntegerDigits?: number;
   maxDecimalDigits?: number;
   className?: string;
+}
+
+interface MoneyFieldProps<T extends FieldValues> extends Omit<MoneyInputProps, 'value' | 'onValueChange'> {
+  control: Control<T>;
+  name: Path<T>;
 }
 
 function groupThousands(raw: string): string {
@@ -58,6 +64,30 @@ export function MoneyInput({
       value={display}
       onChange={(e) => handleChange(e.target.value)}
       className={className}
+    />
+  );
+}
+
+export function MoneyField<T extends FieldValues>({
+  control,
+  name,
+  placeholder = '0.00',
+  maxDecimalDigits = 2,
+  ...rest
+}: Readonly<MoneyFieldProps<T>>) {
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <MoneyInput
+          {...rest}
+          value={field.value ?? ''}
+          onValueChange={field.onChange}
+          placeholder={placeholder}
+          maxDecimalDigits={maxDecimalDigits}
+        />
+      )}
     />
   );
 }

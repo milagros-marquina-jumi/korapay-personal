@@ -31,8 +31,6 @@ export class AuthGuard implements CanActivate {
 
   private async resolveUser(): Promise<AuthUser> {
     const email = this.configService.get<string>('DEMO_USER_EMAIL');
-    // Sin la variable, la busqueda por email haria match con nada y el error
-    // apuntaria al seed en vez de al arranque sin --env-file.
     if (!email) {
       throw new UnauthorizedException(
         'Falta DEMO_USER_EMAIL. Arranca la API con "node --env-file=.env dist/main.js" o via "pnpm start:dev".',

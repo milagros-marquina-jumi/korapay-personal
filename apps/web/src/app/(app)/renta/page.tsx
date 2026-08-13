@@ -228,7 +228,7 @@ function RentaContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         rowClassName={(o) => highlightClass(o.id)}
-        getRowCanExpand={(row) => (row.original.installmentRows?.length ?? 0) > 0}
+        getRowCanExpand={(row) => (row.original.installmentRows?.length ?? 0) > 0 || !!row.original.installments}
         renderExpanded={(o) =>
           activeWorkspaceId ? <RentaInstallments workspaceId={activeWorkspaceId} obligation={o} /> : null
         }

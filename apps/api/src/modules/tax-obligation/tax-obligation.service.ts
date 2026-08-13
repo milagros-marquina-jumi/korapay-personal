@@ -62,7 +62,7 @@ export class TaxObligationService {
     return this.serialize(found);
   }
 
-  private buildInstallments(taxObligationId: string, count: number, totalAmount: string, dueDate: Date) {
+  private buildInstallments(taxObligationId: string, count: number, totalAmount: string, dueDate: Date, pagadas = 0) {
     const total = new Decimal(totalAmount || '0');
     const amortizacion = count > 0 ? total.div(count) : total;
 
@@ -82,12 +82,17 @@ export class TaxObligationService {
         principalAmount: principal.toFixed(2),
         interestAmount: '0.00',
         dueDate: due,
-        status: 'PENDING',
+        status: i <= pagadas ? 'PAID' : 'PENDING',
       });
 
       saldo = saldo.minus(principal);
     }
     return rows;
+  }
+
+  private cuotasPagadas(status: string, count: number, paidInstallments?: number | null): number {
+    if (status === 'PAID') return count;
+    return Math.min(paidInstallments ?? 0, count);
   }
 
   private mapSchedule(taxObligationId: string, schedule: ScheduleRowDto[], fallbackDueDate: Date) {
@@ -147,17 +152,23 @@ export class TaxObligationService {
       await this.prisma.taxObligationInstallment.createMany({
         data: this.mapSchedule(created.id, data.schedule, vence),
       });
-    } else if (this.debeGenerarCuotas(estado, data.installments)) {
+    } else if (this.debeGenerarCuotas(data.installments)) {
+      const cantidad = data.installments as number;
       await this.prisma.taxObligationInstallment.createMany({
-        data: this.buildInstallments(created.id, data.installments as number, data.amount ?? '0', vence),
+        data: this.buildInstallments(
+          created.id,
+          cantidad,
+          data.amount ?? '0',
+          vence,
+          this.cuotasPagadas(estado, cantidad, data.paidInstallments),
+        ),
       });
     }
     return this.findOne(created.id, data.workspaceId);
   }
 
-  private debeGenerarCuotas(status: string, installments?: number | null): boolean {
-    if (!installments || installments <= 0) return false;
-    return status !== 'PAID';
+  private debeGenerarCuotas(installments?: number | null): boolean {
+    return !!installments && installments > 0;
   }
 
   private validarPagadas(pagadas?: number | null, totales?: number | null): void {
@@ -180,11 +191,20 @@ export class TaxObligationService {
     found: {
       status: string;
       amount: Decimal | null;
+      paidInstallments: number | null;
       dueDate: Date;
       installmentRows: { status: string }[];
     },
     data: UpdateTaxObligationDto,
   ): Promise<void> {
+    if (data.status === 'PAID' && found.installmentRows.length) {
+      await this.prisma.taxObligationInstallment.updateMany({
+        where: { taxObligationId: id, status: { not: 'PAID' } },
+        data: { status: 'PAID' },
+      });
+      return;
+    }
+
     if (found.installmentRows.some((r) => r.status === 'PAID')) return;
 
     const vence = data.dueDate ? new Date(data.dueDate as string) : found.dueDate;
@@ -208,10 +228,16 @@ export class TaxObligationService {
     await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
 
     const estado = (data.status as string) ?? found.status;
-    if (!this.debeGenerarCuotas(estado, cantidad)) return;
+    if (!this.debeGenerarCuotas(cantidad)) return;
 
     await this.prisma.taxObligationInstallment.createMany({
-      data: this.buildInstallments(id, cantidad, (data.amount as string) ?? found.amount?.toString() ?? '0', vence),
+      data: this.buildInstallments(
+        id,
+        cantidad,
+        (data.amount as string) ?? found.amount?.toString() ?? '0',
+        vence,
+        this.cuotasPagadas(estado, cantidad, data.paidInstallments ?? found.paidInstallments),
+      ),
     });
   }
 

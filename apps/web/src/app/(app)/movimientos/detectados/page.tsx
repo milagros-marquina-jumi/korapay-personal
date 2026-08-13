@@ -36,7 +36,7 @@ export default function DetectadosPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
+  const [statusFilter, setStatusFilter] = useState('PENDING_REVIEW');
   const [bankFilter, setBankFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
   const [confidenceFilter, setConfidenceFilter] = useState(FILTER_ALL);
@@ -176,18 +176,6 @@ export default function DetectadosPage() {
         id: 'bank',
         header: 'Banco',
         cell: ({ row }) => <span className="text-sm">{row.original.bankName ?? '—'}</span>,
-      },
-      {
-        id: 'source',
-        header: 'Cuenta',
-        cell: ({ row }) => {
-          const src = row.original.emailSource;
-          return (
-            <span className="text-sm text-muted-foreground" title={src?.name ?? undefined}>
-              {src?.email ?? '—'}
-            </span>
-          );
-        },
       },
       {
         id: 'card',
@@ -453,6 +441,10 @@ export default function DetectadosPage() {
           </>
         }
       />
+
+      <p className="text-sm text-muted-foreground">
+        {rows.length} resultado{rows.length === 1 ? '' : 's'}
+      </p>
 
       <DataTable
         columns={columns}

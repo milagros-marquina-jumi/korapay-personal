@@ -106,3 +106,13 @@ export function formatDuration(from?: string | Date | null, to?: string | Date |
   parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
   return parts.join(' ');
 }
+
+const DAY_MS = 86_400_000;
+
+export function daysUntilDue(dueDate: string | Date): number {
+  const today = new Date();
+  const startOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const due = new Date(dueDate);
+  const startOfDue = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+  return Math.round((startOfDue - startOfToday) / DAY_MS);
+}

@@ -193,10 +193,25 @@ export class TaxObligationService {
       amount: Decimal | null;
       paidInstallments: number | null;
       dueDate: Date;
-      installmentRows: { status: string }[];
+      installmentRows: { number: number; status: string }[];
     },
     data: UpdateTaxObligationDto,
   ): Promise<void> {
+    const vence = data.dueDate ? new Date(data.dueDate as string) : found.dueDate;
+
+    if (data.schedule?.length) {
+      const estado = (data.status as string) ?? found.status;
+      const yaPagadas = new Set(found.installmentRows.filter((r) => r.status === 'PAID').map((r) => r.number));
+      await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
+      await this.prisma.taxObligationInstallment.createMany({
+        data: this.mapSchedule(id, data.schedule, vence).map((r) => ({
+          ...r,
+          status: estado === 'PAID' || yaPagadas.has(r.number) ? 'PAID' : r.status,
+        })),
+      });
+      return;
+    }
+
     if (data.status === 'PAID' && found.installmentRows.length) {
       await this.prisma.taxObligationInstallment.updateMany({
         where: { taxObligationId: id, status: { not: 'PAID' } },
@@ -206,16 +221,6 @@ export class TaxObligationService {
     }
 
     if (found.installmentRows.some((r) => r.status === 'PAID')) return;
-
-    const vence = data.dueDate ? new Date(data.dueDate as string) : found.dueDate;
-
-    if (data.schedule?.length) {
-      await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
-      await this.prisma.taxObligationInstallment.createMany({
-        data: this.mapSchedule(id, data.schedule, vence),
-      });
-      return;
-    }
 
     const nuevas = data.installments as number | undefined;
     const cantidad = nuevas ?? found.installmentRows.length;

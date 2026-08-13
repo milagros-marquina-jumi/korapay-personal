@@ -10,7 +10,7 @@ import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch } from '@/lib/api';
 import type { TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, daysUntilDue, formatDate } from '@/lib/utils';
 
 interface Props {
   workspaceId: string;
@@ -54,6 +54,7 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
     .filter((r) => r.status !== 'PAID')
     .reduce((s, r) => s + Number(r.amount), 0)
     .toFixed(2);
+  const ordenadas = [...rows].sort((a, b) => b.number - a.number);
 
   return (
     <div className="px-4 py-3">
@@ -88,12 +89,18 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
       )}
 
       <div className="divide-y rounded-lg border">
-        {rows.map((r) => {
+        {ordenadas.map((r) => {
           const pagada = r.status === 'PAID';
+          const diasRestantes = r.dueDate ? daysUntilDue(r.dueDate) : null;
+          const vencida = !pagada && diasRestantes !== null && diasRestantes < 0;
           return (
             <div
               key={r.id}
-              className={cn('flex items-center justify-between gap-3 px-3 py-2 text-sm', pagada && 'bg-muted/30')}
+              className={cn(
+                'flex items-center justify-between gap-3 px-3 py-2 text-sm',
+                pagada && 'bg-muted/30',
+                vencida && 'bg-destructive/5',
+              )}
             >
               <span className="min-w-0">
                 <span className={cn('block tabular-nums', pagada && 'text-muted-foreground line-through')}>
@@ -108,7 +115,11 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
               </span>
               <div className="flex shrink-0 items-center gap-3">
                 {r.dueDate && (
-                  <span className="hidden text-muted-foreground text-xs sm:inline">vence {formatDate(r.dueDate)}</span>
+                  <span
+                    className={cn('hidden text-xs sm:inline', vencida ? 'text-destructive' : 'text-muted-foreground')}
+                  >
+                    vence {formatDate(r.dueDate)}
+                  </span>
                 )}
                 <span
                   className={cn(
@@ -118,7 +129,7 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
                 >
                   {formatMoney(r.amount, 'PEN')}
                 </span>
-                <StatusBadge status={r.status} />
+                <StatusBadge status={vencida ? 'OVERDUE' : r.status} />
                 {pagada ? (
                   <IconAction
                     icon={RotateCcw}

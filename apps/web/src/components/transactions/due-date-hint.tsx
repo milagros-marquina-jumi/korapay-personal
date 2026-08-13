@@ -2,18 +2,9 @@
 
 import { AlertTriangle } from 'lucide-react';
 import type { Transaction } from '@/lib/api.types';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, daysUntilDue, formatDate } from '@/lib/utils';
 
-const DAY_MS = 86_400_000;
 const WARN_WINDOW_DAYS = 7;
-
-function daysUntilDue(dueDate: string) {
-  const today = new Date();
-  const startOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const due = new Date(dueDate);
-  const startOfDue = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-  return Math.round((startOfDue - startOfToday) / DAY_MS);
-}
 
 function dueLabel(days: number) {
   if (days < 0) return days === -1 ? 'Venció ayer' : `Venció hace ${Math.abs(days)} días`;

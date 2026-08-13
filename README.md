@@ -6,44 +6,30 @@ Gestion financiera personal y empresarial. Evolucion de Mi Bolsillo.
 
 - **Frontend**: Next.js 15 + React 19 + Tailwind CSS + shadcn/ui
 - **Backend**: NestJS 11 + Fastify + Prisma ORM
-- **Database**: PostgreSQL
-- **Auth**: Demo mode (local dev)
+- **Base de datos**: PostgreSQL
+- **Auth**: Modo demo
 - **Monorepo**: Turborepo + pnpm workspaces
 
 ## Requisitos
 
 - Node.js 24 LTS
-- pnpm 11
-- PostgreSQL 16+ (Docker o local)
+- pnpm 10
+- PostgreSQL 16+ (Docker)
+- Fly.io CLI (solo para desplegar backend)
 
-## Inicio rapido
+## Inicio rapido (local)
 
 ```bash
-cp .env.example .env    # DEMO_MODE=true por defecto
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
 pnpm install
 pnpm docker:up          # PostgreSQL en puerto 5435
-pnpm db:migrate         # Migraciones iniciales
-pnpm db:seed            # Cargar datos reales (desde prisma/data/*.json)
+pnpm db:migrate
+pnpm db:seed
 pnpm dev                # Web :3060 + API :3061
 ```
 
-Swagger: `http://localhost:3061/api/docs`.
-
-## Datos reales
-
-El seed carga los datos reales del libro `KoraPay.xlsx` (transcripcion 1:1). El
-script `prisma/data/build.py` (Python + openpyxl) exporta cada hoja a
-`prisma/data/*.json`, y `prisma/seed.ts` los mapea a las entidades correctas:
-ingresos/egresos personales, costos y pagos de MIMOTECH, talentos y sus
-distribuciones de ingreso, ahorros y obligaciones tributarias. Los numeros de
-cuenta y tarjeta se enmascaran automaticamente (`redactSensitiveData`).
-
-Regenerar los JSON si cambia el Excel:
-
-```bash
-python prisma/data/build.py
-pnpm db:seed
-```
+Swagger: `http://localhost:3061/api/docs`
 
 ## Credenciales demo
 
@@ -51,18 +37,57 @@ pnpm db:seed
 mila@korapay.demo / KoraPayAsesino1000
 ```
 
-Autenticacion local en modo demo (`DEMO_MODE=true`). El `AuthGuard` resuelve el
-perfil demo desde la BD; no hay proveedor de auth externo.
+## Variables de entorno
+
+- Backend: `apps/api/.env` (local) y `apps/api/.env.production` (produccion)
+- Frontend: `apps/web/.env` (local) y `apps/web/.env.production` (produccion)
+- Los `.env.example` son plantillas versionadas; los `.env` reales no se versionan.
+
+## Despliegue
+
+### Backend — Fly.io
+
+```bash
+flyctl deploy                        # desde la raiz (usa fly.toml + apps/api/Dockerfile)
+flyctl secrets set KEY=VAL --app korapay-api
+```
+
+- App: `korapay-api` → https://korapay-api.fly.dev
+- BD: `korapay-db` (PostgreSQL en Fly.io)
+- Las migraciones corren solas en cada deploy (`release_command` en `fly.toml`).
+
+### Frontend — Vercel
+
+Conectado al repo GitHub `milagros-marquina-jumi/korapay-personal` (rama `master`).
+Cada push a `master` dispara el deploy automatico.
+
+- URL: https://korapay-web.vercel.app
+- Env vars en Vercel: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`
+
+Deploy manual:
+
+```bash
+cd apps/web && vercel --prod
+```
+
+## Datos reales
+
+El seed carga los datos del libro `KoraPay.xlsx`. Para regenerarlos si cambia el Excel:
+
+```bash
+python prisma/data/build.py
+pnpm db:seed
+```
 
 ## Estructura
 
 ```
 korapay/
   apps/
-    web/          # Next.js frontend (App Router, route groups (app)/(auth))
-    api/          # NestJS backend (Fastify, Prisma, guards multi-tenant)
+    web/          # Next.js (App Router, route groups (app)/(auth))
+    api/          # NestJS (Fastify, Prisma, guards multi-tenant)
   packages/
-    ui/           # Componentes de dominio compartidos (KPICard, MoneyDisplay...)
+    ui/           # Componentes de dominio (KPICard, MoneyDisplay...)
     domain/       # Logica pura (money, enums, validacion)
     typescript-config/
   prisma/
@@ -71,4 +96,5 @@ korapay/
     data/         # JSON generados del Excel + build.py
   docs/           # Documentacion
   docker/         # Docker compose (PostgreSQL)
+  fly.toml        # Configuracion de Fly.io (backend)
 ```

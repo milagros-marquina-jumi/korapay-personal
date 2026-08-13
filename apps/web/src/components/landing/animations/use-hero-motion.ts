@@ -57,30 +57,15 @@ export function useHeroMotion({ scope }: Options): void {
             delay: 0.95,
             ease: EASE.entrance,
           });
-          gsap.from('[data-hero="kpi"] > *', {
-            autoAlpha: 0,
-            y: DISTANCE.subtle,
-            duration: DURATION.fast,
+          // Las barras del grafico crecen desde la base al entrar la ventana.
+          gsap.from('[data-hero="panel"] [style*="height"]', {
+            scaleY: 0,
+            transformOrigin: 'bottom',
+            duration: DURATION.slow,
             stagger: STAGGER.tight,
-            delay: 1.4,
+            delay: 1.25,
             ease: EASE.entrance,
           });
-
-          // Los KPI estan sobre el pliegue: se cuentan con su propio tween, no
-          // con ScrollTrigger, que nunca dispararia por estar ya en pantalla.
-          for (const el of gsap.utils.toArray<HTMLElement>('[data-counter]')) {
-            const destino = Number(el.dataset.counter) || 0;
-            const contador = { valor: 0 };
-            gsap.to(contador, {
-              valor: destino,
-              duration: DURATION.deliberate,
-              ease: EASE.out,
-              delay: 0.6,
-              onUpdate: () => {
-                el.textContent = Math.round(contador.valor).toLocaleString('es-PE');
-              },
-            });
-          }
 
           // Brillo lento de fondo: decorativo, sin informacion asociada.
           gsap.to('[data-hero="glow"]', {

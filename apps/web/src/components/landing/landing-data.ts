@@ -16,19 +16,13 @@ import {
 } from 'lucide-react';
 
 export const HERO = {
-  badge: 'Finanzas personales y de negocio en un solo lugar',
-  titulo: ['Tu dinero,', 'sin hojas de cálculo', 'ni sorpresas.'],
+  badge: 'Hecho para quien factura por su cuenta',
+  titulo: ['Cobras de varios sitios.', 'Tus cuentas', 'deberían saberlo.'],
   subtitulo:
-    'KoraPay reúne tus movimientos, ahorros, deudas, contratos y renta anual en workspaces separados. Cada negocio con sus números, sin mezclarlos.',
+    'Sueldo, proyectos, cliente propio y renta anual no caben en la misma hoja de Excel. KoraPay los separa en workspaces y te dice qué debes, qué te deben y cuándo.',
   ctaPrincipal: { label: 'Entrar a mi cuenta', href: '/dashboard' },
-  ctaSecundario: { label: 'Ver funcionalidades', href: '#funcionalidades' },
+  ctaSecundario: { label: 'Ver qué hace', href: '#funcionalidades' },
 } as const;
-
-export const KPIS = [
-  { valor: 4, sufijo: '', label: 'workspaces independientes' },
-  { valor: 7, sufijo: '', label: 'fuentes en el calendario' },
-  { valor: 100, sufijo: '%', label: 'offline con PWA' },
-] as const;
 
 export const WORKSPACES = [
   {

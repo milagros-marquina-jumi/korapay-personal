@@ -7,6 +7,15 @@ import { useLandingMotion } from '@/components/landing/animations/use-landing-mo
 import { FEATURES, PWA, REPORTES, WORKSPACES } from '@/components/landing/landing-data';
 import { Button } from '@/components/ui/button';
 
+// Nombres y cifras inventados para la vitrina publica.
+const DURACION_DEMO = [
+  { n: 'Cliente A', d: '1 año 6 meses', w: 'w-full', c: '2 contratos' },
+  { n: 'Cliente B', d: '1 año 2 meses', w: 'w-[78%]', c: '1 contrato' },
+  { n: 'Cliente C', d: '11 meses', w: 'w-[61%]', c: '1 contrato' },
+  { n: 'Cliente D', d: '8 meses', w: 'w-[44%]', c: '1 contrato' },
+  { n: 'Cliente E', d: '5 meses', w: 'w-[28%]', c: '1 contrato' },
+] as const;
+
 function SectionTitle({
   eyebrow,
   titulo,
@@ -31,8 +40,8 @@ export function LandingSections() {
         <div className="mx-auto w-full max-w-6xl">
           <SectionTitle
             eyebrow="Workspaces"
-            titulo="Cada negocio con sus propios números"
-            descripcion="Lo personal no se mezcla con lo laboral ni con la empresa. Cambias de workspace y cambia todo: movimientos, catálogos y reportes."
+            titulo="Cuatro bolsillos que no se tocan entre sí"
+            descripcion="Cambias de workspace y cambia todo: movimientos, catálogos y reportes. El gasto de casa nunca aparece en los números de la empresa."
           />
           <div data-stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {WORKSPACES.map((ws) => (
@@ -63,8 +72,8 @@ export function LandingSections() {
         <div className="mx-auto w-full max-w-6xl">
           <SectionTitle
             eyebrow="Funcionalidades"
-            titulo="Lo que hace KoraPay por ti"
-            descripcion="Menos registro manual, más decisiones con datos que ya tienes."
+            titulo="Seis cosas que ya no haces a mano"
+            descripcion="Cada una nació de un dolor concreto: la cuota que se pasó, el contrato que nadie recordaba, el correo del banco sin registrar."
           />
           <div data-stagger className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
@@ -105,13 +114,7 @@ export function LandingSections() {
             <p className="font-display font-semibold text-foreground">Duración por empresa</p>
             <p className="text-muted-foreground text-xs">Los reingresos se suman sin duplicar periodos</p>
             <div className="mt-5 space-y-3.5">
-              {[
-                { n: 'LLATAN', d: '1 año 4 meses', w: 'w-full', c: '2 contratos' },
-                { n: 'CSTI Corp', d: '1 año 4 meses', w: 'w-[97%]', c: '1 contrato' },
-                { n: 'FULLTIMEFORCE', d: '1 año 2 meses', w: 'w-[84%]', c: '1 contrato' },
-                { n: 'SYNOPSIS', d: '9 meses', w: 'w-[56%]', c: '1 contrato' },
-                { n: 'UCIC', d: '9 meses', w: 'w-[53%]', c: '1 contrato' },
-              ].map((e) => (
+              {DURACION_DEMO.map((e) => (
                 <div key={e.n}>
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="truncate font-medium text-foreground text-sm">{e.n}</span>
@@ -124,6 +127,7 @@ export function LandingSections() {
                 </div>
               ))}
             </div>
+            <p className="mt-4 border-t pt-3 text-[11px] text-muted-foreground">Datos de demostración.</p>
           </div>
         </div>
       </section>
@@ -152,10 +156,11 @@ export function LandingSections() {
       <section className="border-t px-4 py-20 md:px-6 md:py-28">
         <div data-reveal className="mx-auto w-full max-w-3xl text-center">
           <h2 className="font-display font-bold text-3xl text-foreground tracking-tight md:text-4xl">
-            Tus finanzas ordenadas desde hoy
+            Empieza por el bolsillo que más te preocupa
           </h2>
           <p className="mt-3 text-base text-muted-foreground">
-            Entra y empieza con el workspace que más te urge. Los demás pueden esperar.
+            No hace falta migrar todo de golpe. Un workspace, los movimientos del mes, y ya ves de dónde sale y a dónde
+            va tu dinero.
           </p>
           <Button asChild size="lg" className="mt-8">
             <Link href="/dashboard">

@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -43,7 +44,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <Logo size={48} withWordmark={false} className="mb-2" />
+          <Link href="/" aria-label="Ir a la página de inicio">
+            <Logo size={48} withWordmark={false} className="mb-2" />
+          </Link>
           <h1 className="font-display text-2xl font-semibold leading-none tracking-tight">KoraPay</h1>
           <CardDescription>Gestión financiera personal y empresarial</CardDescription>
         </CardHeader>

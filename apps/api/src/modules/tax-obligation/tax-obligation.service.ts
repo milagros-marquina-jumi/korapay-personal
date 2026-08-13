@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
-import type { UpdateTaxObligationDto } from './tax-obligation.dto';
+import type { ScheduleRowDto, UpdateTaxObligationDto } from './tax-obligation.dto';
 
 @Injectable()
 export class TaxObligationService {
@@ -10,13 +10,39 @@ export class TaxObligationService {
 
   private serialize(t: {
     amount: Decimal | null;
-    installmentRows?: { amount: Decimal; [k: string]: unknown }[];
+    installmentRows?: {
+      amount: Decimal;
+      principalAmount?: Decimal | null;
+      interestAmount?: Decimal | null;
+      [k: string]: unknown;
+    }[];
     [k: string]: unknown;
   }) {
+    const filas = t.installmentRows ?? [];
+    const principal = filas.reduce((s, r) => s.plus(r.principalAmount ?? r.amount), new Decimal(0));
+    const interes = filas.reduce((s, r) => s.plus(r.interestAmount ?? 0), new Decimal(0));
+    const totalConInteres = principal.plus(interes);
+    const base = principal.gt(0) ? principal : new Decimal(t.amount ?? 0);
+
     return {
       ...t,
       amount: t.amount?.toString() ?? null,
-      installmentRows: t.installmentRows?.map((r) => ({ ...r, amount: r.amount.toString() })),
+      installmentRows: filas.map((r) => ({
+        ...r,
+        amount: r.amount.toString(),
+        principalAmount: r.principalAmount?.toString() ?? null,
+        interestAmount: r.interestAmount?.toString() ?? null,
+      })),
+      // Totales del fraccionamiento: cuanto es capital, cuanto interes y
+      // que porcentaje de mas se termina pagando.
+      totals: filas.length
+        ? {
+            principal: principal.toFixed(2),
+            interest: interes.toFixed(2),
+            total: totalConInteres.toFixed(2),
+            surchargePct: base.gt(0) ? interes.div(base).mul(100).toFixed(2) : '0.00',
+          }
+        : null,
     };
   }
 
@@ -38,22 +64,65 @@ export class TaxObligationService {
     return this.serialize(found);
   }
 
+  /**
+   * Cronograma uniforme, sin interes: reparte el capital en cuotas iguales.
+   * Es solo un punto de partida; el cronograma real de SUNAT se carga con
+   * `schedule`, porque su amortizacion sube cada mes y el interes baja, y eso
+   * no se puede derivar de una tasa.
+   */
   private buildInstallments(taxObligationId: string, count: number, totalAmount: string, dueDate: Date) {
     const total = new Decimal(totalAmount || '0');
-    const per = count > 0 ? total.div(count) : total;
+    const amortizacion = count > 0 ? total.div(count) : total;
+
     const rows = [];
+    let saldo = total;
+
     for (let i = 1; i <= count; i++) {
       const due = new Date(dueDate);
       due.setUTCMonth(due.getUTCMonth() - (count - i));
+
+      // La ultima cuota absorbe el redondeo para que la suma cuadre al centimo.
+      const principal = i === count ? saldo : new Decimal(amortizacion.toFixed(2));
+
       rows.push({
         taxObligationId,
         number: i,
-        amount: per.toFixed(2),
+        amount: principal.toFixed(2),
+        principalAmount: principal.toFixed(2),
+        interestAmount: '0.00',
         dueDate: due,
         status: 'PENDING',
       });
+
+      saldo = saldo.minus(principal);
     }
     return rows;
+  }
+
+  /**
+   * Convierte el cronograma que emite SUNAT (Anexo N.º 2) en filas de cuota.
+   * Cada fila trae su propia amortizacion e interes; el total es la suma.
+   */
+  private mapSchedule(taxObligationId: string, schedule: ScheduleRowDto[], fallbackDueDate: Date) {
+    return schedule.map((r) => {
+      const principal = new Decimal(r.principalAmount || '0');
+      const interes = new Decimal(r.interestAmount || '0');
+      return {
+        taxObligationId,
+        number: r.number,
+        amount: principal.plus(interes).toFixed(2),
+        principalAmount: principal.toFixed(2),
+        interestAmount: interes.toFixed(2),
+        dueDate: r.dueDate ? new Date(r.dueDate) : fallbackDueDate,
+        status: 'PENDING',
+      };
+    });
+  }
+
+  private totalDelCronograma(schedule: ScheduleRowDto[]): string {
+    return schedule
+      .reduce((s, r) => s.plus(r.principalAmount || '0').plus(r.interestAmount || '0'), new Decimal(0))
+      .toFixed(2);
   }
 
   async create(data: {
@@ -65,8 +134,13 @@ export class TaxObligationService {
     status?: string;
     installments?: number;
     paidInstallments?: number;
+    schedule?: ScheduleRowDto[];
     notes?: string;
   }) {
+    const estado = data.status ?? 'PENDING';
+    const cuotas = data.schedule?.length ?? data.installments;
+    this.validarPagadas(data.paidInstallments, cuotas);
+
     const created = await this.prisma.taxObligation.create({
       data: {
         workspaceId: data.workspaceId,
@@ -74,18 +148,94 @@ export class TaxObligationService {
         year: data.year ?? null,
         dueDate: new Date(data.dueDate),
         amount: data.amount ?? null,
-        status: data.status ?? 'PENDING',
-        installments: data.installments ?? null,
+        status: estado,
+        installments: cuotas ?? null,
         paidInstallments: data.paidInstallments ?? 0,
         notes: data.notes ?? null,
       },
     });
-    if (data.installments && data.installments > 0) {
+
+    const vence = new Date(data.dueDate);
+    if (data.schedule?.length) {
       await this.prisma.taxObligationInstallment.createMany({
-        data: this.buildInstallments(created.id, data.installments, data.amount ?? '0', new Date(data.dueDate)),
+        data: this.mapSchedule(created.id, data.schedule, vence),
+      });
+    } else if (this.debeGenerarCuotas(estado, data.installments)) {
+      await this.prisma.taxObligationInstallment.createMany({
+        data: this.buildInstallments(created.id, data.installments as number, data.amount ?? '0', vence),
       });
     }
     return this.findOne(created.id, data.workspaceId);
+  }
+
+  /**
+   * Una obligacion ya pagada no debe generar cuotas pendientes: producia
+   * estados imposibles como "Pagado" con 12 cuotas por pagar.
+   */
+  private debeGenerarCuotas(status: string, installments?: number | null): boolean {
+    if (!installments || installments <= 0) return false;
+    return status !== 'PAID';
+  }
+
+  /** No se puede haber pagado mas cuotas de las que tiene el fraccionamiento. */
+  private validarPagadas(pagadas?: number | null, totales?: number | null): void {
+    if (pagadas == null) return;
+    if (!totales || totales <= 0) {
+      if (pagadas > 0) {
+        throw new BadRequestException('No puedes registrar cuotas pagadas si la obligación no tiene cuotas.');
+      }
+      return;
+    }
+    if (pagadas > totales) {
+      throw new BadRequestException(
+        `Las cuotas pagadas (${pagadas}) no pueden superar el total de cuotas (${totales}).`,
+      );
+    }
+  }
+
+  /**
+   * Rehace el cronograma. Si viene `schedule` se copia tal cual el anexo de
+   * SUNAT; si no, se reparte el capital en cuotas iguales. Nunca toca cuotas
+   * ya pagadas.
+   */
+  private async regenerarCuotas(
+    id: string,
+    found: {
+      status: string;
+      amount: Decimal | null;
+      dueDate: Date;
+      installmentRows: { status: string }[];
+    },
+    data: UpdateTaxObligationDto,
+  ): Promise<void> {
+    if (found.installmentRows.some((r) => r.status === 'PAID')) return;
+
+    const vence = data.dueDate ? new Date(data.dueDate as string) : found.dueDate;
+
+    if (data.schedule?.length) {
+      await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
+      await this.prisma.taxObligationInstallment.createMany({
+        data: this.mapSchedule(id, data.schedule, vence),
+      });
+      return;
+    }
+
+    const nuevas = data.installments as number | undefined;
+    const cantidad = nuevas ?? found.installmentRows.length;
+    const cambioCantidad = nuevas !== undefined && nuevas !== found.installmentRows.length;
+    const cambioMonto = data.amount !== undefined && data.amount !== found.amount?.toString();
+
+    if (!cambioCantidad && !cambioMonto) return;
+    if (!cambioCantidad && cantidad === 0) return;
+
+    await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
+
+    const estado = (data.status as string) ?? found.status;
+    if (!this.debeGenerarCuotas(estado, cantidad)) return;
+
+    await this.prisma.taxObligationInstallment.createMany({
+      data: this.buildInstallments(id, cantidad, (data.amount as string) ?? found.amount?.toString() ?? '0', vence),
+    });
   }
 
   async update(id: string, workspaceId: string, data: UpdateTaxObligationDto) {
@@ -94,6 +244,12 @@ export class TaxObligationService {
       include: { installmentRows: true },
     });
     if (!found) throw new NotFoundException('Obligación no encontrada');
+
+    const cuotasFinales =
+      data.schedule?.length ?? data.installments ?? found.installments ?? found.installmentRows.length;
+    const pagadasFinales = data.paidInstallments ?? found.paidInstallments;
+    this.validarPagadas(pagadasFinales, cuotasFinales);
+
     const updateData: Prisma.TaxObligationUncheckedUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.year !== undefined) updateData.year = data.year;
@@ -101,25 +257,16 @@ export class TaxObligationService {
     if (data.amount !== undefined) updateData.amount = data.amount;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.installments !== undefined) updateData.installments = data.installments;
+    if (data.schedule?.length) {
+      updateData.installments = data.schedule.length;
+      // El cronograma manda: el monto de la obligacion es su total con interes.
+      updateData.amount = this.totalDelCronograma(data.schedule);
+    }
     if (data.paidInstallments !== undefined) updateData.paidInstallments = data.paidInstallments;
     if (data.notes !== undefined) updateData.notes = data.notes;
     await this.prisma.taxObligation.update({ where: { id }, data: updateData });
 
-    const newCount = data.installments as number | undefined;
-    if (
-      newCount !== undefined &&
-      newCount !== found.installmentRows.length &&
-      found.installmentRows.every((r) => r.status !== 'PAID')
-    ) {
-      await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
-      if (newCount > 0) {
-        const amount = (data.amount as string) ?? found.amount?.toString() ?? '0';
-        const dueDate = data.dueDate ? new Date(data.dueDate as string) : found.dueDate;
-        await this.prisma.taxObligationInstallment.createMany({
-          data: this.buildInstallments(id, newCount, amount, dueDate),
-        });
-      }
-    }
+    await this.regenerarCuotas(id, found, data);
     return this.findOne(id, workspaceId);
   }
 

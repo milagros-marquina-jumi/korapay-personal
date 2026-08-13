@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyField } from '@/components/ui/money-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { TalentIncomeDistribution } from '@/lib/api.types';
 
@@ -61,6 +62,7 @@ export function DistributionFormDialog({
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -150,16 +152,11 @@ export function DistributionFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="salary">Sueldo</Label>
-              <Input id="salary" inputMode="decimal" placeholder="0.00" {...register('salary')} />
+              <MoneyField control={control} name="salary" id="salary" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="amountWithDiscount">Con descuento (le llega)</Label>
-              <Input
-                id="amountWithDiscount"
-                inputMode="decimal"
-                placeholder="0.00"
-                {...register('amountWithDiscount')}
-              />
+              <MoneyField control={control} name="amountWithDiscount" id="amountWithDiscount" />
               {errors.amountWithDiscount && (
                 <p className="text-xs text-destructive">{errors.amountWithDiscount.message}</p>
               )}
@@ -169,12 +166,12 @@ export function DistributionFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="amountReceived">Recibí (MIMOTECH)</Label>
-              <Input id="amountReceived" inputMode="decimal" placeholder="0.00" {...register('amountReceived')} />
+              <MoneyField control={control} name="amountReceived" id="amountReceived" />
               {errors.amountReceived && <p className="text-xs text-destructive">{errors.amountReceived.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="amountRetained">Se quedó (talento)</Label>
-              <Input id="amountRetained" inputMode="decimal" placeholder="0.00" {...register('amountRetained')} />
+              <MoneyField control={control} name="amountRetained" id="amountRetained" />
               {errors.amountRetained && <p className="text-xs text-destructive">{errors.amountRetained.message}</p>}
             </div>
           </div>

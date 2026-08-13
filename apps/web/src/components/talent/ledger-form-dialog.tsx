@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyField } from '@/components/ui/money-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { TalentLedgerEntry } from '@/lib/api.types';
@@ -69,6 +70,7 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -158,15 +160,15 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label htmlFor="ledger-paid">Pagado</Label>
-              <Input id="ledger-paid" inputMode="decimal" placeholder="0.00" {...register('paidAmount')} />
+              <MoneyField control={control} name="paidAmount" id="ledger-paid" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ledger-debt">Deuda</Label>
-              <Input id="ledger-debt" inputMode="decimal" placeholder="0.00" {...register('debtAmount')} />
+              <MoneyField control={control} name="debtAmount" id="ledger-debt" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ledger-pending">Falta pagar</Label>
-              <Input id="ledger-pending" inputMode="decimal" placeholder="0.00" {...register('pendingAmount')} />
+              <MoneyField control={control} name="pendingAmount" id="ledger-pending" />
             </div>
           </div>
 

@@ -614,6 +614,8 @@ model TaxObligationInstallment {
   taxObligationId String    @map("tax_obligation_id")
   number          Int
   amount          Decimal   @db.Decimal(18, 2)
+  principalAmount Decimal?  @map("principal_amount") @db.Decimal(18, 2)
+  interestAmount  Decimal?  @map("interest_amount") @db.Decimal(18, 2)
   dueDate         DateTime? @map("due_date") @db.Date
   status          String    @default("PENDING")
   paidDate        DateTime? @map("paid_date") @db.Date

@@ -31,6 +31,14 @@ export class AuthGuard implements CanActivate {
 
   private async resolveUser(): Promise<AuthUser> {
     const email = this.configService.get<string>('DEMO_USER_EMAIL');
+    // Sin la variable, la busqueda por email haria match con nada y el error
+    // apuntaria al seed en vez de al arranque sin --env-file.
+    if (!email) {
+      throw new UnauthorizedException(
+        'Falta DEMO_USER_EMAIL. Arranca la API con "node --env-file=.env dist/main.js" o via "pnpm start:dev".',
+      );
+    }
+
     let current = this.cachedProfileId
       ? await this.prisma.profile.findUnique({ where: { id: this.cachedProfileId } })
       : null;
@@ -38,7 +46,7 @@ export class AuthGuard implements CanActivate {
       current = await this.prisma.profile.findUnique({ where: { email } });
       if (!current) {
         this.cachedProfileId = null;
-        throw new UnauthorizedException('Perfil no encontrado. Corre el seed: pnpm db:seed');
+        throw new UnauthorizedException(`Perfil ${email} no encontrado. Corre el seed: pnpm db:seed`);
       }
       this.cachedProfileId = current.id;
     }

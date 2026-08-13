@@ -19,22 +19,34 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyField } from '@/components/ui/money-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
-const schema = z.object({
-  name: z.string().min(1, 'Requerido'),
-  year: z.string().optional(),
-  dueDate: z.string().min(1, 'Requerido'),
-  amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
-  status: z.enum(['PENDING', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED']),
-  installments: z.string().optional(),
-  paidInstallments: z.string().optional(),
-  notes: z.string().optional(),
-});
+const schema = z
+  .object({
+    name: z.string().min(1, 'Requerido'),
+    year: z.string().optional(),
+    dueDate: z.string().min(1, 'Requerido'),
+    amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
+    status: z.enum(['PENDING', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED']),
+    installments: z.string().optional(),
+    paidInstallments: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  // No se puede haber pagado mas cuotas de las que existen.
+  .refine(
+    (v) => {
+      const total = Number(v.installments || 0);
+      const pagadas = Number(v.paidInstallments || 0);
+      if (!pagadas) return true;
+      return total > 0 && pagadas <= total;
+    },
+    { message: 'No puede superar el total de cuotas', path: ['paidInstallments'] },
+  );
 
 type FormValues = z.infer<typeof schema>;
 
@@ -67,6 +79,7 @@ export function TaxObligationFormDialog({
     reset,
     setValue,
     watch,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -147,9 +160,13 @@ export function TaxObligationFormDialog({
               {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">Monto</Label>
-              <Input id="amount" inputMode="decimal" placeholder="0.00" {...register('amount')} />
-              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+              <Label htmlFor="amount">Total a pagar</Label>
+              <MoneyField control={control} name="amount" id="amount" />
+              {errors.amount ? (
+                <p className="text-xs text-destructive">{errors.amount.message}</p>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">Con intereses, si es en cuotas</p>
+              )}
             </div>
           </div>
 
@@ -187,6 +204,7 @@ export function TaxObligationFormDialog({
             <div className="space-y-2">
               <Label htmlFor="paidInstallments">Cuotas pagadas</Label>
               <Input id="paidInstallments" inputMode="numeric" placeholder="Ej. 3" {...register('paidInstallments')} />
+              {errors.paidInstallments && <p className="text-destructive text-xs">{errors.paidInstallments.message}</p>}
             </div>
 
             <div className="space-y-2">

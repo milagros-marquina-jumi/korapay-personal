@@ -108,10 +108,15 @@ function RentaContent() {
         header: 'Cuotas',
         cell: ({ row }) => {
           const t = row.original;
-          if (!t.installments) return <span className="text-sm text-muted-foreground">-</span>;
+          // Se cuentan las cuotas reales: `installments` y `paidInstallments`
+          // son campos sueltos que podian contradecir al cronograma.
+          const filas = t.installmentRows ?? [];
+          const total = filas.length || t.installments || 0;
+          if (!total) return <span className="text-muted-foreground text-sm">-</span>;
+          const pagadas = filas.length ? filas.filter((r) => r.status === 'PAID').length : (t.paidInstallments ?? 0);
           return (
             <span className="text-sm tabular-nums">
-              {t.paidInstallments ?? 0} / {t.installments}
+              {pagadas} / {total}
             </span>
           );
         },
@@ -120,7 +125,7 @@ function RentaContent() {
         id: 'amount',
         accessorFn: (r) => Number(r.amount),
         sortingFn: 'basic',
-        header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
+        header: ({ column }) => <SortableHeader column={column} label="Total a pagar" className="ml-auto" />,
         cell: ({ row }) => (
           <div className="text-right font-semibold tabular-nums">{formatMoney(row.original.amount, 'PEN')}</div>
         ),
@@ -223,7 +228,7 @@ function RentaContent() {
         globalFilter={search}
         onGlobalFilterChange={setSearch}
         rowClassName={(o) => highlightClass(o.id)}
-        getRowCanExpand={(row) => !!row.original.installments && row.original.installments > 0}
+        getRowCanExpand={(row) => (row.original.installmentRows?.length ?? 0) > 0}
         renderExpanded={(o) =>
           activeWorkspaceId ? <RentaInstallments workspaceId={activeWorkspaceId} obligation={o} /> : null
         }

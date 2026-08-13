@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyField } from '@/components/ui/money-field';
 import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -70,6 +71,7 @@ export function ContractFormDialog({
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -167,7 +169,7 @@ export function ContractFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="salary">Salario</Label>
-              <Input id="salary" inputMode="decimal" placeholder="0.00" {...register('salary')} />
+              <MoneyField control={control} name="salary" id="salary" />
             </div>
             <div className="space-y-2">
               <Label>Tipo de pago</Label>

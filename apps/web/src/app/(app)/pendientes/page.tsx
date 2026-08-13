@@ -29,6 +29,7 @@ import {
 import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MoneyField } from '@/components/ui/money-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +57,7 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     setValue,
@@ -125,7 +127,7 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="amount">Monto</Label>
-              <Input id="amount" inputMode="decimal" placeholder="0.00" {...register('amount')} />
+              <MoneyField control={control} name="amount" id="amount" />
               {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
             </div>
             <div className="space-y-2">

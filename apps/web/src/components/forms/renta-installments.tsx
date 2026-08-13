@@ -5,18 +5,19 @@ import { StatusBadge } from '@korapay/ui';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { RentaSchedulePaste } from '@/components/forms/renta-schedule-paste';
 import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch } from '@/lib/api';
 import type { TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 interface Props {
   workspaceId: string;
   obligation: TaxObligation;
 }
 
-export function RentaInstallments({ workspaceId, obligation }: Props) {
+export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) {
   const queryClient = useQueryClient();
   const rows = obligation.installmentRows ?? [];
   const paid = rows.filter((r) => r.status === 'PAID').length;
@@ -37,38 +38,105 @@ export function RentaInstallments({ workspaceId, obligation }: Props) {
   });
 
   if (!rows.length) {
-    return <p className="px-4 py-3 text-sm text-muted-foreground">Esta obligación no tiene cuotas definidas.</p>;
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <p className="text-muted-foreground text-sm">
+          Todavía no hay cuotas. Pega el cuadro de tu resolución de SUNAT.
+        </p>
+        <RentaSchedulePaste workspaceId={workspaceId} obligation={obligation} />
+      </div>
+    );
   }
+
+  const totals = obligation.totals;
+  const conInteres = !!totals && Number(totals.interest) > 0;
+  const pendiente = rows
+    .filter((r) => r.status !== 'PAID')
+    .reduce((s, r) => s + Number(r.amount), 0)
+    .toFixed(2);
 
   return (
     <div className="px-4 py-3">
-      <p className="mb-2 text-xs font-medium text-muted-foreground">
-        Cuotas ({paid}/{rows.length} pagadas)
-      </p>
-      <div className="divide-y rounded-lg border">
-        {rows.map((r) => (
-          <div key={r.id} className="flex items-center justify-between px-3 py-2 text-sm">
-            <span className="tabular-nums">Cuota {r.number}</span>
-            <div className="flex items-center gap-3">
-              {r.dueDate && <span className="text-xs text-muted-foreground">vence {formatDate(r.dueDate)}</span>}
-              <span className="w-24 text-right font-medium tabular-nums">{formatMoney(r.amount, 'PEN')}</span>
-              <StatusBadge status={r.status} />
-              {r.status === 'PAID' ? (
-                <IconAction
-                  icon={RotateCcw}
-                  label="Marcar pendiente"
-                  onClick={() => pay.mutate({ installmentId: r.id, action: 'unpay' })}
-                />
-              ) : (
-                <IconAction
-                  icon={CheckCircle2}
-                  label="Marcar pagada"
-                  onClick={() => pay.mutate({ installmentId: r.id, action: 'pay' })}
-                />
-              )}
-            </div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <p className="font-medium text-muted-foreground text-xs">
+          Cuotas ({paid}/{rows.length} pagadas) · queda {formatMoney(pendiente, 'PEN')}
+        </p>
+        <RentaSchedulePaste workspaceId={workspaceId} obligation={obligation} />
+      </div>
+
+      {conInteres && (
+        <div className="mb-3 grid gap-2 rounded-lg border border-warning/40 bg-warning/8 p-3 sm:grid-cols-4">
+          <div>
+            <p className="text-[11px] text-muted-foreground">Deuda original</p>
+            <p className="font-semibold text-sm tabular-nums">{formatMoney(totals.principal, 'PEN')}</p>
           </div>
-        ))}
+          <div>
+            <p className="text-[11px] text-muted-foreground">Interés</p>
+            <p className="font-semibold text-sm text-warning-foreground tabular-nums">
+              +{formatMoney(totals.interest, 'PEN')}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">Total a pagar</p>
+            <p className="font-semibold text-sm tabular-nums">{formatMoney(totals.total, 'PEN')}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">Pagas de más</p>
+            <p className="font-semibold text-sm text-warning-foreground tabular-nums">+{totals.surchargePct}%</p>
+          </div>
+        </div>
+      )}
+
+      <div className="divide-y rounded-lg border">
+        {rows.map((r) => {
+          const pagada = r.status === 'PAID';
+          return (
+            <div
+              key={r.id}
+              className={cn('flex items-center justify-between gap-3 px-3 py-2 text-sm', pagada && 'bg-muted/30')}
+            >
+              <span className="min-w-0">
+                {/* Una cuota saldada se tacha: se ve de un vistazo que ya no se debe. */}
+                <span className={cn('block tabular-nums', pagada && 'text-muted-foreground line-through')}>
+                  Cuota {r.number}
+                </span>
+                {conInteres && r.interestAmount && Number(r.interestAmount) > 0 && (
+                  <span className="block text-[11px] text-muted-foreground tabular-nums">
+                    {formatMoney(r.principalAmount ?? r.amount, 'PEN')} de deuda +{' '}
+                    {formatMoney(r.interestAmount, 'PEN')} de interés
+                  </span>
+                )}
+              </span>
+              <div className="flex shrink-0 items-center gap-3">
+                {r.dueDate && (
+                  <span className="hidden text-muted-foreground text-xs sm:inline">vence {formatDate(r.dueDate)}</span>
+                )}
+                <span
+                  className={cn(
+                    'w-24 text-right font-medium tabular-nums',
+                    pagada && 'text-muted-foreground line-through',
+                  )}
+                >
+                  {formatMoney(r.amount, 'PEN')}
+                </span>
+                <StatusBadge status={r.status} />
+                {pagada ? (
+                  <IconAction
+                    icon={RotateCcw}
+                    label="Marcar pendiente"
+                    onClick={() => pay.mutate({ installmentId: r.id, action: 'unpay' })}
+                  />
+                ) : (
+                  <IconAction
+                    icon={CheckCircle2}
+                    label="Marcar pagada"
+                    onClick={() => pay.mutate({ installmentId: r.id, action: 'pay' })}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

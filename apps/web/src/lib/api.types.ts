@@ -722,6 +722,8 @@ export interface TaxObligationInstallment {
   id: string;
   number: number;
   amount: string;
+  principalAmount?: string | null;
+  interestAmount?: string | null;
   dueDate?: string | null;
   status: string;
   paidDate?: string | null;
@@ -739,6 +741,12 @@ export interface TaxObligation {
   paidInstallments?: number;
   notes?: string | null;
   installmentRows?: TaxObligationInstallment[];
+  totals?: {
+    principal: string;
+    interest: string;
+    total: string;
+    surchargePct: string;
+  } | null;
 }
 
 export interface Project {

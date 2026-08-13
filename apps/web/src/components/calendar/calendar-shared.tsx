@@ -27,15 +27,19 @@ const STATUS_STYLE: Record<CalendarStatus, string> = {
   OVERDUE: 'bg-destructive/12 text-destructive',
   REVIEW: 'bg-info/12 text-info',
   PENDING: 'bg-warning/15 text-warning-foreground',
+  PAID: 'bg-muted text-muted-foreground',
 };
 
 const STATUS_LABEL: Record<CalendarStatus, string> = {
   OVERDUE: 'Vencido',
   REVIEW: 'Por revisar',
   PENDING: 'Pendiente',
+  PAID: 'Pagado',
 };
 
 export function dotColor(event: CalendarEvent): string {
+  // Lo pagado va en gris: esta en el calendario como historial, no como aviso.
+  if (event.status === 'PAID') return 'bg-muted-foreground/40';
   if (event.status === 'OVERDUE') return 'bg-destructive';
   if (event.kind === 'COLLECTION') return 'bg-success';
   if (event.kind === 'CONTRACT_END') return 'bg-info';
@@ -61,7 +65,13 @@ export function EventRow({
 }: Readonly<{ event: CalendarEvent; showWorkspace?: boolean; onNavigate?: () => void }>) {
   const Icon = SOURCE_ICON[event.source];
   const cobro = event.kind === 'COLLECTION';
+  const pagado = event.status === 'PAID';
   const { activeWorkspaceId, setActiveWorkspaceId } = useWorkspace();
+
+  // Un cobro ya saldado no se pinta en verde: no es dinero por entrar.
+  let tonoMonto = 'text-foreground';
+  if (pagado) tonoMonto = 'text-muted-foreground';
+  else if (cobro) tonoMonto = 'text-success';
 
   const handleClick = () => {
     if (event.workspaceId && event.workspaceId !== activeWorkspaceId) {
@@ -74,7 +84,10 @@ export function EventRow({
     <Link
       href={event.href}
       onClick={handleClick}
-      className="flex items-start gap-3 rounded-lg border border-border/60 bg-card px-3 py-3 transition-colors hover:border-brand/40 hover:bg-accent/60"
+      className={cn(
+        'flex w-full min-w-0 max-w-full items-start gap-3 overflow-hidden rounded-lg border border-border/60 bg-card px-3 py-3 transition-colors hover:border-brand/40 hover:bg-accent/60',
+        pagado && 'opacity-70',
+      )}
     >
       <span
         className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg', STATUS_STYLE[event.status])}
@@ -82,17 +95,15 @@ export function EventRow({
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-sm font-medium text-foreground">{event.title}</span>
-          {event.amount && (
-            <span
-              className={cn('shrink-0 text-sm font-semibold tabular-nums', cobro ? 'text-success' : 'text-foreground')}
-            >
-              {cobro ? '+' : '−'}
-              {formatMoney(event.amount, event.currency as 'PEN' | 'USD')}
-            </span>
-          )}
-        </span>
+        {/* El monto va debajo del titulo: en columnas angostas ponerlos en la
+            misma linea empujaba la fila mas alla del ancho de la tarjeta. */}
+        <span className="block truncate font-medium text-foreground text-sm">{event.title}</span>
+        {event.amount && (
+          <span className={cn('mt-0.5 block font-semibold text-sm tabular-nums', tonoMonto)}>
+            {cobro ? '+' : '−'}
+            {formatMoney(event.amount, event.currency as 'PEN' | 'USD')}
+          </span>
+        )}
         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           <span>{SOURCE_LABEL[event.source]}</span>
           <span aria-hidden="true">·</span>

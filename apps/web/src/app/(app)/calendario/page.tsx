@@ -38,10 +38,16 @@ function formatLargo(iso: string): string {
 
 export default function CalendarioPage() {
   const hoy = todayIso();
-  const { data, isLoading } = useCalendar();
+  const [verPagados, setVerPagados] = useState(false);
+  const { data, isLoading } = useCalendar({ includePaid: verPagados });
 
   const byDate = useMemo(() => groupByDate(data?.events ?? []), [data]);
-  const proximos = useMemo(() => upcomingFirst(data?.events ?? []).slice(0, 12), [data]);
+  // "Proximos" es una lista de acciones: lo ya pagado nunca entra aqui.
+  const proximos = useMemo(
+    () => upcomingFirst((data?.events ?? []).filter((e) => e.status !== 'PAID')).slice(0, 12),
+    [data],
+  );
+  const pagadosVisibles = useMemo(() => (data?.events ?? []).filter((e) => e.status === 'PAID').length, [data]);
 
   // Si el mes actual no tiene nada, arranca en el mes con actividad mas cercano:
   // abrir en un mes vacio hace parecer que el calendario no tiene datos.
@@ -134,6 +140,19 @@ export default function CalendarioPage() {
             />
           </div>
 
+          <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5">
+            <input
+              type="checkbox"
+              checked={verPagados}
+              onChange={(e) => setVerPagados(e.target.checked)}
+              className="size-4 accent-brand"
+            />
+            <span className="text-foreground text-sm">Mostrar lo ya pagado</span>
+            <span className="text-muted-foreground text-xs">
+              {verPagados ? `${pagadosVisibles} en el historial` : 'El calendario muestra solo lo que falta'}
+            </span>
+          </label>
+
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="space-y-4">
               <Card>
@@ -175,6 +194,11 @@ export default function CalendarioPage() {
                     <span className="flex items-center gap-1.5">
                       <span className="size-1.5 rounded-full bg-info" /> Contrato
                     </span>
+                    {verPagados && (
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-1.5 rounded-full bg-muted-foreground/40" /> Pagado
+                      </span>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -194,7 +218,7 @@ export default function CalendarioPage() {
                       Elige un día con puntos de color para ver su detalle.
                     </p>
                   ) : (
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
                       {delDia.map((event) => (
                         <EventRow key={event.id} event={event} />
                       ))}
@@ -213,7 +237,7 @@ export default function CalendarioPage() {
                 {proximos.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Nada pendiente.</p>
                 ) : (
-                  <div className="grid max-h-128 gap-2 overflow-y-auto pr-1.5">
+                  <div className="grid max-h-128 min-w-0 grid-cols-[minmax(0,1fr)] gap-2 overflow-y-auto overflow-x-hidden pr-1.5">
                     {proximos.map((event) => (
                       <EventRow key={event.id} event={event} />
                     ))}

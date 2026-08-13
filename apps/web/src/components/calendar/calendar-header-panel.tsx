@@ -92,7 +92,7 @@ export function CalendarHeaderPanel() {
               {eventos.length === 0 ? (
                 <p className="py-8 text-center text-sm text-muted-foreground">Sin vencimientos registrados.</p>
               ) : (
-                <div className="grid gap-2">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
                   {eventos.map((event) => (
                     <EventRow key={event.id} event={event} onNavigate={() => setOpen(false)} />
                   ))}

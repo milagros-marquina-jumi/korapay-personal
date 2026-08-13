@@ -5,10 +5,11 @@ import { apiFetch } from '@/lib/api';
 import type { CalendarEvent, CalendarResponse } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
-export function useCalendar(range?: { from?: string; to?: string }) {
+export function useCalendar(range?: { from?: string; to?: string; includePaid?: boolean }) {
   const params = new URLSearchParams();
   if (range?.from) params.set('from', range.from);
   if (range?.to) params.set('to', range.to);
+  if (range?.includePaid) params.set('includePaid', 'true');
   const qs = params.toString();
 
   return useQuery({

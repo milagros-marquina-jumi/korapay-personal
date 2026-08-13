@@ -14,7 +14,7 @@ export class CalendarController {
 
   @Get()
   @ApiOperation({ summary: 'Eventos financieros de todos los workspaces del usuario' })
-  getEvents(@CurrentUser('sub') profileId: string, @Query() { from, to }: CalendarQueryDto) {
-    return this.calendarService.getEvents(profileId, from, to);
+  getEvents(@CurrentUser('sub') profileId: string, @Query() { from, to, includePaid }: CalendarQueryDto) {
+    return this.calendarService.getEvents(profileId, from, to, includePaid === 'true');
   }
 }

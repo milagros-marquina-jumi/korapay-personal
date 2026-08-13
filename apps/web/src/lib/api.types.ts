@@ -759,7 +759,7 @@ export interface Application {
 
 export type CalendarSource = 'TRANSACTION' | 'TALENT_LEDGER' | 'TAX' | 'CONTRACT' | 'SUBSCRIPTION';
 export type CalendarKind = 'PAYMENT' | 'COLLECTION' | 'CONTRACT_END';
-export type CalendarStatus = 'PENDING' | 'REVIEW' | 'OVERDUE';
+export type CalendarStatus = 'PENDING' | 'REVIEW' | 'OVERDUE' | 'PAID';
 
 export interface CalendarEvent {
   id: string;

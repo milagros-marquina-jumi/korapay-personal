@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, Matches } from 'class-validator';
+import { IsIn, IsOptional, Matches } from 'class-validator';
 
 export type CalendarSource = 'TRANSACTION' | 'TALENT_LEDGER' | 'TAX' | 'CONTRACT' | 'SUBSCRIPTION';
 export type CalendarKind = 'PAYMENT' | 'COLLECTION' | 'CONTRACT_END';
-export type CalendarStatus = 'PENDING' | 'REVIEW' | 'OVERDUE';
+export type CalendarStatus = 'PENDING' | 'REVIEW' | 'OVERDUE' | 'PAID';
 
 export class CalendarQueryDto {
   @ApiPropertyOptional({ example: '2026-08-01' })
@@ -15,6 +15,14 @@ export class CalendarQueryDto {
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to debe ser YYYY-MM-DD' })
   to?: string;
+
+  @ApiPropertyOptional({
+    example: 'true',
+    description: 'Incluye lo ya pagado. Por defecto false: el calendario prioriza lo que falta pagar.',
+  })
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  includePaid?: string;
 }
 
 export class CalendarEventDto {

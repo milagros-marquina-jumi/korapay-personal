@@ -40,6 +40,7 @@ export default function DetectadosPage() {
   const [bankFilter, setBankFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
   const [confidenceFilter, setConfidenceFilter] = useState(FILTER_ALL);
+  const [sourceFilter, setSourceFilter] = useState(FILTER_ALL);
   const [confirming, setConfirming] = useState<DetectedTransaction | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
   const [usdDetail, setUsdDetail] = useState<DetectedTransaction | null>(null);
@@ -49,8 +50,9 @@ export default function DetectadosPage() {
       status: statusFilter === FILTER_ALL ? undefined : statusFilter,
       bankCode: bankFilter === FILTER_ALL ? undefined : bankFilter,
       currency: currencyFilter === FILTER_ALL ? undefined : currencyFilter,
+      emailSourceId: sourceFilter === FILTER_ALL ? undefined : sourceFilter,
     }),
-    [statusFilter, bankFilter, currencyFilter],
+    [statusFilter, bankFilter, currencyFilter, sourceFilter],
   );
 
   const { data, isLoading } = useQuery({
@@ -61,6 +63,7 @@ export default function DetectadosPage() {
           status: filters.status,
           bankCode: filters.bankCode,
           currency: filters.currency,
+          emailSourceId: filters.emailSourceId,
         })}`,
       ),
     refetchInterval: 15 * 60 * 1000,
@@ -139,6 +142,11 @@ export default function DetectadosPage() {
     return [...map.entries()].map(([value, label]) => ({ value, label }));
   }, [data]);
 
+  const sourceOptions = useMemo(
+    () => (emailSources ?? []).map((s) => ({ value: s.id, label: s.email })),
+    [emailSources],
+  );
+
   const rows = useMemo(() => {
     let filtered = data ?? [];
     const q = search.trim().toLowerCase();
@@ -168,6 +176,18 @@ export default function DetectadosPage() {
         id: 'bank',
         header: 'Banco',
         cell: ({ row }) => <span className="text-sm">{row.original.bankName ?? '—'}</span>,
+      },
+      {
+        id: 'source',
+        header: 'Cuenta',
+        cell: ({ row }) => {
+          const src = row.original.emailSource;
+          return (
+            <span className="text-sm text-muted-foreground" title={src?.name ?? undefined}>
+              {src?.email ?? '—'}
+            </span>
+          );
+        },
       },
       {
         id: 'card',
@@ -328,7 +348,8 @@ export default function DetectadosPage() {
     statusFilter !== FILTER_ALL ||
     bankFilter !== FILTER_ALL ||
     currencyFilter !== FILTER_ALL ||
-    confidenceFilter !== FILTER_ALL;
+    confidenceFilter !== FILTER_ALL ||
+    sourceFilter !== FILTER_ALL;
 
   return (
     <PageShell
@@ -378,6 +399,7 @@ export default function DetectadosPage() {
           setBankFilter(FILTER_ALL);
           setCurrencyFilter(FILTER_ALL);
           setConfidenceFilter(FILTER_ALL);
+          setSourceFilter(FILTER_ALL);
         }}
         filters={
           <>
@@ -409,6 +431,13 @@ export default function DetectadosPage() {
               ]}
               placeholder="Moneda"
               allLabel="Toda moneda"
+            />
+            <FilterSelect
+              value={sourceFilter}
+              onValueChange={setSourceFilter}
+              options={sourceOptions}
+              placeholder="Cuenta"
+              allLabel="Toda cuenta"
             />
             <FilterSelect
               value={confidenceFilter}

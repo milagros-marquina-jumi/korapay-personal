@@ -39,6 +39,7 @@ export class DetectedTransactionsService {
           ? { merchantNormalized: { contains: filters.search.toUpperCase(), mode: 'insensitive' } }
           : {}),
       },
+      include: { emailSource: { select: { id: true, name: true, email: true } } },
       orderBy: { occurredAt: 'desc' },
       take: 500,
     });

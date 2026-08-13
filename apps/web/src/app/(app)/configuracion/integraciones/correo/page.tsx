@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, apiUrl } from '@/lib/api';
 import type { EmailSource, EmailSourceCreated } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDateTime } from '@/lib/utils';
@@ -52,8 +52,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 function ingestionUrl(): string {
-  if (typeof window === 'undefined') return '';
-  return `${window.location.origin.replace(':3060', ':3061')}/api/v1/email-ingestion/messages`;
+  return apiUrl('/email-ingestion/messages');
 }
 
 function CopyRow({ value, onCopy }: { value: string; onCopy: () => void }) {

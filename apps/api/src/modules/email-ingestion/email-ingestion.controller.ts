@@ -16,9 +16,10 @@ interface RequestWithSource {
 }
 
 @ApiTags('EmailIngestion')
-// Endpoint publico protegido solo por token: limite mas estrecho que el global
-// para que un token no valido no se pueda tantear a 100 intentos por minuto.
-@Throttle({ default: { ttl: 60_000, limit: 20 } })
+// Endpoint publico protegido solo por token. El token es de 256 bits aleatorios
+// (inviable de tantear). El limite permite el lote del conector: hasta 100 hilos
+// por corrida a ~600ms por mensaje (~100 req/min).
+@Throttle({ default: { ttl: 60_000, limit: 120 } })
 @UseGuards(IngestionGuard)
 @Controller('email-ingestion')
 export class EmailIngestionController {

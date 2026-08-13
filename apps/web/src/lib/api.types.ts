@@ -32,6 +32,7 @@ export interface DetectedTransaction {
   id: string;
   workspaceId?: string | null;
   emailSourceId: string;
+  emailSource?: { id: string; name: string; email: string } | null;
   accountId?: string | null;
   categoryId?: string | null;
   projectId?: string | null;

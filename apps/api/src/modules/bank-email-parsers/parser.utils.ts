@@ -30,7 +30,12 @@ export function parseAmount(raw: string): string {
 export function isNonTransactional(text: string): boolean {
   const t = text.toLowerCase();
   if (/tu c[oó]digo de verificaci[oó]n es|c[oó]digo de verificaci[oó]n:?\s*\d|otp:?\s*\d/i.test(t)) return true;
-  if (/revisa el estado de cuenta|estado de cuenta disponible|descarga tu estado de cuenta|tu estado de tarjeta|resumen mensual/i.test(t)) return true;
+  if (
+    /revisa el estado de cuenta|estado de cuenta disponible|descarga tu estado de cuenta|tu estado de tarjeta|resumen mensual/i.test(
+      t,
+    )
+  )
+    return true;
   if (/promoci[oó]n exclusiva|oferta exclusiva|beneficio exclusivo|aumento de l[ií]nea de cr[eé]dito/i.test(t))
     return true;
   if (/cambi(?:aste|o) tu contrase[añ]a|actualizaci[oó]n de datos de contacto/i.test(t)) return true;

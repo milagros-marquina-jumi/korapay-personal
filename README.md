@@ -64,10 +64,10 @@ Cada push a `master` dispara el deploy automatico.
 - URL: https://korapay-web.vercel.app
 - Env vars en Vercel: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`
 
-Deploy manual:
+Deploy manual (desde la raiz del repo, no desde `apps/web`):
 
 ```bash
-cd apps/web && vercel --prod
+vercel --prod
 ```
 
 ## Datos reales

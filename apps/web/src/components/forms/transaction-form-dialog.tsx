@@ -21,7 +21,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoneyInput } from '@/components/ui/money-input';
-import { MultiSelect } from '@/components/ui/multi-select';
+import { MultiSelectCreatable } from '@/components/ui/multi-select-creatable';
 import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -529,19 +529,13 @@ export function TransactionFormDialog({
                 </div>
                 <div className="space-y-2">
                   <Label>Proyecto(s)</Label>
-                  <MultiSelect
+                  <MultiSelectCreatable
                     placeholder="Uno o varios"
                     searchPlaceholder="Buscar proyecto..."
-                    selected={
-                      (watch('projectIds') ?? [])
-                        .map((id) => projects?.find((p) => p.id === id)?.name)
-                        .filter(Boolean) as string[]
-                    }
-                    onChange={(names) => {
-                      const ids = names.map((n) => projects?.find((p) => p.name === n)?.id).filter(Boolean) as string[];
-                      setValue('projectIds', ids);
-                    }}
-                    groups={[{ label: 'Proyectos', options: (projects ?? []).map((p) => p.name) }]}
+                    selected={watch('projectIds') ?? []}
+                    onChange={(ids) => setValue('projectIds', ids)}
+                    options={(projects ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                    showChips={false}
                   />
                 </div>
               </div>

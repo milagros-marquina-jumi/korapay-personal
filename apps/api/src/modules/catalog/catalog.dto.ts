@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsDateString, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class CreateApplicationDto {
   @ApiProperty()
@@ -71,6 +71,24 @@ export class CreateGlobalCompanyDto {
   @IsOptional()
   @IsString()
   ruc?: string;
+
+  @ApiPropertyOptional({
+    description: 'Clientes globales que atiende esta empresa. Reemplaza la lista completa.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  clientIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Nombres de clientes nuevos a crear y asociar en el mismo guardado.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  newClientNames?: string[];
 }
 
 export class UpdateGlobalCompanyDto extends PartialType(CreateGlobalCompanyDto) {}
@@ -147,6 +165,24 @@ export class CreateEmploymentContractDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Clientes globales atendidos en este contrato. Reemplaza la lista completa.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  clientIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Clientes nuevos a crear en el catálogo global y asociar a la empresa del contrato.',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  newClientNames?: string[];
 }
 
 export class UpdateEmploymentContractDto extends PartialType(CreateEmploymentContractDto) {}

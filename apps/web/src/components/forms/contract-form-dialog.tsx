@@ -20,11 +20,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoneyField } from '@/components/ui/money-input';
+import { MultiSelectCreatable } from '@/components/ui/multi-select-creatable';
 import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
-import type { Company, EmploymentContract } from '@/lib/api.types';
+import type { Company, EmploymentContract, GlobalCompany } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
@@ -70,6 +71,18 @@ export function ContractFormDialog({
     enabled: open,
   });
 
+  const { data: globalCompanies } = useQuery({
+    queryKey: queryKeys.globalCompanies(),
+    queryFn: () => apiFetch<GlobalCompany[]>('/global-companies'),
+    enabled: open,
+  });
+
+  const { data: globalClients } = useQuery({
+    queryKey: queryKeys.globalClients(),
+    queryFn: () => apiFetch<{ id: string; name: string; globalCompanyId?: string | null }[]>('/global-clients'),
+    enabled: open,
+  });
+
   const { data: contratos } = useQuery({
     queryKey: queryKeys.employmentContracts(workspaceId),
     queryFn: () => apiFetch<EmploymentContract[]>(`/employment-contracts?workspaceId=${workspaceId}`),
@@ -98,6 +111,25 @@ export function ContractFormDialog({
     [contratos, companyIdSeleccionada, contract?.id],
   );
 
+  const [clientIds, setClientIds] = useState<string[]>([]);
+  const [nuevosClientes, setNuevosClientes] = useState<string[]>([]);
+
+  const empresaSel = (companies ?? []).find((c) => c.id === companyIdSeleccionada);
+  const globalCompanyId =
+    empresaSel?.globalCompanyId ??
+    (globalCompanies ?? []).find((g) => g.name.toLowerCase() === (empresaSel?.name ?? '').toLowerCase())?.id ??
+    null;
+
+  const opcionesCliente = useMemo(() => {
+    const todos = globalClients ?? [];
+    const suyos = globalCompanyId ? todos.filter((c) => c.globalCompanyId === globalCompanyId) : [];
+    const resto = todos.filter((c) => !suyos.some((s) => s.id === c.id));
+    return [
+      ...suyos.map((c) => ({ value: c.id, label: c.name, group: 'De esta empresa' })),
+      ...resto.map((c) => ({ value: c.id, label: c.name, group: 'Otros clientes' })),
+    ];
+  }, [globalClients, globalCompanyId]);
+
   const inicioElegido = watch('startDate');
   const posicionNueva = previos.filter((c) => c.startDate.slice(0, 10) < (inicioElegido ?? '')).length + 1;
 
@@ -113,6 +145,8 @@ export function ContractFormDialog({
         currency: (contract.currency as 'PEN' | 'USD') ?? 'PEN',
         notes: contract.notes ?? '',
       });
+      setClientIds((contract.clients ?? []).map((c) => c.id));
+      setNuevosClientes([]);
     }
   }, [open, contract, reset]);
 
@@ -128,6 +162,8 @@ export function ContractFormDialog({
         salary: values.salary || undefined,
         currency: values.currency,
         notes: values.notes || undefined,
+        clientIds,
+        newClientNames: nuevosClientes,
       };
       if (editing && contract) {
         return apiFetch<EmploymentContract>(`/employment-contracts/${contract.id}?workspaceId=${workspaceId}`, {
@@ -140,8 +176,12 @@ export function ContractFormDialog({
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.employmentContracts(workspaceId) });
       toast.success(editing ? 'Contrato actualizado' : 'Contrato creado');
+      queryClient.invalidateQueries({ queryKey: queryKeys.globalClients() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.globalCompanies() });
       if (!editing && result?.id) onSaved?.(result.id);
       reset();
+      setClientIds([]);
+      setNuevosClientes([]);
       setOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
@@ -183,6 +223,22 @@ export function ContractFormDialog({
                 </p>
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Clientes</Label>
+            <MultiSelectCreatable
+              options={opcionesCliente}
+              selected={clientIds}
+              onChange={setClientIds}
+              nuevos={nuevosClientes}
+              onNuevosChange={setNuevosClientes}
+              placeholder={companyIdSeleccionada ? 'Sin clientes' : 'Elige primero la empresa'}
+              searchPlaceholder="Buscar o escribir para crear..."
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Los clientes nuevos se guardan también en el catálogo global de la empresa.
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -11,7 +11,7 @@ import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
-import type { Client, Company } from '@/lib/api.types';
+import type { Company, GlobalClient } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { cn } from '@/lib/utils';
@@ -27,45 +27,37 @@ export function ClientManagerDialog({ workspaceId, company, open, onOpenChange }
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
-  const [editing, setEditing] = useState<Client | null>(null);
-  const [values, setValues] = useState<{ name: string; email: string; phone: string }>({
-    name: '',
-    email: '',
-    phone: '',
-  });
+  const [editing, setEditing] = useState<GlobalClient | null>(null);
+  const [values, setValues] = useState<{ name: string }>({ name: '' });
 
   const { data } = useQuery({
-    queryKey: queryKeys.clients(workspaceId, company.id),
-    queryFn: () => apiFetch<Client[]>(`/clients?workspaceId=${workspaceId}&companyId=${company.id}`),
+    queryKey: queryKeys.globalClients(),
+    queryFn: () => apiFetch<GlobalClient[]>('/global-clients'),
     enabled: open,
   });
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.clients(workspaceId, company.id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.globalClients() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.globalCompanies() });
     queryClient.invalidateQueries({ queryKey: queryKeys.companies(workspaceId) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.employmentContracts(workspaceId) });
   };
 
   const reset = () => {
     setEditing(null);
-    setValues({ name: '', email: '', phone: '' });
+    setValues({ name: '' });
   };
 
   const save = useMutation({
     mutationFn: () => {
-      const payload = {
-        workspaceId,
-        companyId: company.id,
-        name: values.name,
-        email: values.email || undefined,
-        phone: values.phone || undefined,
-      };
+      const payload = { name: values.name.trim(), globalCompanyId: company.globalCompanyId ?? undefined };
       if (editing) {
-        return apiFetch<Client>(`/clients/${editing.id}?workspaceId=${workspaceId}`, {
+        return apiFetch<GlobalClient>(`/global-clients/${editing.id}`, {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
       }
-      return apiFetch<Client>('/clients', { method: 'POST', body: JSON.stringify(payload) });
+      return apiFetch<GlobalClient>('/global-clients', { method: 'POST', body: JSON.stringify(payload) });
     },
     onSuccess: (result) => {
       invalidate();
@@ -77,7 +69,7 @@ export function ClientManagerDialog({ workspaceId, company, open, onOpenChange }
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => apiFetch(`/clients/${id}?workspaceId=${workspaceId}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => apiFetch(`/global-clients/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       invalidate();
       toast.success('Cliente eliminado');
@@ -85,7 +77,7 @@ export function ClientManagerDialog({ workspaceId, company, open, onOpenChange }
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const clients = data ?? [];
+  const clients = (data ?? []).filter((c) => c.globalCompanyId && c.globalCompanyId === company.globalCompanyId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -137,7 +129,7 @@ export function ClientManagerDialog({ workspaceId, company, open, onOpenChange }
                     label="Editar"
                     onClick={() => {
                       setEditing(client);
-                      setValues({ name: client.name, email: client.email ?? '', phone: client.phone ?? '' });
+                      setValues({ name: client.name });
                     }}
                   />
                   <IconAction

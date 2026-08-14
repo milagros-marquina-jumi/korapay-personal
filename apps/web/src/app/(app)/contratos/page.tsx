@@ -27,6 +27,11 @@ import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { formatDate } from '@/lib/utils';
 
+const REINGRESO_OPTIONS = [
+  { value: 'SI', label: 'Solo reingresos' },
+  { value: 'NO', label: 'Sin reingreso' },
+];
+
 function formatDateOrActive(value?: string | null) {
   return value ? formatDate(value) : 'Actual';
 }
@@ -41,6 +46,7 @@ function ContratosContent() {
   const [type, setType] = useState(FILTER_ALL);
   const [currency, setCurrency] = useState(FILTER_ALL);
   const [company, setCompany] = useState(FILTER_ALL);
+  const [reingreso, setReingreso] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<EmploymentContract | null>(null);
   const [detalle, setDetalle] = useState<EmploymentContract | null>(null);
 
@@ -100,9 +106,11 @@ function ContratosContent() {
           (status === FILTER_ALL || (c.state ?? c.status) === status) &&
           (type === FILTER_ALL || c.type === type) &&
           (currency === FILTER_ALL || c.currency === currency) &&
-          (company === FILTER_ALL || c.companyName === company),
+          (company === FILTER_ALL || c.companyName === company) &&
+          (reingreso === FILTER_ALL ||
+            (reingreso === 'SI' ? (c.sequenceTotal ?? 1) > 1 : (c.sequenceTotal ?? 1) === 1)),
       ),
-    [allContracts, status, type, currency, company],
+    [allContracts, status, type, currency, company, reingreso],
   );
 
   const handleClear = () => {
@@ -111,6 +119,7 @@ function ContratosContent() {
     setType(FILTER_ALL);
     setCurrency(FILTER_ALL);
     setCompany(FILTER_ALL);
+    setReingreso(FILTER_ALL);
   };
 
   const columns = useMemo<ColumnDef<EmploymentContract, unknown>[]>(
@@ -235,7 +244,8 @@ function ContratosContent() {
           status !== FILTER_ALL ||
           type !== FILTER_ALL ||
           currency !== FILTER_ALL ||
-          company !== FILTER_ALL
+          company !== FILTER_ALL ||
+          reingreso !== FILTER_ALL
         }
         onClear={handleClear}
         filters={
@@ -267,6 +277,13 @@ function ContratosContent() {
               options={currencyOptions}
               placeholder="Moneda"
               allLabel="Toda moneda"
+            />
+            <FilterSelect
+              value={reingreso}
+              onValueChange={setReingreso}
+              options={REINGRESO_OPTIONS}
+              placeholder="Reingresos"
+              allLabel="Todos"
             />
           </>
         }

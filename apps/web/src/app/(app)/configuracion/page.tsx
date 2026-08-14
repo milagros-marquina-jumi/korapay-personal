@@ -67,7 +67,13 @@ export default function ConfiguracionPage() {
     queryFn: () => apiFetch<GlobalCompanyItem[]>('/global-companies'),
   });
 
+  const { data: globalClients } = useQuery({
+    queryKey: queryKeys.globalClients(),
+    queryFn: () => apiFetch<{ id: string; name: string }[]>('/global-clients'),
+  });
+
   const companyOptions = (globalCompanies ?? []).map((c) => ({ value: c.id, label: c.name }));
+  const clientOptions = (globalClients ?? []).map((c) => ({ value: c.id, label: c.name }));
 
   return (
     <PageShell title="Configuración" description="Workspaces, tipo de cambio y catálogos">
@@ -162,8 +168,18 @@ export default function ConfiguracionPage() {
                 fields={[
                   { name: 'name', label: 'Nombre', required: true },
                   { name: 'ruc', label: 'RUC', placeholder: 'Opcional' },
+                  {
+                    name: 'clientIds',
+                    label: 'Clientes',
+                    multi: true,
+                    createField: 'newClientNames',
+                    itemsKey: 'clients',
+                    options: clientOptions,
+                    placeholder: 'Sin clientes',
+                  },
                 ]}
                 display={displayGlobalCompany}
+                alsoInvalidate={[queryKeys.globalClients()]}
                 searchable
                 searchText={searchGlobalCompany}
               />
@@ -180,6 +196,7 @@ export default function ConfiguracionPage() {
                   { name: 'globalCompanyId', label: 'Empresa', options: companyOptions },
                 ]}
                 display={displayGlobalClient}
+                alsoInvalidate={[queryKeys.globalCompanies()]}
                 searchable
                 searchText={searchGlobalClient}
               />

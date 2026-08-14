@@ -5,7 +5,7 @@ import { StatusBadge } from '@korapay/ui';
 import { SequenceBadge } from '@/components/contracts/sequence-badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { EmploymentContract } from '@/lib/api.types';
-import { cn, formatDateLong, formatDuration } from '@/lib/utils';
+import { cn, formatDateLong, formatDurationExact } from '@/lib/utils';
 
 interface Props {
   contract: EmploymentContract | null;
@@ -43,8 +43,9 @@ export function ContractDetailDialog({ contract, onOpenChange }: Readonly<Props>
             <dl className="divide-y rounded-xl border text-sm">
               <Linea label="Inicio" value={formatDateLong(contract.startDate)} />
               <Linea label="Fin" value={contract.endDate ? formatDateLong(contract.endDate) : 'Sigue activo'} />
-              <Linea label="Duración" value={formatDuration(contract.startDate, contract.endDate)} />
+              <Linea label="Duración" value={formatDurationExact(contract.startDate, contract.endDate)} />
               <Linea label="Tipo de pago" value={contract.type || '—'} />
+              <Linea label="Clientes" value={(contract.clients ?? []).map((c) => c.name).join(', ') || '—'} />
             </dl>
 
             {contract.notes && (

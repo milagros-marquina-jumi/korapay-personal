@@ -14,7 +14,7 @@ import {
   type SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Fragment, type ReactNode, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
@@ -52,13 +52,16 @@ export function DataTable<T>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [expanded, setExpanded] = useState<ExpandedState>({});
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize });
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, columnFilters, globalFilter, expanded },
+    state: { sorting, columnFilters, globalFilter, expanded, pagination },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
+    autoResetPageIndex: false,
     onGlobalFilterChange,
     onExpandedChange: (updater) => {
       const next = typeof updater === 'function' ? updater(expanded) : updater;
@@ -77,10 +80,19 @@ export function DataTable<T>({
     getFilteredRowModel: getFilteredRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize } },
   });
 
   const rows = table.getRowModel().rows;
+  const totalFiltrado = table.getFilteredRowModel().rows.length;
+
+  useEffect(() => {
+    setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }));
+  }, [globalFilter, columnFilters]);
+
+  useEffect(() => {
+    const ultima = Math.max(0, Math.ceil(totalFiltrado / pagination.pageSize) - 1);
+    setPagination((p) => (p.pageIndex > ultima ? { ...p, pageIndex: ultima } : p));
+  }, [totalFiltrado, pagination.pageSize]);
 
   if (!isLoading && rows.length === 0) {
     return (

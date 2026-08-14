@@ -90,6 +90,11 @@ export class CatalogService {
       this.prisma.employmentContract.findMany({
         where: { workspaceId, deletedAt: null },
         orderBy: { startDate: 'desc' },
+        include: {
+          clients: {
+            include: { globalClient: { select: { id: true, name: true } } },
+          },
+        },
       }),
       this.prisma.company.findMany({
         where: { workspaceId, deletedAt: null },
@@ -106,14 +111,81 @@ export class CatalogService {
 
     const sequence = buildContractSequence(contracts);
 
-    return contracts.map((c) => ({
+    return contracts.map(({ clients, ...c }) => ({
       ...c,
       salary: c.salary?.toString() ?? null,
       companyName: companyName.get(c.companyId ?? '') ?? null,
       grossSalary: grossByCompany.get(c.companyId ?? '') ?? null,
+      clients: clients.map((x) => x.globalClient),
       ...(sequence.get(c.id) ?? { sequence: 1, sequenceTotal: 1 }),
       ...deriveContractState(c.endDate),
     }));
+  }
+
+  private async globalCompanyDe(companyId?: string | null): Promise<string | null> {
+    if (!companyId) return null;
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { globalCompanyId: true, name: true },
+    });
+    if (!company) return null;
+    if (company.globalCompanyId) return company.globalCompanyId;
+
+    const porNombre = await this.prisma.globalCompany.findFirst({
+      where: { name: { equals: company.name, mode: 'insensitive' }, deletedAt: null },
+    });
+    const global = porNombre ?? (await this.prisma.globalCompany.create({ data: { name: company.name } }));
+    await this.prisma.company.update({ where: { id: companyId }, data: { globalCompanyId: global.id } });
+    return global.id;
+  }
+
+  private async sincronizarClientesDelContrato(
+    contractId: string,
+    companyId: string | null | undefined,
+    clientIds?: string[],
+    newClientNames?: string[],
+  ): Promise<void> {
+    if (clientIds === undefined && !newClientNames?.length) return;
+
+    const globalCompanyId = await this.globalCompanyDe(companyId);
+    const nombres = (newClientNames ?? []).map((n) => n.trim()).filter(Boolean);
+    const creados: string[] = [];
+
+    for (const name of nombres) {
+      const existente = await this.prisma.globalClient.findFirst({
+        where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
+      });
+      if (existente) {
+        creados.push(existente.id);
+        if (globalCompanyId && !existente.globalCompanyId) {
+          await this.prisma.globalClient.update({
+            where: { id: existente.id },
+            data: { globalCompanyId },
+          });
+        }
+        continue;
+      }
+      const nuevo = await this.prisma.globalClient.create({ data: { name, globalCompanyId } });
+      creados.push(nuevo.id);
+    }
+
+    const finales = [...new Set([...(clientIds ?? []), ...creados])];
+
+    await this.prisma.employmentContractClient.deleteMany({
+      where: { contractId, globalClientId: { notIn: finales } },
+    });
+    if (finales.length) {
+      await this.prisma.employmentContractClient.createMany({
+        data: finales.map((globalClientId) => ({ contractId, globalClientId })),
+        skipDuplicates: true,
+      });
+      if (globalCompanyId) {
+        await this.prisma.globalClient.updateMany({
+          where: { id: { in: finales }, globalCompanyId: null, deletedAt: null },
+          data: { globalCompanyId },
+        });
+      }
+    }
   }
 
   async createEmploymentContract(data: {
@@ -126,6 +198,8 @@ export class CatalogService {
     salary?: string;
     currency?: string;
     notes?: string;
+    clientIds?: string[];
+    newClientNames?: string[];
   }) {
     const created = await this.prisma.employmentContract.create({
       data: {
@@ -141,6 +215,7 @@ export class CatalogService {
         notes: data.notes ?? null,
       },
     });
+    await this.sincronizarClientesDelContrato(created.id, data.companyId, data.clientIds, data.newClientNames);
     await this.contractIncome.syncContractIncomes(created.id, data.workspaceId);
     return { ...created, salary: created.salary?.toString() ?? null };
   }
@@ -161,6 +236,12 @@ export class CatalogService {
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.notes !== undefined) updateData.notes = data.notes;
     const updated = await this.prisma.employmentContract.update({ where: { id }, data: updateData });
+    await this.sincronizarClientesDelContrato(
+      id,
+      data.companyId !== undefined ? data.companyId : found.companyId,
+      data.clientIds,
+      data.newClientNames,
+    );
     await this.contractIncome.syncContractIncomes(id, workspaceId);
     return { ...updated, salary: updated.salary?.toString() ?? null };
   }
@@ -169,6 +250,7 @@ export class CatalogService {
     const found = await this.prisma.employmentContract.findFirst({ where: { id, workspaceId, deletedAt: null } });
     if (!found) throw new NotFoundException('Contrato no encontrado');
     await this.contractIncome.removeFutureIncomes(id, workspaceId);
+    await this.prisma.employmentContractClient.deleteMany({ where: { contractId: id } });
     return this.prisma.employmentContract.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
@@ -228,15 +310,87 @@ export class CatalogService {
     });
   }
 
-  async createGlobalCompany(data: { name: string; ruc?: string }) {
+  private async sincronizarClientes(
+    globalCompanyId: string,
+    clientIds?: string[],
+    newClientNames?: string[],
+  ): Promise<void> {
+    const nombres = (newClientNames ?? []).map((n) => n.trim()).filter(Boolean);
+    const creados: string[] = [];
+
+    for (const name of nombres) {
+      const existente = await this.prisma.globalClient.findFirst({
+        where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
+      });
+      if (existente) {
+        creados.push(existente.id);
+        continue;
+      }
+      const nuevo = await this.prisma.globalClient.create({ data: { name, globalCompanyId } });
+      creados.push(nuevo.id);
+    }
+
+    if (clientIds === undefined && !creados.length) return;
+
+    const finales = [...new Set([...(clientIds ?? []), ...creados])];
+
+    await this.prisma.globalClient.updateMany({
+      where: { globalCompanyId, deletedAt: null, id: { notIn: finales } },
+      data: { globalCompanyId: null },
+    });
+    if (finales.length) {
+      await this.prisma.globalClient.updateMany({
+        where: { id: { in: finales }, deletedAt: null },
+        data: { globalCompanyId },
+      });
+    }
+  }
+
+  private async reflejarEnWorkspaces(globalCompanyId: string, name: string, ruc?: string | null): Promise<void> {
+    const espejos = await this.prisma.company.findMany({
+      where: { globalCompanyId, deletedAt: null },
+      select: { id: true },
+    });
+    if (espejos.length) {
+      await this.prisma.company.updateMany({
+        where: { id: { in: espejos.map((e) => e.id) } },
+        data: { name, ruc: ruc ?? null },
+      });
+      return;
+    }
+
+    const porNombre = await this.prisma.company.findMany({
+      where: { name: { equals: name, mode: 'insensitive' }, globalCompanyId: null, deletedAt: null },
+      select: { id: true },
+    });
+    if (porNombre.length) {
+      await this.prisma.company.updateMany({
+        where: { id: { in: porNombre.map((e) => e.id) } },
+        data: { globalCompanyId, name },
+      });
+    }
+  }
+
+  async createGlobalCompany(data: { name: string; ruc?: string; clientIds?: string[]; newClientNames?: string[] }) {
     const dup = await this.prisma.globalCompany.findFirst({
       where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
     });
     if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
-    return this.prisma.globalCompany.create({ data: { name: data.name, ruc: data.ruc ?? null } });
+    const created = await this.prisma.globalCompany.create({
+      data: { name: data.name, ruc: data.ruc ?? null },
+    });
+    await this.sincronizarClientes(created.id, data.clientIds, data.newClientNames);
+    await this.reflejarEnWorkspaces(created.id, created.name, created.ruc);
+    return this.prisma.globalCompany.findUnique({
+      where: { id: created.id },
+      include: { clients: { where: { deletedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true } } },
+    });
   }
 
-  async updateGlobalCompany(id: string, data: { name?: string; ruc?: string }) {
+  async updateGlobalCompany(
+    id: string,
+    data: { name?: string; ruc?: string; clientIds?: string[]; newClientNames?: string[] },
+  ) {
     const found = await this.prisma.globalCompany.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Empresa no encontrada');
     if (data.name) {
@@ -245,12 +399,43 @@ export class CatalogService {
       });
       if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
     }
-    return this.prisma.globalCompany.update({ where: { id }, data });
+    const { clientIds, newClientNames, ...campos } = data;
+    const actualizada = await this.prisma.globalCompany.update({ where: { id }, data: campos });
+    await this.sincronizarClientes(id, clientIds, newClientNames);
+    await this.reflejarEnWorkspaces(id, actualizada.name, actualizada.ruc);
+    return this.prisma.globalCompany.findUnique({
+      where: { id },
+      include: { clients: { where: { deletedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true } } },
+    });
   }
 
   async removeGlobalCompany(id: string) {
     const found = await this.prisma.globalCompany.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Empresa no encontrada');
+
+    const espejos = await this.prisma.company.findMany({
+      where: { globalCompanyId: id, deletedAt: null },
+      select: { id: true },
+    });
+    const ids = espejos.map((c) => c.id);
+
+    if (ids.length) {
+      const [movimientos, contratos] = await Promise.all([
+        this.prisma.transaction.count({ where: { companyId: { in: ids }, deletedAt: null } }),
+        this.prisma.employmentContract.count({ where: { companyId: { in: ids }, deletedAt: null } }),
+      ]);
+      if (movimientos || contratos) {
+        throw new ConflictException(
+          `No se puede eliminar: tiene ${movimientos} movimiento(s) y ${contratos} contrato(s) asociados.`,
+        );
+      }
+      await this.prisma.company.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
+    }
+
+    await this.prisma.globalClient.updateMany({
+      where: { globalCompanyId: id, deletedAt: null },
+      data: { globalCompanyId: null },
+    });
     return this.prisma.globalCompany.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
@@ -295,6 +480,7 @@ export class CatalogService {
   async removeGlobalClient(id: string) {
     const found = await this.prisma.globalClient.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Cliente no encontrado');
+    await this.prisma.employmentContractClient.deleteMany({ where: { globalClientId: id } });
     return this.prisma.globalClient.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 

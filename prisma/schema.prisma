@@ -210,7 +210,8 @@ model GlobalClient {
   createdAt       DateTime  @default(now()) @map("created_at")
   deletedAt       DateTime? @map("deleted_at")
 
-  globalCompany GlobalCompany? @relation(fields: [globalCompanyId], references: [id], onDelete: SetNull)
+  globalCompany GlobalCompany?             @relation(fields: [globalCompanyId], references: [id], onDelete: SetNull)
+  contracts     EmploymentContractClient[]
 
   @@index([globalCompanyId])
   @@map("global_clients")
@@ -560,10 +561,24 @@ model EmploymentContract {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clients   EmploymentContractClient[]
 
   @@index([workspaceId])
   @@map("employment_contracts")
+}
+
+model EmploymentContractClient {
+  contractId     String   @map("contract_id")
+  globalClientId String   @map("global_client_id")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  contract     EmploymentContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  globalClient GlobalClient       @relation(fields: [globalClientId], references: [id], onDelete: Cascade)
+
+  @@id([contractId, globalClientId])
+  @@index([globalClientId])
+  @@map("employment_contract_clients")
 }
 
 model Subscription {

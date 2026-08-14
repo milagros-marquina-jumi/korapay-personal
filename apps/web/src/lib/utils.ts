@@ -66,10 +66,20 @@ function formatYmd(years: number, months: number, days: number): string {
   return `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}`;
 }
 
-export function formatDurationRange(from: string | Date, to?: string | Date | null): string {
+export function formatYmdCompact(years: number, months: number, days: number): string {
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`);
+  if (months > 0) parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`);
+  if (days > 0) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`);
+  if (!parts.length) return '1 día';
+  if (parts.length === 1) return parts[0] as string;
+  return `${parts.slice(0, -1).join(', ')} y ${parts.at(-1)}`;
+}
+
+export function durationParts(from: string | Date, to?: string | Date | null): [number, number, number] {
   const start = new Date(from);
   const end = to ? new Date(to) : new Date();
-  if (end < start) return formatYmd(0, 0, 0);
+  if (end < start) return [0, 0, 0];
 
   let years = end.getUTCFullYear() - start.getUTCFullYear();
   let months = end.getUTCMonth() - start.getUTCMonth();
@@ -84,6 +94,17 @@ export function formatDurationRange(from: string | Date, to?: string | Date | nu
     years -= 1;
     months += 12;
   }
+  return [years, months, days];
+}
+
+export function formatDurationExact(from?: string | Date | null, to?: string | Date | null): string {
+  if (!from) return '—';
+  const [y, m, d] = durationParts(from, to);
+  return formatYmdCompact(y, m, d);
+}
+
+export function formatDurationRange(from: string | Date, to?: string | Date | null): string {
+  const [years, months, days] = durationParts(from, to);
   return formatYmd(years, months, days);
 }
 

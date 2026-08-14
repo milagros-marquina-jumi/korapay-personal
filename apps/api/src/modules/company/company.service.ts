@@ -10,13 +10,25 @@ export class CompanyService {
       where: { workspaceId, deletedAt: null },
       orderBy: { name: 'asc' },
       include: {
-        _count: { select: { clients: { where: { deletedAt: null } } } },
         globalCompany: { select: { id: true, name: true, ruc: true } },
       },
     });
+    const globalIds = companies.map((c) => c.globalCompanyId).filter((id): id is string => !!id);
+    const globalClients = globalIds.length
+      ? await this.prisma.globalClient.findMany({
+          where: { globalCompanyId: { in: globalIds }, deletedAt: null },
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, globalCompanyId: true },
+        })
+      : [];
+
     return companies.map((c) => {
-      const { _count, ...rest } = c;
-      return { ...rest, clientCount: _count.clients };
+      const suyos = globalClients.filter((g) => g.globalCompanyId === c.globalCompanyId);
+      return {
+        ...c,
+        clients: suyos.map(({ id, name }) => ({ id, name })),
+        clientCount: suyos.length,
+      };
     });
   }
   async create(data: {

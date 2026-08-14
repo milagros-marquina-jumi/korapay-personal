@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { IconAction } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MultiSelectCreatable } from '@/components/ui/multi-select-creatable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api';
 import { useHighlightNew } from '@/lib/use-highlight-new';
@@ -21,6 +22,9 @@ export interface CatalogField {
   required?: boolean;
   placeholder?: string;
   options?: { value: string; label: string }[];
+  multi?: boolean;
+  createField?: string;
+  itemsKey?: string;
 }
 
 const NONE = '__none__';
@@ -41,6 +45,7 @@ interface Props {
   deletable?: boolean;
   searchable?: boolean;
   searchText?: (item: CatalogItem) => string;
+  alsoInvalidate?: readonly (readonly unknown[])[];
 }
 
 export function CatalogManager({
@@ -54,6 +59,7 @@ export function CatalogManager({
   deletable = true,
   searchable = false,
   searchText,
+  alsoInvalidate,
 }: Props) {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
@@ -61,6 +67,8 @@ export function CatalogManager({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CatalogItem | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
+  const [multiValues, setMultiValues] = useState<Record<string, string[]>>({});
+  const [multiNuevos, setMultiNuevos] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState('');
 
   const { data } = useQuery({
@@ -86,11 +94,19 @@ export function CatalogManager({
         })
       : sorted;
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey });
+    for (const k of alsoInvalidate ?? []) queryClient.invalidateQueries({ queryKey: k });
+  };
 
   const save = useMutation({
     mutationFn: () => {
-      const body = { ...extraBody, ...values };
+      const body: Record<string, unknown> = { ...extraBody, ...values };
+      for (const f of fields) {
+        if (!f.multi) continue;
+        body[f.name] = multiValues[f.name] ?? [];
+        if (f.createField) body[f.createField] = multiNuevos[f.name] ?? [];
+      }
       if (editing) {
         return apiFetch<CatalogItem>(withId(endpoint, editing.id, extraBody), {
           method: 'PATCH',
@@ -109,6 +125,8 @@ export function CatalogManager({
       setOpen(false);
       setEditing(null);
       setValues({});
+      setMultiValues({});
+      setMultiNuevos({});
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -125,11 +143,24 @@ export function CatalogManager({
   const openCreate = () => {
     setEditing(null);
     setValues({});
+    setMultiValues({});
+    setMultiNuevos({});
     setOpen(true);
   };
   const openEdit = (item: CatalogItem) => {
     setEditing(item);
-    setValues(Object.fromEntries(fields.map((f) => [f.name, String(item[f.name] ?? '')])));
+    setValues(Object.fromEntries(fields.filter((f) => !f.multi).map((f) => [f.name, String(item[f.name] ?? '')])));
+    setMultiValues(
+      Object.fromEntries(
+        fields
+          .filter((f) => f.multi)
+          .map((f) => {
+            const lista = (item[f.itemsKey ?? f.name] as { id: string }[] | undefined) ?? [];
+            return [f.name, lista.map((x) => x.id)];
+          }),
+      ),
+    );
+    setMultiNuevos({});
     setOpen(true);
   };
 
@@ -159,7 +190,18 @@ export function CatalogManager({
               {fields.map((f) => (
                 <div key={f.name} className="space-y-2">
                   <Label htmlFor={f.name}>{f.label}</Label>
-                  {f.options ? (
+                  {f.multi ? (
+                    <MultiSelectCreatable
+                      options={f.options ?? []}
+                      selected={multiValues[f.name] ?? []}
+                      onChange={(next) => setMultiValues((v) => ({ ...v, [f.name]: next }))}
+                      nuevos={f.createField ? (multiNuevos[f.name] ?? []) : undefined}
+                      onNuevosChange={
+                        f.createField ? (next) => setMultiNuevos((v) => ({ ...v, [f.name]: next })) : undefined
+                      }
+                      placeholder={f.placeholder ?? 'Selecciona'}
+                    />
+                  ) : f.options ? (
                     <Select
                       value={values[f.name] || NONE}
                       onValueChange={(value) => setValues((v) => ({ ...v, [f.name]: value === NONE ? '' : value }))}

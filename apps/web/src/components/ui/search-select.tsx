@@ -74,7 +74,7 @@ export function SearchSelect({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="max-h-80 w-[--radix-dropdown-menu-trigger-width] overflow-hidden p-0"
+        className="max-h-80 w-(--radix-dropdown-menu-trigger-width) max-w-[calc(100vw-2rem)] overflow-hidden p-0"
         align="start"
       >
         <div className="sticky top-0 border-b bg-popover p-2">

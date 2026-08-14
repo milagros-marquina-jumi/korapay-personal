@@ -134,6 +134,8 @@ export interface Company {
   startDate?: string | null;
   endDate?: string | null;
   clientCount?: number;
+  globalCompanyId?: string | null;
+  clients?: { id: string; name: string }[];
 }
 
 export interface Client {
@@ -517,6 +519,7 @@ export interface GlobalCompany {
 export interface GlobalClient {
   id: string;
   name: string;
+  globalCompanyId?: string | null;
 }
 
 export interface TalentDebtRow {
@@ -716,6 +719,7 @@ export interface EmploymentContract {
   daysRemaining?: number | null;
   sequence?: number;
   sequenceTotal?: number;
+  clients?: { id: string; name: string }[];
 }
 
 export interface TaxObligationInstallment {

@@ -7,7 +7,7 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
 import { IconAction } from '@/components/ui/icon-action';
 import type { Transaction } from '@/lib/api.types';
-import { accountNumber, grossOf } from '@/lib/employment-income';
+import { accountNumber, type ConceptOrdinal, grossOf } from '@/lib/employment-income';
 import { splitTags, type TagCatalogs } from '@/lib/transaction-tags';
 import { formatMonthYear } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ interface Options {
   onShowDetail: (tx: Transaction) => void;
   onShowConversion: (tx: Transaction) => void;
   showDate?: boolean;
+  ordinals?: Map<string, ConceptOrdinal>;
 }
 
 export function buildIncomeColumns({
@@ -31,6 +32,7 @@ export function buildIncomeColumns({
   onShowDetail,
   onShowConversion,
   showDate = true,
+  ordinals,
 }: Options): ColumnDef<Transaction, unknown>[] {
   const columns: ColumnDef<Transaction, unknown>[] = [];
 
@@ -46,11 +48,27 @@ export function buildIncomeColumns({
     {
       accessorKey: 'concept',
       header: ({ column }) => <SortableHeader column={column} label="Concepto" />,
-      cell: ({ row }) => (
-        <span className="block max-w-[20rem] truncate font-medium" title={row.original.concept}>
-          {row.original.concept}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const orden = ordinals?.get(row.original.id);
+        const empresa = companyName(row.original.companyId) ?? row.original.category?.name;
+        return (
+          <span
+            className="flex max-w-[20rem] items-baseline gap-1.5"
+            title={
+              orden
+                ? `${row.original.concept} ${orden.position} de ${orden.total} en ${empresa ?? 'esta empresa'}`
+                : row.original.concept
+            }
+          >
+            <span className="truncate font-medium">{row.original.concept}</span>
+            {orden && (
+              <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
+                ({orden.position}/{orden.total})
+              </span>
+            )}
+          </span>
+        );
+      },
     },
     {
       id: 'company',

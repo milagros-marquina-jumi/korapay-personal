@@ -194,6 +194,7 @@ export interface Transaction {
   categoryId?: string | null;
   accountId?: string | null;
   companyId?: string | null;
+  contractId?: string | null;
   personId?: string | null;
   projectId?: string | null;
   applicationId?: string | null;

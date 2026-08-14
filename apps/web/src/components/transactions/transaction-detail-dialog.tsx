@@ -4,11 +4,11 @@ import { formatMoney } from '@korapay/domain';
 import { StatusBadge } from '@korapay/ui';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { Transaction } from '@/lib/api.types';
-import { accountNumber, looksLikeAccount } from '@/lib/employment-income';
+import type { EmploymentContract, Transaction } from '@/lib/api.types';
+import { accountNumber, type ConceptOrdinal, looksLikeAccount } from '@/lib/employment-income';
 import { RECURRENCE_LABELS, TRANSACTION_TYPE_LABELS } from '@/lib/labels';
 import { isFixedExpense, meaningfulTags } from '@/lib/transaction-tags';
-import { cn, formatDate, formatDateLong } from '@/lib/utils';
+import { cn, formatDate, formatDateLong, formatDateMedium } from '@/lib/utils';
 
 function paymentMethods(tags?: string[]) {
   const methods = meaningfulTags(tags);
@@ -25,6 +25,8 @@ interface Props {
   workspaceId: string | null;
   categoryName: (id?: string | null) => string;
   categoryLabel?: string;
+  contract?: EmploymentContract | null;
+  ordinal?: ConceptOrdinal | null;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -33,6 +35,8 @@ export function TransactionDetailDialog({
   workspaceId,
   categoryName,
   categoryLabel = 'Categoría',
+  contract,
+  ordinal,
   onOpenChange,
 }: Readonly<Props>) {
   const gross = transaction?.amountGross;
@@ -52,7 +56,14 @@ export function TransactionDetailDialog({
         {transaction && (
           <>
             <DialogHeader className="space-y-1">
-              <DialogTitle className="pr-6 text-lg leading-tight">{transaction.concept}</DialogTitle>
+              <DialogTitle className="pr-6 text-lg leading-tight">
+                {transaction.concept}
+                {ordinal && (
+                  <span className="ml-1.5 font-normal text-base text-muted-foreground tabular-nums">
+                    ({ordinal.position}/{ordinal.total})
+                  </span>
+                )}
+              </DialogTitle>
               <DialogDescription className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span>{TRANSACTION_TYPE_LABELS[transaction.type] ?? transaction.type}</span>
                 <span aria-hidden="true">·</span>
@@ -95,6 +106,20 @@ export function TransactionDetailDialog({
                 }
               />
             </dl>
+
+            {contract && (
+              <div className="rounded-xl border px-4 py-3">
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Contrato</p>
+                <p className="mt-1 font-medium text-sm">
+                  {contract.position || 'Sin cargo registrado'}
+                  {contract.type && <span className="ml-1.5 text-muted-foreground">· {contract.type}</span>}
+                </p>
+                <p className="mt-0.5 text-muted-foreground text-sm">
+                  {formatDateMedium(contract.startDate)} —{' '}
+                  {contract.endDate ? formatDateMedium(contract.endDate) : 'sigue activo'}
+                </p>
+              </div>
+            )}
 
             {transaction.isRecurring && transaction.recurrenceRule && workspaceId && (
               <RecurrenceHistory workspaceId={workspaceId} ruleId={transaction.recurrenceRule.id} />

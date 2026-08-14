@@ -21,8 +21,15 @@ import { OwnCompanyToggle, useOwnCompanyVisibility } from '@/components/reports/
 import { TransactionDetailDialog, UsdConversionDialog } from '@/components/transactions/transaction-detail-dialog';
 import { Button } from '@/components/ui/button';
 import { apiFetch, buildQuery } from '@/lib/api';
-import type { BankCatalog, Company, Paginated, PaymentMethodCatalog, Transaction } from '@/lib/api.types';
-import { grossOf, INCOME_STATUS_LABELS, monthKeyOf } from '@/lib/employment-income';
+import type {
+  BankCatalog,
+  Company,
+  EmploymentContract,
+  Paginated,
+  PaymentMethodCatalog,
+  Transaction,
+} from '@/lib/api.types';
+import { conceptOrdinals, contractOf, grossOf, INCOME_STATUS_LABELS, monthKeyOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { splitTags } from '@/lib/transaction-tags';
 import { useDefaultYear } from '@/lib/use-default-year';
@@ -66,6 +73,12 @@ function IngresosContent() {
   const { data: companies } = useQuery({
     queryKey: queryKeys.companies(activeWorkspaceId ?? ''),
     queryFn: () => apiFetch<Company[]>(`/companies?workspaceId=${activeWorkspaceId}`),
+    enabled: !!activeWorkspaceId,
+  });
+
+  const { data: contracts } = useQuery({
+    queryKey: queryKeys.employmentContracts(activeWorkspaceId ?? ''),
+    queryFn: () => apiFetch<EmploymentContract[]>(`/employment-contracts?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
 
@@ -134,6 +147,10 @@ function IngresosContent() {
   const [year, setYear] = useDefaultYear(availableYears);
 
   const companyName = (id?: string | null) => companies?.find((c) => c.id === id)?.name;
+
+  // Se numera sobre el total y no sobre lo filtrado: el sueldo 3 de 15 sigue
+  // siendo el 3 aunque la vista muestre un solo mes.
+  const ordinals = useMemo(() => conceptOrdinals(data?.data ?? []), [data?.data]);
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -215,8 +232,9 @@ function IngresosContent() {
         onShowDetail: setDetail,
         onShowConversion: setUsdDetail,
         showDate: false,
+        ordinals,
       }),
-    [activeWorkspaceId, companies, catalogs, confirm, removeMutation],
+    [activeWorkspaceId, companies, catalogs, confirm, removeMutation, ordinals],
   );
 
   return (
@@ -397,6 +415,8 @@ function IngresosContent() {
         workspaceId={activeWorkspaceId}
         categoryLabel="Empresa"
         categoryName={() => companyName(detail?.companyId) ?? detail?.category?.name ?? '—'}
+        contract={detail ? contractOf(detail, contracts ?? []) : null}
+        ordinal={detail ? ordinals.get(detail.id) : null}
         onOpenChange={(next) => !next && setDetail(null)}
       />
 

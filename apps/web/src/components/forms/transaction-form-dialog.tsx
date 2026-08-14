@@ -33,13 +33,16 @@ import type {
   BankCatalog,
   Category,
   Company,
+  EmploymentContract,
   PaymentMethodCatalog,
   Person,
   Project,
   Transaction,
 } from '@/lib/api.types';
+import { contractOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { buildTags, isFixedExpense, splitTags } from '@/lib/transaction-tags';
+import { formatDateMedium } from '@/lib/utils';
 
 const TYPE_OPTIONS = [
   { value: 'INCOME', label: 'Ingreso' },
@@ -145,6 +148,12 @@ export function TransactionFormDialog({
     enabled: open && showCompany,
   });
 
+  const { data: contracts } = useQuery({
+    queryKey: queryKeys.employmentContracts(workspaceId),
+    queryFn: () => apiFetch<EmploymentContract[]>(`/employment-contracts?workspaceId=${workspaceId}`),
+    enabled: open && showCompany,
+  });
+
   const {
     register,
     handleSubmit,
@@ -171,6 +180,14 @@ export function TransactionFormDialog({
   // En ingresos laborales la repeticion la define el contrato, no la recurrencia del movimiento.
   const contractDrivenIncome = showCompany;
   const currentStatus = watch('status');
+  const companySeleccionada = watch('companyId');
+  const fechaElegida = watch('date');
+  // Solo informativo: ubica el contrato que cubria esa empresa en esa fecha para
+  // dar contexto al movimiento. No altera nada de lo que se guarda.
+  const contratoVigente = useMemo(() => {
+    if (!showCompany || !companySeleccionada || !fechaElegida) return null;
+    return contractOf({ companyId: companySeleccionada, date: fechaElegida }, contracts ?? []);
+  }, [showCompany, companySeleccionada, fechaElegida, contracts]);
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
   // Los costos de MIMOTECH se clasifican por aplicacion y proyecto, y los pagos
@@ -267,7 +284,7 @@ export function TransactionFormDialog({
           type: rest.type,
           concept: rest.concept,
           amount: rest.amount,
-          amountGross: rest.amountGross || null,
+          amountGross: rest.amountGross || rest.amount,
           currency: rest.currency,
           date: rest.date,
           status: rest.status,
@@ -288,7 +305,7 @@ export function TransactionFormDialog({
       const payload = {
         ...rest,
         workspaceId,
-        amountGross: rest.amountGross || undefined,
+        amountGross: rest.amountGross || rest.amount,
         applicationId: isBusinessCost ? rest.applicationId : undefined,
         projectIds: isBusinessCost && projectIds?.length ? projectIds : undefined,
         personId: isTeamPayment ? personId : undefined,
@@ -371,7 +388,7 @@ export function TransactionFormDialog({
                 value={watch('amountGross') ?? ''}
                 onValueChange={(raw) => setValue('amountGross', raw)}
               />
-              <p className="text-xs text-muted-foreground">Antes de descuentos. Vacío si no hubo.</p>
+              <p className="text-muted-foreground text-xs">Antes de descuentos. Si lo dejas vacío, se usa el neto.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="amount">Monto neto</Label>
@@ -418,6 +435,19 @@ export function TransactionFormDialog({
               </div>
             )}
           </div>
+
+          {contratoVigente && (
+            <div className="rounded-lg border bg-muted/30 px-3 py-2">
+              <p className="font-medium text-xs">
+                Contrato vigente en esa fecha
+                {contratoVigente.position ? `: ${contratoVigente.position}` : ''}
+              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {formatDateMedium(contratoVigente.startDate)} —{' '}
+                {contratoVigente.endDate ? formatDateMedium(contratoVigente.endDate) : 'sigue activo'}
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">

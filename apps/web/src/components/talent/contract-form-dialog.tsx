@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { CurrencyToggle } from '@/components/ui/currency-toggle';
 import {
   Dialog,
   DialogContent,
@@ -153,7 +154,15 @@ export function TalentContractFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="rate">Sueldo</Label>
-              <MoneyField control={control} name="rate" id="rate" />
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <MoneyField control={control} name="rate" id="rate" />
+                </div>
+                <CurrencyToggle
+                  value={(watch('currency') ?? 'PEN') as 'PEN' | 'USD'}
+                  onChange={(v) => setValue('currency', v)}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Tipo de pago</Label>
@@ -201,18 +210,6 @@ export function TalentContractFormDialog({
               <div className="space-y-2">
                 <Label htmlFor="endDate">Fin</Label>
                 <Input id="endDate" type="date" {...register('endDate')} />
-              </div>
-              <div className="space-y-2">
-                <Label>Moneda</Label>
-                <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PEN">Soles (S/)</SelectItem>
-                    <SelectItem value="USD">Dólares ($)</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             <div className="space-y-2">

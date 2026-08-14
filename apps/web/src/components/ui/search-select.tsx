@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronDown, Search } from 'lucide-react';
+import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +25,8 @@ interface SearchSelectProps {
   searchPlaceholder?: string;
   clearable?: boolean;
   clearLabel?: string;
+  onCreate?: (nombre: string) => Promise<void> | void;
+  createLabel?: string;
 }
 
 export function SearchSelect({
@@ -35,9 +37,12 @@ export function SearchSelect({
   searchPlaceholder = 'Buscar...',
   clearable = false,
   clearLabel = 'Sin asignar',
+  onCreate,
+  createLabel = 'Crear',
 }: Readonly<SearchSelectProps>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [creando, setCreando] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -50,6 +55,21 @@ export function SearchSelect({
     onValueChange(next);
     setOpen(false);
     setQuery('');
+  };
+
+  const termino = query.trim();
+  const puedeCrear = !!onCreate && !!termino && !options.some((o) => o.label.toLowerCase() === termino.toLowerCase());
+
+  const crear = async () => {
+    if (!onCreate || !termino) return;
+    setCreando(true);
+    try {
+      await onCreate(termino);
+      setOpen(false);
+      setQuery('');
+    } finally {
+      setCreando(false);
+    }
   };
 
   return (
@@ -84,15 +104,33 @@ export function SearchSelect({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter' && puedeCrear) {
+                  e.preventDefault();
+                  void crear();
+                }
+              }}
               placeholder={searchPlaceholder}
               className="h-9 pl-8"
             />
           </div>
         </div>
-        <div className="max-h-64 overflow-y-auto py-1">
-          {filtered.length === 0 && (
-            <p className="px-3 py-6 text-center text-sm text-muted-foreground">Sin resultados</p>
+        <div className="max-h-64 overflow-x-hidden overflow-y-auto py-1">
+          {puedeCrear && (
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                void crear();
+              }}
+              className="flex items-center gap-2 font-medium text-brand"
+            >
+              <Plus className="size-4 shrink-0" />
+              <span className="min-w-0 truncate">{creando ? 'Creando…' : `${createLabel} "${termino}"`}</span>
+            </DropdownMenuItem>
+          )}
+          {filtered.length === 0 && !puedeCrear && (
+            <p className="px-3 py-6 text-center text-muted-foreground text-sm">Sin resultados</p>
           )}
           {clearable && value && !query && (
             <DropdownMenuItem

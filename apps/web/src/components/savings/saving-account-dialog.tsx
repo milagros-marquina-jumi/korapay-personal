@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
+import { CurrencyToggle } from '@/components/ui/currency-toggle';
 import {
   Dialog,
   DialogContent,
@@ -125,23 +126,15 @@ export function SavingAccountDialog({ open, onOpenChange, year, month, periodLab
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="account-currency">Moneda</Label>
-              <Select value={currency} onValueChange={setCurrency} disabled={!!account}>
-                <SelectTrigger id="account-currency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PEN">Soles (PEN)</SelectItem>
-                  <SelectItem value="USD">Dólares (USD)</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-1.5">
+            <Label htmlFor="account-amount">Monto</Label>
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <MoneyInput id="account-amount" value={amount} onValueChange={setAmount} />
+              </div>
+              {account ? null : <CurrencyToggle value={currency as 'PEN' | 'USD'} onChange={(v) => setCurrency(v)} />}
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="account-amount">Monto</Label>
-              <MoneyInput id="account-amount" value={amount} onValueChange={setAmount} />
-            </div>
+            {account && <p className="text-muted-foreground text-xs">Moneda: {currency}. No se puede cambiar.</p>}
           </div>
         </div>
 

@@ -17,6 +17,7 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { CurrencyToggle } from '@/components/ui/currency-toggle';
 import {
   Dialog,
   DialogContent,
@@ -58,6 +59,7 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
   const {
     register,
     control,
+    watch,
     handleSubmit,
     reset,
     setValue,
@@ -124,24 +126,18 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
             {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="amount">Monto</Label>
-              <MoneyField control={control} name="amount" id="amount" />
-              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+          <div className="space-y-2">
+            <Label htmlFor="amount">Monto</Label>
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1">
+                <MoneyField control={control} name="amount" id="amount" />
+              </div>
+              <CurrencyToggle
+                value={(watch('currency') ?? 'PEN') as 'PEN' | 'USD'}
+                onChange={(v) => setValue('currency', v)}
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Moneda</Label>
-              <Select defaultValue="PEN" onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dólares ($)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {errors.amount && <p className="text-destructive text-xs">{errors.amount.message}</p>}
           </div>
 
           <div className="space-y-2">

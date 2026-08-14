@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { CurrencyToggle } from '@/components/ui/currency-toggle';
 import {
   Dialog,
   DialogContent,
@@ -346,18 +347,6 @@ export function TransactionFormDialog({
               <Label htmlFor="date">Fecha</Label>
               <Input id="date" type="date" {...register('date')} />
             </div>
-            <div className="space-y-1.5">
-              <Label>Moneda</Label>
-              <Select value={watch('currency')} onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dólares ($)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           {showCategory && (
@@ -386,13 +375,18 @@ export function TransactionFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="amount">Monto neto</Label>
-              <MoneyInput
-                id="amount"
-                value={watch('amount') ?? ''}
-                onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
-              />
-              <p className="text-xs text-muted-foreground">Lo que realmente recibiste.</p>
-              {errors.amount && <p className="text-xs text-destructive">{errors.amount.message}</p>}
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <MoneyInput
+                    id="amount"
+                    value={watch('amount') ?? ''}
+                    onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
+                  />
+                </div>
+                <CurrencyToggle value={watch('currency')} onChange={(v) => setValue('currency', v)} />
+              </div>
+              <p className="text-muted-foreground text-xs">Lo que realmente recibiste.</p>
+              {errors.amount && <p className="text-destructive text-xs">{errors.amount.message}</p>}
             </div>
           </div>
 

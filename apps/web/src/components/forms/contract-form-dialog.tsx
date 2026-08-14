@@ -201,10 +201,23 @@ export function ContractFormDialog({
             <Label>Empresa</Label>
             <SearchSelect
               placeholder="Selecciona empresa"
-              searchPlaceholder="Buscar empresa..."
+              searchPlaceholder="Buscar o escribir para crear..."
               value={watch('companyId') ?? ''}
               onValueChange={(v) => setValue('companyId', v)}
               options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+              onCreate={async (nombre) => {
+                const creada = await apiFetch<Company>('/companies', {
+                  method: 'POST',
+                  body: JSON.stringify({ workspaceId, name: nombre }),
+                });
+                await Promise.all([
+                  queryClient.invalidateQueries({ queryKey: queryKeys.companies(workspaceId) }),
+                  queryClient.invalidateQueries({ queryKey: queryKeys.globalCompanies() }),
+                ]);
+                setValue('companyId', creada.id);
+                toast.success(`Empresa "${nombre}" creada`);
+              }}
+              createLabel="Crear empresa"
             />
             {previos.length > 0 && (
               <div className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -234,7 +247,7 @@ export function ContractFormDialog({
               onChange={setClientIds}
               nuevos={nuevosClientes}
               onNuevosChange={setNuevosClientes}
-              placeholder={companyIdSeleccionada ? 'Sin clientes' : 'Elige primero la empresa'}
+              placeholder="Sin clientes"
               searchPlaceholder="Buscar o escribir para crear..."
             />
             <p className="text-[11px] text-muted-foreground">

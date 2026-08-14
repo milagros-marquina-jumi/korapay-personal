@@ -17,6 +17,7 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { CurrencyToggle } from '@/components/ui/currency-toggle';
 import {
   Dialog,
   DialogContent,
@@ -171,32 +172,25 @@ function DebtFormDialog({ workspaceId, open, onOpenChange, debt, onCreated }: Re
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="originalAmount">Monto</Label>
-              <Controller
-                control={control}
-                name="originalAmount"
-                render={({ field }) => (
-                  <MoneyInput id="originalAmount" value={field.value} onValueChange={field.onChange} />
-                )}
-              />
-              {errors.originalAmount && <p className="text-xs text-destructive">{errors.originalAmount.message}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="debt-currency">Moneda</Label>
-              <Controller
-                control={control}
-                name="currency"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="debt-currency">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PEN">Soles (S/)</SelectItem>
-                      <SelectItem value="USD">Dólares ($)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <Controller
+                    control={control}
+                    name="originalAmount"
+                    render={({ field }) => (
+                      <MoneyInput id="originalAmount" value={field.value} onValueChange={field.onChange} />
+                    )}
+                  />
+                </div>
+                <Controller
+                  control={control}
+                  name="currency"
+                  render={({ field }) => (
+                    <CurrencyToggle value={field.value as 'PEN' | 'USD'} onChange={field.onChange} />
+                  )}
+                />
+              </div>
+              {errors.originalAmount && <p className="text-destructive text-xs">{errors.originalAmount.message}</p>}
             </div>
           </div>
 

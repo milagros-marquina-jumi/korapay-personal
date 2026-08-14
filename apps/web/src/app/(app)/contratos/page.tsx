@@ -20,6 +20,7 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { PeruLaboralCalendar } from '@/components/reports/peru-laboral-calendar';
 import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch } from '@/lib/api';
@@ -120,6 +121,13 @@ function ContratosContent() {
       ),
     [allContracts, status, type, currency, company, reingreso],
   );
+
+  // Gratificacion y CTS solo aplican a planilla, igual que en reportes.
+  const sueldoPlanilla =
+    allContracts
+      .filter((c) => c.type === 'Planilla' && (c.salary ?? c.grossSalary))
+      .sort((a, b) => b.startDate.localeCompare(a.startDate))
+      .map((c) => Number(c.salary ?? c.grossSalary))[0] ?? 0;
 
   const handleClear = () => {
     setSearch('');
@@ -248,6 +256,7 @@ function ContratosContent() {
         activeWorkspaceId && (
           <div className="flex items-center gap-2">
             <ActiveContractsDialog contracts={allContracts} />
+            <PeruLaboralCalendar latestMonthlySalary={sueldoPlanilla} />
             <ContractFormDialog
               workspaceId={activeWorkspaceId}
               onSaved={markNew}

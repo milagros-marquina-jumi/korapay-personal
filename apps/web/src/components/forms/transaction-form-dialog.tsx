@@ -324,7 +324,7 @@ export function TransactionFormDialog({
           onSubmit={handleSubmit((v) => mutation.mutate(v))}
           className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
         >
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo</Label>
               <Select

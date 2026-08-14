@@ -188,7 +188,6 @@ export function ContractFormDialog({
           <div className="space-y-2">
             <Label htmlFor="position">Cargo</Label>
             <Input id="position" placeholder="Ej. Desarrollador Fullstack" {...register('position')} />
-            <p className="text-[11px] text-muted-foreground">Tu puesto, no el nombre de la empresa</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

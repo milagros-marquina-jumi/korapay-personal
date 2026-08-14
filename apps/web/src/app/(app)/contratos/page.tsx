@@ -4,10 +4,11 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ActiveContractsDialog } from '@/components/contracts/active-contracts-dialog';
+import { ContractDetailDialog } from '@/components/contracts/contract-detail-dialog';
 import { SequenceBadge } from '@/components/contracts/sequence-badge';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -41,6 +42,7 @@ function ContratosContent() {
   const [currency, setCurrency] = useState(FILTER_ALL);
   const [company, setCompany] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<EmploymentContract | null>(null);
+  const [detalle, setDetalle] = useState<EmploymentContract | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.employmentContracts(activeWorkspaceId ?? ''),
@@ -180,6 +182,7 @@ function ContratosContent() {
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-0.5">
+            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction
               icon={Trash2}
@@ -289,6 +292,8 @@ function ContratosContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
+
+      <ContractDetailDialog contract={detalle} onOpenChange={(next) => !next && setDetalle(null)} />
     </PageShell>
   );
 }

@@ -191,11 +191,13 @@ model PaymentMethod {
 }
 
 model GlobalCompany {
-  id        String    @id @default(uuid())
-  name      String    @unique
-  ruc       String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  deletedAt DateTime? @map("deleted_at")
+  id          String    @id @default(uuid())
+  name        String    @unique
+  ruc         String?
+  legalName   String?   @map("legal_name")
+  website     String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  deletedAt   DateTime? @map("deleted_at")
 
   clients   GlobalClient[]
   companies Company[]

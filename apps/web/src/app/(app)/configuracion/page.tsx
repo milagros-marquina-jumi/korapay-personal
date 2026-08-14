@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Mail, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { CatalogManager } from '@/components/catalog/catalog-manager';
 import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
@@ -38,20 +39,85 @@ function text(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
 
+function detalleEmpresa(item: { [key: string]: unknown }) {
+  const clients = (item.clients ?? []) as { id: string; name: string }[];
+  const web = text(item.website);
+  return (
+    <div className="space-y-3">
+      <dl className="divide-y rounded-xl border text-sm">
+        <LineaDetalle label="RUC" value={text(item.ruc) || '—'} />
+        <LineaDetalle label="Razón social" value={text(item.legalName) || '—'} />
+        <LineaDetalle
+          label="Página web"
+          value={
+            web ? (
+              <a href={web} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+                {web}
+              </a>
+            ) : (
+              '—'
+            )
+          }
+        />
+        <LineaDetalle label="Clientes" value={String(clients.length)} />
+      </dl>
+      {clients.length > 0 && (
+        <div className="rounded-xl border px-4 py-3">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Clientes que atiende</p>
+          <ul className="mt-1 space-y-0.5 text-sm">
+            {clients.map((c) => (
+              <li key={c.id}>{c.name}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LineaDetalle({ label, value }: Readonly<{ label: string; value: ReactNode }>) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 px-4 py-2.5">
+      <dt className="shrink-0 text-muted-foreground text-xs">{label}</dt>
+      <dd className="min-w-0 break-all text-right font-medium">{value}</dd>
+    </div>
+  );
+}
+
 function avisoBorrarEmpresa(item: { [key: string]: unknown }) {
-  const clients = (item.clients ?? []) as { name: string }[];
+  const clients = (item.clients ?? []) as { id: string; name: string }[];
   if (!clients.length) return null;
-  const nombres = clients.map((c) => c.name).join(', ');
-  const frase =
-    clients.length === 1
-      ? `Su cliente ${nombres} quedará sin empresa asignada.`
-      : `Sus ${clients.length} clientes (${nombres}) quedarán sin empresa asignada.`;
-  return `${frase} Si tiene movimientos o contratos, no se podrá eliminar.`;
+  return (
+    <>
+      <div className="rounded-lg border bg-muted/30 px-3 py-2">
+        <p className="font-medium text-foreground text-xs">
+          {clients.length === 1
+            ? 'Su cliente quedará sin empresa:'
+            : `Sus ${clients.length} clientes quedarán sin empresa:`}
+        </p>
+        <ul className="mt-1 space-y-0.5">
+          {clients.map((c) => (
+            <li key={c.id} className="flex items-center gap-1.5">
+              <span className="size-1 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden="true" />
+              <span className="min-w-0 truncate">{c.name}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <p className="text-xs">Si tiene movimientos o contratos, no se podrá eliminar.</p>
+    </>
+  );
 }
 
 function avisoBorrarCliente(item: { [key: string]: unknown }) {
   const company = item.globalCompany as { name: string } | null;
-  return company ? `Está asociado a ${company.name} y se quitará de los contratos donde figure.` : null;
+  if (!company) return null;
+  return (
+    <p>
+      Está asociado a <span className="font-medium text-foreground">{company.name}</span> y se quitará de los contratos
+      donde figure.
+    </p>
+  );
 }
 
 function searchGlobalCompany(item: { [key: string]: unknown }) {
@@ -183,7 +249,20 @@ export default function ConfiguracionPage() {
                 queryKey={queryKeys.globalCompanies()}
                 fields={[
                   { name: 'name', label: 'Nombre', required: true },
-                  { name: 'ruc', label: 'RUC', placeholder: 'Opcional' },
+                  {
+                    name: 'ruc',
+                    label: 'RUC',
+                    placeholder: '11 dígitos',
+                    lookup: {
+                      label: 'Buscar en SUNAT',
+                      run: async (ruc: string) => {
+                        const r = await apiFetch<{ ruc: string; legalName: string }>(`/ruc-lookup/${ruc}`);
+                        return { ruc: r.ruc, legalName: r.legalName };
+                      },
+                    },
+                  },
+                  { name: 'legalName', label: 'Razón social', placeholder: 'Se completa al buscar el RUC' },
+                  { name: 'website', label: 'Página web', placeholder: 'https://empresa.com' },
                   {
                     name: 'clientIds',
                     label: 'Clientes',
@@ -195,6 +274,7 @@ export default function ConfiguracionPage() {
                   },
                 ]}
                 display={displayGlobalCompany}
+                renderDetail={detalleEmpresa}
                 deleteWarning={avisoBorrarEmpresa}
                 alsoInvalidate={[queryKeys.globalClients()]}
                 searchable

@@ -72,6 +72,16 @@ export class CreateGlobalCompanyDto {
   @IsString()
   ruc?: string;
 
+  @ApiPropertyOptional({ description: 'Razon social segun SUNAT' })
+  @IsOptional()
+  @IsString()
+  legalName?: string;
+
+  @ApiPropertyOptional({ example: 'https://empresa.com' })
+  @IsOptional()
+  @IsString()
+  website?: string;
+
   @ApiPropertyOptional({
     description: 'Clientes globales que atiende esta empresa. Reemplaza la lista completa.',
     type: [String],

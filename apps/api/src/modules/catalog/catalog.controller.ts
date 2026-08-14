@@ -20,13 +20,17 @@ import {
   UpdateProjectDto,
 } from './catalog.dto';
 import { CatalogService } from './catalog.service';
+import { RucLookupService } from './ruc-lookup.service';
 
 @ApiTags('Catalog')
 @ApiBearerAuth()
 @UseGuards(AuthGuard)
 @Controller()
 export class CatalogController {
-  constructor(private readonly catalogService: CatalogService) {}
+  constructor(
+    private readonly catalogService: CatalogService,
+    private readonly rucLookup: RucLookupService,
+  ) {}
 
   // ---- Applications (por workspace) ----
   @Get('applications')
@@ -154,6 +158,12 @@ export class CatalogController {
   }
 
   // ---- Global companies ----
+  @Get('ruc-lookup/:ruc')
+  @ApiOperation({ summary: 'Consultar razon social en SUNAT por RUC' })
+  lookupRuc(@Param('ruc') ruc: string) {
+    return this.rucLookup.lookup(ruc);
+  }
+
   @Get('global-companies')
   @ApiOperation({ summary: 'List global companies' })
   globalCompanies() {

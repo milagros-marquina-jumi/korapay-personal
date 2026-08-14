@@ -514,6 +514,9 @@ export interface GlobalCompany {
   id: string;
   name: string;
   ruc?: string | null;
+  legalName?: string | null;
+  website?: string | null;
+  clients?: { id: string; name: string }[];
 }
 
 export interface GlobalClient {

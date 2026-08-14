@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Eye, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/providers/confirm-provider';
@@ -25,6 +25,10 @@ export interface CatalogField {
   multi?: boolean;
   createField?: string;
   itemsKey?: string;
+  lookup?: {
+    label: string;
+    run: (valor: string) => Promise<Record<string, string>>;
+  };
 }
 
 const NONE = '__none__';
@@ -36,7 +40,7 @@ interface CatalogItem {
 
 interface Props {
   title: string;
-  deleteWarning?: (item: CatalogItem) => string | null;
+  deleteWarning?: (item: CatalogItem) => ReactNode;
   endpoint: string;
   queryKey: readonly unknown[];
   fields: CatalogField[];
@@ -47,6 +51,7 @@ interface Props {
   searchable?: boolean;
   searchText?: (item: CatalogItem) => string;
   alsoInvalidate?: readonly (readonly unknown[])[];
+  renderDetail?: (item: CatalogItem) => ReactNode;
 }
 
 export function CatalogManager({
@@ -62,6 +67,7 @@ export function CatalogManager({
   searchable = false,
   searchText,
   alsoInvalidate,
+  renderDetail,
 }: Props) {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
@@ -72,6 +78,8 @@ export function CatalogManager({
   const [multiValues, setMultiValues] = useState<Record<string, string[]>>({});
   const [multiNuevos, setMultiNuevos] = useState<Record<string, string[]>>({});
   const [search, setSearch] = useState('');
+  const [buscando, setBuscando] = useState<string | null>(null);
+  const [detalle, setDetalle] = useState<CatalogItem | null>(null);
 
   const { data } = useQuery({
     queryKey,
@@ -220,6 +228,38 @@ export function CatalogManager({
                         ))}
                       </SelectContent>
                     </Select>
+                  ) : f.lookup ? (
+                    <div className="flex gap-2">
+                      <Input
+                        id={f.name}
+                        value={values[f.name] ?? ''}
+                        placeholder={f.placeholder}
+                        required={f.required}
+                        className="flex-1"
+                        onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={buscando === f.name || !(values[f.name] ?? '').trim()}
+                        onClick={async () => {
+                          const campo = f.lookup;
+                          if (!campo) return;
+                          setBuscando(f.name);
+                          try {
+                            const encontrado = await campo.run((values[f.name] ?? '').trim());
+                            setValues((v) => ({ ...v, ...encontrado }));
+                            toast.success('Datos encontrados');
+                          } catch (e) {
+                            toast.error((e as Error).message);
+                          } finally {
+                            setBuscando(null);
+                          }
+                        }}
+                      >
+                        {buscando === f.name ? 'Buscando...' : f.lookup.label}
+                      </Button>
+                    </div>
                   ) : (
                     <Input
                       id={f.name}
@@ -269,6 +309,7 @@ export function CatalogManager({
             <div key={item.id} className={cn('flex items-center justify-between px-3 py-2', highlightClass(item.id))}>
               <span className="text-sm">{display(item)}</span>
               <div className="flex gap-0.5">
+                {renderDetail && <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(item)} />}
                 {editable && <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(item)} />}
                 {deletable && (
                   <IconAction
@@ -278,13 +319,15 @@ export function CatalogManager({
                     onClick={async () => {
                       const ok = await confirm({
                         title: `Eliminar ${title.toLowerCase()}`,
-                        description: [
-                          `Se eliminará "${nombreDe(item)}".`,
-                          deleteWarning?.(item),
-                          'Esta acción no se puede deshacer.',
-                        ]
-                          .filter(Boolean)
-                          .join(' '),
+                        description: (
+                          <>
+                            <p>
+                              Se eliminará <span className="font-medium text-foreground">{nombreDe(item)}</span>.
+                            </p>
+                            {deleteWarning?.(item)}
+                            <p>Esta acción no se puede deshacer.</p>
+                          </>
+                        ),
                         confirmLabel: 'Eliminar',
                         destructive: true,
                       });
@@ -301,6 +344,15 @@ export function CatalogManager({
           </p>
         )}
       </div>
+
+      <Dialog open={detalle !== null} onOpenChange={(next) => !next && setDetalle(null)}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="pr-6">{detalle ? nombreDe(detalle) : ''}</DialogTitle>
+          </DialogHeader>
+          {detalle && renderDetail?.(detalle)}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

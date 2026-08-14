@@ -371,13 +371,25 @@ export class CatalogService {
     }
   }
 
-  async createGlobalCompany(data: { name: string; ruc?: string; clientIds?: string[]; newClientNames?: string[] }) {
+  async createGlobalCompany(data: {
+    name: string;
+    ruc?: string;
+    legalName?: string;
+    website?: string;
+    clientIds?: string[];
+    newClientNames?: string[];
+  }) {
     const dup = await this.prisma.globalCompany.findFirst({
       where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
     });
     if (dup) throw new ConflictException('Ya existe una empresa con ese nombre');
     const created = await this.prisma.globalCompany.create({
-      data: { name: data.name, ruc: data.ruc ?? null },
+      data: {
+        name: data.name,
+        ruc: data.ruc ?? null,
+        legalName: data.legalName ?? null,
+        website: data.website ?? null,
+      },
     });
     await this.sincronizarClientes(created.id, data.clientIds, data.newClientNames);
     await this.reflejarEnWorkspaces(created.id, created.name, created.ruc);
@@ -389,7 +401,14 @@ export class CatalogService {
 
   async updateGlobalCompany(
     id: string,
-    data: { name?: string; ruc?: string; clientIds?: string[]; newClientNames?: string[] },
+    data: {
+      name?: string;
+      ruc?: string;
+      legalName?: string;
+      website?: string;
+      clientIds?: string[];
+      newClientNames?: string[];
+    },
   ) {
     const found = await this.prisma.globalCompany.findFirst({ where: { id, deletedAt: null } });
     if (!found) throw new NotFoundException('Empresa no encontrada');

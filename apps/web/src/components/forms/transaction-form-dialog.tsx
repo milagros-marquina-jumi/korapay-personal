@@ -1,7 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { formatMoney } from '@korapay/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlertTriangle } from 'lucide-react';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -39,7 +41,7 @@ import type {
   Project,
   Transaction,
 } from '@/lib/api.types';
-import { contractOf } from '@/lib/employment-income';
+import { contractDatesInverted, contractOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { buildTags, isFixedExpense, splitTags } from '@/lib/transaction-tags';
 import { formatDateMedium } from '@/lib/utils';
@@ -363,8 +365,19 @@ export function TransactionFormDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="date">Fecha</Label>
-              <Input id="date" type="date" {...register('date')} />
+              <Label htmlFor="date">{showCompany ? 'Mes' : 'Fecha'}</Label>
+              {showCompany ? (
+                // Un sueldo pertenece a un mes, no a un dia: se pide mes y anio y
+                // se guarda el dia 1, que es como esta registrado todo el historico.
+                <Input
+                  id="date"
+                  type="month"
+                  value={(watch('date') ?? '').slice(0, 7)}
+                  onChange={(e) => setValue('date', e.target.value ? `${e.target.value}-01` : '')}
+                />
+              ) : (
+                <Input id="date" type="date" {...register('date')} />
+              )}
             </div>
           </div>
 
@@ -441,13 +454,34 @@ export function TransactionFormDialog({
           {contratoVigente && (
             <div className="rounded-lg border bg-muted/30 px-3 py-2">
               <p className="font-medium text-xs">
-                Contrato vigente en esa fecha
+                Contrato vigente en ese mes
                 {contratoVigente.position ? `: ${contratoVigente.position}` : ''}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
                 {formatDateMedium(contratoVigente.startDate)} —{' '}
                 {contratoVigente.endDate ? formatDateMedium(contratoVigente.endDate) : 'sigue activo'}
               </p>
+              {contratoVigente.salary && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Sueldo bruto del contrato:{' '}
+                  <button
+                    type="button"
+                    onClick={() => setValue('amountGross', Number(contratoVigente.salary).toString())}
+                    title="Usar este monto como bruto"
+                    className="font-semibold text-foreground tabular-nums underline underline-offset-2 hover:text-brand"
+                  >
+                    {formatMoney(String(contratoVigente.salary), (contratoVigente.currency as 'PEN' | 'USD') ?? 'PEN')}
+                  </button>
+                </p>
+              )}
+              {contractDatesInverted(contratoVigente) && (
+                <p className="mt-1.5 flex items-start gap-1.5 font-medium text-[11px] text-destructive">
+                  <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>
+                    La fecha de fin de este contrato es anterior a la de inicio. Corrígela en el módulo de contratos.
+                  </span>
+                </p>
+              )}
             </div>
           )}
 

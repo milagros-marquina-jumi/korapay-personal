@@ -75,15 +75,34 @@ export function contractOf<T extends { companyId?: string | null; startDate: str
   }
   if (!tx.companyId) return null;
 
-  const dia = tx.date.slice(0, 10);
+  // Se compara por mes y no por dia: los ingresos se registran el dia 1, asi que
+  // un contrato que arranca a mitad de mes igual cubre el sueldo de ese mes.
+  const mes = tx.date.slice(0, 7);
   const suyos = contracts.filter((c) => c.companyId === tx.companyId);
-  const vigente = suyos.find((c) => c.startDate.slice(0, 10) <= dia && (!c.endDate || c.endDate.slice(0, 10) >= dia));
+  const vigente = suyos.find((c) => {
+    const [desde, hasta] = rangoMeses(c);
+    return desde <= mes && (!hasta || hasta >= mes);
+  });
   if (vigente) return vigente;
 
   // Un ingreso puede pagarse despues de terminar el contrato (liquidacion): se
-  // toma el ultimo contrato que ya habia empezado en esa fecha.
+  // toma el ultimo contrato que ya habia empezado en ese mes.
   const previos = suyos
-    .filter((c) => c.startDate.slice(0, 10) <= dia)
+    .filter((c) => rangoMeses(c)[0] <= mes)
     .toSorted((a, b) => b.startDate.localeCompare(a.startDate));
   return previos[0] ?? null;
+}
+
+// Un contrato con fin anterior al inicio esta mal capturado: se ordena el rango
+// para que el ingreso siga encontrando su contrato pese al dato invertido.
+function rangoMeses(c: { startDate: string; endDate?: string | null }): [string, string | null] {
+  const inicio = c.startDate.slice(0, 7);
+  const fin = c.endDate ? c.endDate.slice(0, 7) : null;
+  if (fin && fin < inicio) return [fin, inicio];
+  return [inicio, fin];
+}
+
+export function contractDatesInverted(c?: { startDate: string; endDate?: string | null } | null): boolean {
+  if (!c?.endDate) return false;
+  return c.endDate.slice(0, 10) < c.startDate.slice(0, 10);
 }

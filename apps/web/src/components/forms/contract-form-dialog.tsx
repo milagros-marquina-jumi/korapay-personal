@@ -30,16 +30,21 @@ import type { Company, EmploymentContract, GlobalCompany } from '@/lib/api.types
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
-const schema = z.object({
-  position: z.string().optional(),
-  startDate: z.string().min(1, 'Requerido'),
-  endDate: z.string().optional(),
-  companyId: z.string().optional(),
-  type: z.string().optional(),
-  salary: z.string().optional(),
-  currency: z.enum(['PEN', 'USD']),
-  notes: z.string().optional(),
-});
+const schema = z
+  .object({
+    position: z.string().optional(),
+    startDate: z.string().min(1, 'Requerido'),
+    endDate: z.string().optional(),
+    companyId: z.string().optional(),
+    type: z.string().optional(),
+    salary: z.string().optional(),
+    currency: z.enum(['PEN', 'USD']),
+    notes: z.string().optional(),
+  })
+  .refine((v) => !v.endDate || v.endDate >= v.startDate, {
+    path: ['endDate'],
+    message: 'La fecha de fin no puede ser anterior a la de inicio',
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -269,7 +274,11 @@ export function ContractFormDialog({
             <div className="space-y-2">
               <Label htmlFor="endDate">Fin</Label>
               <Input id="endDate" type="date" {...register('endDate')} />
-              <p className="text-xs text-muted-foreground">Vacío si el contrato sigue activo</p>
+              {errors.endDate ? (
+                <p className="text-xs text-destructive">{errors.endDate.message}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Vacío si el contrato sigue activo</p>
+              )}
             </div>
           </div>
 

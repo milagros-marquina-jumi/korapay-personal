@@ -2,10 +2,11 @@
 
 import { formatMoney } from '@korapay/domain';
 import { StatusBadge } from '@korapay/ui';
+import { AlertTriangle } from 'lucide-react';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { EmploymentContract, Transaction } from '@/lib/api.types';
-import { accountNumber, type ConceptOrdinal, looksLikeAccount } from '@/lib/employment-income';
+import { accountNumber, type ConceptOrdinal, contractDatesInverted, looksLikeAccount } from '@/lib/employment-income';
 import { RECURRENCE_LABELS, TRANSACTION_TYPE_LABELS } from '@/lib/labels';
 import { isFixedExpense, meaningfulTags } from '@/lib/transaction-tags';
 import { cn, formatDate, formatDateLong, formatDateMedium } from '@/lib/utils';
@@ -118,6 +119,20 @@ export function TransactionDetailDialog({
                   {formatDateMedium(contract.startDate)} —{' '}
                   {contract.endDate ? formatDateMedium(contract.endDate) : 'sigue activo'}
                 </p>
+                {contract.salary && (
+                  <p className="mt-1 text-muted-foreground text-sm">
+                    Sueldo bruto del contrato:{' '}
+                    <span className="font-medium text-foreground tabular-nums">
+                      {formatMoney(String(contract.salary), (contract.currency as 'PEN' | 'USD') ?? 'PEN')}
+                    </span>
+                  </p>
+                )}
+                {contractDatesInverted(contract) && (
+                  <p className="mt-1.5 flex items-start gap-1.5 font-medium text-destructive text-xs">
+                    <AlertTriangle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+                    <span>La fecha de fin de este contrato es anterior a la de inicio.</span>
+                  </p>
+                )}
               </div>
             )}
 

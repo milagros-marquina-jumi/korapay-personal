@@ -137,3 +137,16 @@ export function daysUntilDue(dueDate: string | Date): number {
   const startOfDue = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
   return Math.round((startOfDue - startOfToday) / DAY_MS);
 }
+
+export function formatDaysRemaining(days?: number | null): string | null {
+  if (days === null || days === undefined) return null;
+  if (days < 0) return 'Ya venció';
+  if (days === 0) return 'Vence hoy';
+  if (days === 1) return 'Vence mañana';
+
+  const hoy = new Date();
+  const fin = new Date(hoy);
+  fin.setDate(fin.getDate() + days);
+  const [años, meses, dias] = durationParts(hoy, fin);
+  return `Faltan ${formatYmdCompact(años, meses, dias)}`;
+}

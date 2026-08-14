@@ -26,7 +26,7 @@ import { apiFetch } from '@/lib/api';
 import type { EmploymentContract } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDaysRemaining } from '@/lib/utils';
 
 const REINGRESO_OPTIONS = [
   { value: 'SI', label: 'Solo reingresos' },
@@ -206,7 +206,7 @@ function ContratosContent() {
             <div className="flex flex-col items-start gap-0.5">
               <StatusBadge status={row.original.state ?? row.original.status} />
               {row.original.state === 'EXPIRING' && days !== null && days !== undefined && (
-                <span className="text-xs text-warning">{days === 0 ? 'vence hoy' : `faltan ${days} días`}</span>
+                <span className="text-warning text-xs">{formatDaysRemaining(days)}</span>
               )}
             </div>
           );

@@ -13,17 +13,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { EmploymentContract } from '@/lib/api.types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDaysRemaining } from '@/lib/utils';
 
 interface Props {
   contracts: EmploymentContract[];
-}
-
-function remainingLabel(days?: number | null) {
-  if (days === null || days === undefined) return 'Sin fecha de fin';
-  if (days === 0) return 'Vence hoy';
-  if (days === 1) return 'Vence mañana';
-  return `Faltan ${days} días`;
 }
 
 export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
@@ -77,7 +70,7 @@ export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
                     {formatDate(c.startDate)} → {c.endDate ? formatDate(c.endDate) : 'indefinido'}
                   </span>
                   <span className={c.state === 'EXPIRING' ? 'font-medium text-warning' : undefined}>
-                    {remainingLabel(c.daysRemaining)}
+                    {formatDaysRemaining(c.daysRemaining) ?? 'Sin fecha de fin'}
                   </span>
                 </div>
               </div>

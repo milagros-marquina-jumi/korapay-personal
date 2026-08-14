@@ -47,7 +47,7 @@ export class CompanyService {
     return this.prisma.company.create({
       data: {
         workspaceId: data.workspaceId,
-        globalCompanyId: data.globalCompanyId || null,
+        globalCompanyId: data.globalCompanyId || (await this.globalDeNombre(data.name, data.ruc)),
         name: data.name,
         ruc: data.ruc,
         industry: data.industry,
@@ -55,6 +55,15 @@ export class CompanyService {
         endDate: data.endDate ? new Date(data.endDate) : null,
       },
     });
+  }
+
+  private async globalDeNombre(name: string, ruc?: string): Promise<string> {
+    const existente = await this.prisma.globalCompany.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' }, deletedAt: null },
+    });
+    if (existente) return existente.id;
+    const creada = await this.prisma.globalCompany.create({ data: { name, ruc: ruc ?? null } });
+    return creada.id;
   }
   async update(id: string, workspaceId: string, data: UpdateCompanyDto) {
     const company = await this.prisma.company.findFirst({

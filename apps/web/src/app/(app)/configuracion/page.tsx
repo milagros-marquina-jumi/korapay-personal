@@ -3,8 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { Mail, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { CatalogManager } from '@/components/catalog/catalog-manager';
+import { type CompanyContract, CompanyContractsDialog } from '@/components/catalog/company-contracts-dialog';
 import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
 import { PageShell } from '@/components/layout/page-shell';
@@ -21,18 +22,38 @@ interface GlobalCompanyItem {
   clients?: { id: string; name: string }[];
 }
 
-function displayGlobalCompany(item: { [key: string]: unknown }) {
-  const clients = (item.clients ?? []) as { id: string; name: string }[];
-  return (
-    <span className="flex flex-col">
-      <span>{String(item.name)}</span>
-      {clients.length > 0 && (
-        <span className="text-xs text-muted-foreground">
-          {clients.length} cliente{clients.length === 1 ? '' : 's'}: {clients.map((c) => c.name).join(', ')}
-        </span>
-      )}
-    </span>
-  );
+function crearDisplayGlobalCompany(onVerContratos: (item: { [key: string]: unknown }) => void) {
+  return function displayGlobalCompany(item: { [key: string]: unknown }) {
+    const clients = (item.clients ?? []) as { id: string; name: string }[];
+    const contratos = Number(item.contractCount ?? 0);
+    return (
+      <span className="flex flex-col">
+        <span>{String(item.name)}</span>
+        {(contratos > 0 || clients.length > 0) && (
+          <span className="flex flex-wrap items-center gap-x-1 text-muted-foreground text-xs">
+            {contratos > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onVerContratos(item);
+                }}
+                className="rounded text-brand hover:underline"
+              >
+                {contratos} contrato{contratos === 1 ? '' : 's'}
+              </button>
+            )}
+            {contratos > 0 && clients.length > 0 && <span aria-hidden="true">·</span>}
+            {clients.length > 0 && (
+              <span>
+                {clients.length} cliente{clients.length === 1 ? '' : 's'}: {clients.map((c) => c.name).join(', ')}
+              </span>
+            )}
+          </span>
+        )}
+      </span>
+    );
+  };
 }
 
 function text(value: unknown) {
@@ -41,6 +62,7 @@ function text(value: unknown) {
 
 function detalleEmpresa(item: { [key: string]: unknown }) {
   const clients = (item.clients ?? []) as { id: string; name: string }[];
+  const contratos = (item.contracts ?? []) as CompanyContract[];
   const web = text(item.website);
   return (
     <div className="space-y-3">
@@ -59,6 +81,22 @@ function detalleEmpresa(item: { [key: string]: unknown }) {
             )
           }
         />
+        <LineaDetalle label="Contratos" value={String(item.contractCount ?? 0)} />
+        {contratos.length > 0 && (
+          <div className="px-4 py-2.5">
+            <p className="text-muted-foreground text-xs">Quién los tiene</p>
+            <ul className="mt-1 space-y-0.5 text-sm">
+              {contratos.map((c) => (
+                <li key={c.id} className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate">{c.holder}</span>
+                  <span className="shrink-0 text-muted-foreground text-xs">
+                    {c.kind === 'OWN' ? 'propio' : 'talento'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <LineaDetalle label="Clientes" value={String(clients.length)} />
       </dl>
       {clients.length > 0 && (
@@ -86,6 +124,15 @@ function LineaDetalle({ label, value }: Readonly<{ label: string; value: ReactNo
 
 function avisoBorrarEmpresa(item: { [key: string]: unknown }) {
   const clients = (item.clients ?? []) as { id: string; name: string }[];
+  const contratos = Number(item.contractCount ?? 0);
+  if (contratos > 0) {
+    return (
+      <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-destructive">
+        Tiene {contratos} contrato{contratos === 1 ? '' : 's'} asociado{contratos === 1 ? '' : 's'}, así que no se podrá
+        eliminar.
+      </p>
+    );
+  }
   if (!clients.length) return null;
   return (
     <>
@@ -104,7 +151,7 @@ function avisoBorrarEmpresa(item: { [key: string]: unknown }) {
           ))}
         </ul>
       </div>
-      <p className="text-xs">Si tiene movimientos o contratos, no se podrá eliminar.</p>
+      <p className="text-xs">Si tiene movimientos, no se podrá eliminar.</p>
     </>
   );
 }
@@ -153,6 +200,19 @@ export default function ConfiguracionPage() {
     queryKey: queryKeys.globalClients(),
     queryFn: () => apiFetch<{ id: string; name: string }[]>('/global-clients'),
   });
+
+  const [contratosDe, setContratosDe] = useState<{ name: string; contracts: CompanyContract[] } | null>(null);
+
+  const displayEmpresa = useMemo(
+    () =>
+      crearDisplayGlobalCompany((item) =>
+        setContratosDe({
+          name: String(item.name),
+          contracts: (item.contracts ?? []) as CompanyContract[],
+        }),
+      ),
+    [],
+  );
 
   const companyOptions = (globalCompanies ?? []).map((c) => ({ value: c.id, label: c.name }));
   const clientOptions = (globalClients ?? []).map((c) => ({ value: c.id, label: c.name }));
@@ -273,7 +333,7 @@ export default function ConfiguracionPage() {
                     placeholder: 'Sin clientes',
                   },
                 ]}
-                display={displayGlobalCompany}
+                display={displayEmpresa}
                 renderDetail={detalleEmpresa}
                 deleteWarning={avisoBorrarEmpresa}
                 alsoInvalidate={[queryKeys.globalClients()]}
@@ -404,6 +464,11 @@ export default function ConfiguracionPage() {
           </div>
         </TabsContent>
       </Tabs>
+      <CompanyContractsDialog
+        companyName={contratosDe?.name ?? null}
+        contracts={contratosDe?.contracts ?? []}
+        onOpenChange={(next) => !next && setContratosDe(null)}
+      />
     </PageShell>
   );
 }

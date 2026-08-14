@@ -66,7 +66,7 @@ export function MultiSelectCreatable({
   const puedeCrear = !!onNuevosChange && !yaExiste;
 
   const total = selected.length + nuevos.length;
-  const etiqueta = etiquetaResumen(total, placeholder, selected, nuevos, options);
+  const etiqueta = etiquetaResumen(total, placeholder, selected, nuevos, options, showChips);
 
   const alternar = (value: string) => {
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
@@ -184,9 +184,11 @@ function etiquetaResumen(
   selected: string[],
   nuevos: string[],
   options: Opcion[],
+  showChips: boolean,
 ): string {
   if (total === 0) return placeholder;
   if (total > 1) return `${total} seleccionados`;
+  if (showChips) return '1 seleccionado';
   const id = selected[0];
   if (id) return options.find((o) => o.value === id)?.label ?? id;
   return nuevos[0] ?? placeholder;

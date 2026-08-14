@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ActiveContractsDialog } from '@/components/contracts/active-contracts-dialog';
 import { ContractDetailDialog } from '@/components/contracts/contract-detail-dialog';
+import { SalaryConversionDialog } from '@/components/contracts/salary-conversion-dialog';
 import { SequenceBadge } from '@/components/contracts/sequence-badge';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -49,6 +50,13 @@ function ContratosContent() {
   const [reingreso, setReingreso] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<EmploymentContract | null>(null);
   const [detalle, setDetalle] = useState<EmploymentContract | null>(null);
+  const [usdContract, setUsdContract] = useState<EmploymentContract | null>(null);
+
+  const { data: exchangeRate } = useQuery({
+    queryKey: queryKeys.exchangeRate(),
+    queryFn: () => apiFetch<{ rate: string; date: string }>('/exchange-rate'),
+  });
+  const rate = exchangeRate?.rate ?? null;
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.employmentContracts(activeWorkspaceId ?? ''),
@@ -157,16 +165,34 @@ function ContratosContent() {
         id: 'salary',
         header: 'Salario bruto',
         cell: ({ row }) => {
-          const own = row.original.salary;
-          const derived = row.original.grossSalary;
-          const value = own ?? derived;
+          const c = row.original;
+          const own = c.salary;
+          const value = own ?? c.grossSalary;
           if (!value) return <span className="text-muted-foreground">-</span>;
+          const nota = !own && <span className="text-muted-foreground text-xs">según sus pagos</span>;
+
+          if (c.currency === 'USD') {
+            const soles = (Number(value) * Number(rate ?? 0)).toFixed(2);
+            return (
+              <div className="flex flex-col items-start">
+                <button
+                  type="button"
+                  onClick={() => setUsdContract(c)}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-muted"
+                  title="Ver conversión en dólares"
+                >
+                  <span className="font-medium tabular-nums">{formatMoney(soles, 'PEN')}</span>
+                  <span className="rounded bg-brand/10 px-1 font-medium text-[10px] text-brand">USD</span>
+                </button>
+                {nota}
+              </div>
+            );
+          }
+
           return (
             <div className="flex flex-col">
-              <span className="font-medium tabular-nums">
-                {formatMoney(value, row.original.currency as 'PEN' | 'USD')}
-              </span>
-              {!own && <span className="text-xs text-muted-foreground">según sus pagos</span>}
+              <span className="font-medium tabular-nums">{formatMoney(value, 'PEN')}</span>
+              {nota}
             </div>
           );
         },
@@ -310,7 +336,14 @@ function ContratosContent() {
         />
       )}
 
-      <ContractDetailDialog contract={detalle} onOpenChange={(next) => !next && setDetalle(null)} />
+      <ContractDetailDialog contract={detalle} rate={rate} onOpenChange={(next) => !next && setDetalle(null)} />
+
+      <SalaryConversionDialog
+        contract={usdContract}
+        rate={rate}
+        rateDate={exchangeRate?.date}
+        onOpenChange={(next) => !next && setUsdContract(null)}
+      />
     </PageShell>
   );
 }

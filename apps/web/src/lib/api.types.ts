@@ -517,6 +517,7 @@ export interface GlobalCompany {
   legalName?: string | null;
   website?: string | null;
   clients?: { id: string; name: string }[];
+  contractCount?: number;
 }
 
 export interface GlobalClient {

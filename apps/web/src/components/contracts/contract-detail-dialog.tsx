@@ -9,14 +9,16 @@ import { cn, formatDateLong, formatDurationExact } from '@/lib/utils';
 
 interface Props {
   contract: EmploymentContract | null;
+  rate?: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ContractDetailDialog({ contract, onOpenChange }: Readonly<Props>) {
+export function ContractDetailDialog({ contract, rate, onOpenChange }: Readonly<Props>) {
   const propio = contract?.salary;
   const derivado = contract?.grossSalary;
   const salario = propio ?? derivado;
-  const moneda = (contract?.currency ?? 'PEN') as 'PEN' | 'USD';
+  const enDolares = contract?.currency === 'USD';
+  const enSoles = enDolares && salario ? (Number(salario) * Number(rate ?? 0)).toFixed(2) : salario;
 
   return (
     <Dialog open={contract !== null} onOpenChange={onOpenChange}>
@@ -34,7 +36,12 @@ export function ContractDetailDialog({ contract, onOpenChange }: Readonly<Props>
             <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
               <div className="min-w-0">
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Salario bruto</p>
-                <p className="font-semibold text-2xl tabular-nums">{salario ? formatMoney(salario, moneda) : '—'}</p>
+                <p className="font-semibold text-2xl tabular-nums">{enSoles ? formatMoney(enSoles, 'PEN') : '—'}</p>
+                {enDolares && salario && (
+                  <p className="mt-0.5 text-muted-foreground text-xs tabular-nums">
+                    {formatMoney(salario, 'USD')} al tipo de cambio de hoy
+                  </p>
+                )}
                 {salario && !propio && <p className="mt-0.5 text-muted-foreground text-xs">Según sus pagos</p>}
               </div>
               <StatusBadge status={contract.status} />

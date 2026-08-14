@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
+import { CurrencyToggle } from '@/components/ui/currency-toggle';
 import {
   Dialog,
   DialogContent,
@@ -262,7 +263,12 @@ export function ContractFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="salary">Salario</Label>
-              <MoneyField control={control} name="salary" id="salary" />
+              <div className="flex gap-2">
+                <div className="min-w-0 flex-1">
+                  <MoneyField control={control} name="salary" id="salary" />
+                </div>
+                <CurrencyToggle value={watch('currency')} onChange={(v) => setValue('currency', v)} />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Tipo de pago</Label>
@@ -280,19 +286,6 @@ export function ContractFormDialog({
           </div>
 
           <CollapsibleSection label="Ver más opciones">
-            <div className="space-y-2">
-              <Label>Moneda</Label>
-              <Select value={watch('currency')} onValueChange={(v) => setValue('currency', v as 'PEN' | 'USD')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="PEN">Soles (S/)</SelectItem>
-                  <SelectItem value="USD">Dólares ($)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>
               <Textarea id="notes" rows={2} placeholder="Detalle opcional" {...register('notes')} />

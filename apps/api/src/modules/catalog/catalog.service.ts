@@ -300,13 +300,72 @@ export class CatalogService {
     return this.prisma.currency.delete({ where: { id } });
   }
 
-  globalCompanies() {
-    return this.prisma.globalCompany.findMany({
+  async globalCompanies() {
+    const companies = await this.prisma.globalCompany.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },
       include: {
         clients: { where: { deletedAt: null }, orderBy: { name: 'asc' }, select: { id: true, name: true } },
+        companies: { where: { deletedAt: null }, select: { id: true } },
       },
+    });
+
+    const espejos = companies.flatMap((g) => g.companies.map((c) => c.id));
+    const [propios, deTalentos] = await Promise.all([
+      espejos.length
+        ? this.prisma.employmentContract.findMany({
+            where: { companyId: { in: espejos }, deletedAt: null },
+            orderBy: { startDate: 'desc' },
+            select: { id: true, companyId: true, position: true, startDate: true, endDate: true, status: true },
+          })
+        : Promise.resolve([]),
+      this.prisma.talentContract.findMany({
+        where: { companyName: { not: null } },
+        orderBy: { startDate: 'desc' },
+        select: {
+          id: true,
+          companyName: true,
+          position: true,
+          startDate: true,
+          endDate: true,
+          status: true,
+          talentProfile: { select: { id: true, name: true } },
+        },
+      }),
+    ]);
+
+    const talentosPorNombre = new Map<string, typeof deTalentos>();
+    for (const tc of deTalentos) {
+      const clave = (tc.companyName ?? '').trim().toLowerCase();
+      if (!clave) continue;
+      talentosPorNombre.set(clave, [...(talentosPorNombre.get(clave) ?? []), tc]);
+    }
+
+    return companies.map(({ companies: espejo, ...g }) => {
+      const ids = new Set(espejo.map((c) => c.id));
+      const mios = propios
+        .filter((c) => c.companyId && ids.has(c.companyId))
+        .map((c) => ({
+          id: c.id,
+          kind: 'OWN' as const,
+          holder: 'Tuyo',
+          position: c.position,
+          startDate: c.startDate,
+          endDate: c.endDate,
+          status: c.status,
+        }));
+      const suyos = (talentosPorNombre.get(g.name.trim().toLowerCase()) ?? []).map((c) => ({
+        id: c.id,
+        kind: 'TALENT' as const,
+        holder: c.talentProfile?.name ?? 'Talento',
+        talentId: c.talentProfile?.id ?? null,
+        position: c.position,
+        startDate: c.startDate,
+        endDate: c.endDate,
+        status: c.status,
+      }));
+      const contracts = [...mios, ...suyos];
+      return { ...g, contracts, contractCount: contracts.length };
     });
   }
 

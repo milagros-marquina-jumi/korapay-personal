@@ -240,7 +240,9 @@ export function TransactionFormDialog({
         type: (transaction.type as FormValues['type']) ?? defaultType,
         concept: transaction.concept,
         amount: Number(transaction.amountOriginal).toString(),
-        amountGross: transaction.amountGross ? Number(transaction.amountGross).toString() : '',
+        // Sin descuento no se guarda bruto, pero el formulario debe mostrar el
+        // mismo valor que la tabla: ahi el bruto sin dato ya se muestra como el neto.
+        amountGross: Number(transaction.amountGross ?? transaction.amountOriginal).toString(),
         currency: (transaction.currency as 'PEN' | 'USD') ?? 'PEN',
         date: transaction.date.slice(0, 10),
         status: (transaction.status as FormValues['status']) ?? 'PENDING',

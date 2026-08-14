@@ -38,6 +38,22 @@ function text(value: unknown) {
   return typeof value === 'string' ? value : '';
 }
 
+function avisoBorrarEmpresa(item: { [key: string]: unknown }) {
+  const clients = (item.clients ?? []) as { name: string }[];
+  if (!clients.length) return null;
+  const nombres = clients.map((c) => c.name).join(', ');
+  const frase =
+    clients.length === 1
+      ? `Su cliente ${nombres} quedará sin empresa asignada.`
+      : `Sus ${clients.length} clientes (${nombres}) quedarán sin empresa asignada.`;
+  return `${frase} Si tiene movimientos o contratos, no se podrá eliminar.`;
+}
+
+function avisoBorrarCliente(item: { [key: string]: unknown }) {
+  const company = item.globalCompany as { name: string } | null;
+  return company ? `Está asociado a ${company.name} y se quitará de los contratos donde figure.` : null;
+}
+
 function searchGlobalCompany(item: { [key: string]: unknown }) {
   const clients = (item.clients ?? []) as { name: string }[];
   return [text(item.name), text(item.ruc), ...clients.map((c) => c.name)].join(' ');
@@ -179,6 +195,7 @@ export default function ConfiguracionPage() {
                   },
                 ]}
                 display={displayGlobalCompany}
+                deleteWarning={avisoBorrarEmpresa}
                 alsoInvalidate={[queryKeys.globalClients()]}
                 searchable
                 searchText={searchGlobalCompany}
@@ -196,6 +213,7 @@ export default function ConfiguracionPage() {
                   { name: 'globalCompanyId', label: 'Empresa', options: companyOptions },
                 ]}
                 display={displayGlobalClient}
+                deleteWarning={avisoBorrarCliente}
                 alsoInvalidate={[queryKeys.globalCompanies()]}
                 searchable
                 searchText={searchGlobalClient}

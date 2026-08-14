@@ -11,6 +11,7 @@ import {
   Banknote,
   Copy,
   ExternalLink,
+  Eye,
   KeyRound,
   Landmark,
   Pencil,
@@ -33,6 +34,7 @@ import { type ContractFormValues, TalentContractFormDialog } from '@/components/
 import { DistributionFormDialog, type DistributionFormValues } from '@/components/talent/distribution-form-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
+import { TalentContractDetailDialog } from '@/components/talent/talent-contract-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +68,7 @@ function TalentDetailContent() {
   const confirm = useConfirm();
   const ws = activeWorkspaceId ?? '';
   const [editingContract, setEditingContract] = useState<TalentContract | null>(null);
+  const [detalleContrato, setDetalleContrato] = useState<TalentContract | null>(null);
   const [contractFilter, setContractFilter] = useState('ACTIVE');
   const [editingDist, setEditingDist] = useState<TalentIncomeDistribution | null>(null);
 
@@ -716,6 +719,7 @@ function TalentDetailContent() {
                       </div>
                       <div className="flex items-center gap-1">
                         <StatusBadge status={contract.status} />
+                        <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalleContrato(contract)} />
                         <IconAction icon={Pencil} label="Editar" onClick={() => setEditingContract(contract)} />
                         <IconAction
                           icon={Trash2}
@@ -923,6 +927,11 @@ function TalentDetailContent() {
               </CardContent>
             </Card>
           )}
+
+          <TalentContractDetailDialog
+            contract={detalleContrato}
+            onOpenChange={(next) => !next && setDetalleContrato(null)}
+          />
 
           {editingContract && (
             <TalentContractFormDialog

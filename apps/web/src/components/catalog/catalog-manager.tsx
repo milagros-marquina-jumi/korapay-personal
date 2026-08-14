@@ -36,6 +36,7 @@ interface CatalogItem {
 
 interface Props {
   title: string;
+  deleteWarning?: (item: CatalogItem) => string | null;
   endpoint: string;
   queryKey: readonly unknown[];
   fields: CatalogField[];
@@ -50,6 +51,7 @@ interface Props {
 
 export function CatalogManager({
   title,
+  deleteWarning,
   endpoint,
   queryKey,
   fields,
@@ -276,7 +278,13 @@ export function CatalogManager({
                     onClick={async () => {
                       const ok = await confirm({
                         title: `Eliminar ${title.toLowerCase()}`,
-                        description: `Se eliminará "${display(item)}". Esta acción no se puede deshacer.`,
+                        description: [
+                          `Se eliminará "${nombreDe(item)}".`,
+                          deleteWarning?.(item),
+                          'Esta acción no se puede deshacer.',
+                        ]
+                          .filter(Boolean)
+                          .join(' '),
                         confirmLabel: 'Eliminar',
                         destructive: true,
                       });
@@ -295,6 +303,14 @@ export function CatalogManager({
       </div>
     </div>
   );
+}
+
+function nombreDe(item: CatalogItem): string {
+  for (const clave of ['name', 'label', 'code', 'concept']) {
+    const valor = item[clave];
+    if (typeof valor === 'string' && valor.trim()) return valor;
+  }
+  return 'este registro';
 }
 
 function endpointWithQuery(endpoint: string, extra?: Record<string, unknown>): string {

@@ -120,7 +120,7 @@ export class TaxObligationService {
   async create(data: {
     workspaceId: string;
     name: string;
-    year?: number;
+    year: number;
     dueDate: string;
     amount?: string;
     status?: string;
@@ -137,9 +137,9 @@ export class TaxObligationService {
       data: {
         workspaceId: data.workspaceId,
         name: data.name,
-        year: data.year ?? null,
+        year: data.year,
         dueDate: new Date(data.dueDate),
-        amount: data.amount ?? null,
+        amount: data.schedule?.length ? this.totalDelCronograma(data.schedule) : (data.amount ?? null),
         status: estado,
         installments: cuotas ?? null,
         paidInstallments: data.paidInstallments ?? 0,

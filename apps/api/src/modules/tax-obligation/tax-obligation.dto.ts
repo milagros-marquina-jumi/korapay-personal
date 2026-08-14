@@ -53,13 +53,12 @@ export class CreateTaxObligationDto {
   @IsNotEmpty()
   name!: string;
 
-  @ApiPropertyOptional({ example: 2026 })
-  @IsOptional()
+  @ApiProperty({ example: 2026 })
   @Type(() => Number)
   @IsInt()
   @Min(2000)
   @Max(2100)
-  year?: number;
+  year!: number;
 
   @ApiProperty({ example: '2027-06-30' })
   @IsDateString()

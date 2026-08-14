@@ -15,9 +15,10 @@ import { cn, daysUntilDue, formatDate } from '@/lib/utils';
 interface Props {
   workspaceId: string;
   obligation: TaxObligation;
+  readOnly?: boolean;
 }
 
-export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) {
+export function RentaInstallments({ workspaceId, obligation, readOnly = false }: Readonly<Props>) {
   const queryClient = useQueryClient();
   const rows = obligation.installmentRows ?? [];
   const paid = rows.filter((r) => r.status === 'PAID').length;
@@ -41,9 +42,11 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
     return (
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
         <p className="text-muted-foreground text-sm">
-          Todavía no hay cuotas. Pega el cuadro de tu resolución de SUNAT.
+          {readOnly
+            ? 'Esta obligación no tiene cuotas.'
+            : 'Todavía no hay cuotas. Pega el cuadro de tu resolución de SUNAT.'}
         </p>
-        <RentaSchedulePaste workspaceId={workspaceId} obligation={obligation} />
+        {!readOnly && <RentaSchedulePaste workspaceId={workspaceId} obligation={obligation} />}
       </div>
     );
   }
@@ -62,7 +65,7 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
         <p className="font-medium text-muted-foreground text-xs">
           Cuotas ({paid}/{rows.length} pagadas) · queda {formatMoney(pendiente, 'PEN')}
         </p>
-        <RentaSchedulePaste workspaceId={workspaceId} obligation={obligation} />
+        {!readOnly && <RentaSchedulePaste workspaceId={workspaceId} obligation={obligation} />}
       </div>
 
       {conInteres && (
@@ -130,19 +133,20 @@ export function RentaInstallments({ workspaceId, obligation }: Readonly<Props>) 
                   {formatMoney(r.amount, 'PEN')}
                 </span>
                 <StatusBadge status={vencida ? 'OVERDUE' : r.status} />
-                {pagada ? (
-                  <IconAction
-                    icon={RotateCcw}
-                    label="Marcar pendiente"
-                    onClick={() => pay.mutate({ installmentId: r.id, action: 'unpay' })}
-                  />
-                ) : (
-                  <IconAction
-                    icon={CheckCircle2}
-                    label="Marcar pagada"
-                    onClick={() => pay.mutate({ installmentId: r.id, action: 'pay' })}
-                  />
-                )}
+                {!readOnly &&
+                  (pagada ? (
+                    <IconAction
+                      icon={RotateCcw}
+                      label="Marcar pendiente"
+                      onClick={() => pay.mutate({ installmentId: r.id, action: 'unpay' })}
+                    />
+                  ) : (
+                    <IconAction
+                      icon={CheckCircle2}
+                      label="Marcar pagada"
+                      onClick={() => pay.mutate({ installmentId: r.id, action: 'pay' })}
+                    />
+                  ))}
               </div>
             </div>
           );

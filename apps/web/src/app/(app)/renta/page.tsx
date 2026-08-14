@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { CheckCircle2, ChevronDown, ChevronRight, Clock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Clock, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
@@ -12,6 +12,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { TaxStatusToggle } from '@/components/data-table/tax-status-toggle';
+import { RentaDetailDialog } from '@/components/forms/renta-detail-dialog';
 import { RentaInstallments } from '@/components/forms/renta-installments';
 import { TaxObligationFormDialog } from '@/components/forms/tax-obligation-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
@@ -34,6 +35,7 @@ function RentaContent() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<TaxObligation | null>(null);
+  const [detalle, setDetalle] = useState<TaxObligation | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.taxObligations(activeWorkspaceId ?? ''),
@@ -66,6 +68,8 @@ function RentaContent() {
     () => allObligations.filter((o) => status === FILTER_ALL || o.status === status),
     [allObligations, status],
   );
+
+  const detalleVivo = detalle ? (allObligations.find((o) => o.id === detalle.id) ?? detalle) : null;
 
   const totalPendiente = obligations.filter((o) => o.status !== 'PAID').reduce((sum, o) => sum + Number(o.amount), 0);
   const totalPagado = obligations.filter((o) => o.status === 'PAID').reduce((sum, o) => sum + Number(o.amount), 0);
@@ -108,8 +112,6 @@ function RentaContent() {
         header: 'Cuotas',
         cell: ({ row }) => {
           const t = row.original;
-          // Se cuentan las cuotas reales: `installments` y `paidInstallments`
-          // son campos sueltos que podian contradecir al cronograma.
           const filas = t.installmentRows ?? [];
           const total = filas.length || t.installments || 0;
           if (!total) return <span className="text-muted-foreground text-sm">-</span>;
@@ -149,6 +151,7 @@ function RentaContent() {
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-0.5">
+            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction
               icon={Trash2}
@@ -245,6 +248,12 @@ function RentaContent() {
           onOpenChange={(next) => !next && setEditing(null)}
         />
       )}
+
+      <RentaDetailDialog
+        obligation={detalleVivo}
+        workspaceId={activeWorkspaceId}
+        onOpenChange={(next) => !next && setDetalle(null)}
+      />
     </PageShell>
   );
 }

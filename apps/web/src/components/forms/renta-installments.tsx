@@ -53,10 +53,9 @@ export function RentaInstallments({ workspaceId, obligation, readOnly = false }:
 
   const totals = obligation.totals;
   const conInteres = !!totals && Number(totals.interest) > 0;
-  const pendiente = rows
-    .filter((r) => r.status !== 'PAID')
-    .reduce((s, r) => s + Number(r.amount), 0)
-    .toFixed(2);
+  const porPagar = rows.filter((r) => r.status !== 'PAID');
+  const pendiente = porPagar.reduce((s, r) => s + Number(r.amount), 0).toFixed(2);
+  const capitalPendiente = porPagar.reduce((s, r) => s + Number(r.principalAmount ?? r.amount), 0).toFixed(2);
   const ordenadas = [...rows].sort((a, b) => b.number - a.number);
 
   return (
@@ -88,6 +87,19 @@ export function RentaInstallments({ workspaceId, obligation, readOnly = false }:
             <p className="text-[11px] text-muted-foreground">Pagas de más</p>
             <p className="font-semibold text-sm text-warning-foreground tabular-nums">+{totals.surchargePct}%</p>
           </div>
+        </div>
+      )}
+
+      {porPagar.length > 0 && Number(capitalPendiente) > 0 && (
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-lg border px-3 py-2">
+          <div>
+            <p className="text-[11px] text-muted-foreground">Deuda que falta (así la muestra SUNAT)</p>
+            <p className="font-semibold text-sm tabular-nums">{formatMoney(capitalPendiente, 'PEN')}</p>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Sin los intereses de las cuotas que aún no vencen. Pagando cuota por cuota son{' '}
+            {formatMoney(pendiente, 'PEN')}.
+          </p>
         </div>
       )}
 

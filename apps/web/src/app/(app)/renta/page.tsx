@@ -71,8 +71,27 @@ function RentaContent() {
 
   const detalleVivo = detalle ? (allObligations.find((o) => o.id === detalle.id) ?? detalle) : null;
 
-  const totalPendiente = obligations.filter((o) => o.status !== 'PAID').reduce((sum, o) => sum + Number(o.amount), 0);
-  const totalPagado = obligations.filter((o) => o.status === 'PAID').reduce((sum, o) => sum + Number(o.amount), 0);
+  const { totalPendiente, totalPagado } = useMemo(
+    () =>
+      obligations.reduce(
+        (acc, o) => {
+          const filas = o.installmentRows ?? [];
+          if (filas.length) {
+            for (const r of filas) {
+              if (r.status === 'PAID') acc.totalPagado += Number(r.amount);
+              else acc.totalPendiente += Number(r.amount);
+            }
+          } else if (o.status === 'PAID') {
+            acc.totalPagado += Number(o.amount);
+          } else {
+            acc.totalPendiente += Number(o.amount);
+          }
+          return acc;
+        },
+        { totalPendiente: 0, totalPagado: 0 },
+      ),
+    [obligations],
+  );
 
   const handleClear = () => {
     setSearch('');

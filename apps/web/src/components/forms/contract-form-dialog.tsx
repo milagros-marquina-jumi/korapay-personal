@@ -2,7 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { Company, EmploymentContract } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDate } from '@/lib/utils';
 
 const schema = z.object({
   position: z.string().optional(),
@@ -69,6 +70,12 @@ export function ContractFormDialog({
     enabled: open,
   });
 
+  const { data: contratos } = useQuery({
+    queryKey: queryKeys.employmentContracts(workspaceId),
+    queryFn: () => apiFetch<EmploymentContract[]>(`/employment-contracts?workspaceId=${workspaceId}`),
+    enabled: open,
+  });
+
   const {
     register,
     control,
@@ -81,6 +88,18 @@ export function ContractFormDialog({
     resolver: zodResolver(schema),
     defaultValues: { position: '', startDate: new Date().toISOString().slice(0, 10), currency: 'PEN' },
   });
+
+  const companyIdSeleccionada = watch('companyId');
+  const previos = useMemo(
+    () =>
+      (contratos ?? [])
+        .filter((c) => c.companyId === companyIdSeleccionada && c.id !== contract?.id)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate)),
+    [contratos, companyIdSeleccionada, contract?.id],
+  );
+
+  const inicioElegido = watch('startDate');
+  const posicionNueva = previos.filter((c) => c.startDate.slice(0, 10) < (inicioElegido ?? '')).length + 1;
 
   useEffect(() => {
     if (open && contract) {
@@ -146,11 +165,30 @@ export function ContractFormDialog({
               onValueChange={(v) => setValue('companyId', v)}
               options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
             />
+            {previos.length > 0 && (
+              <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                <p className="font-medium text-xs">
+                  Ya tienes {previos.length} {previos.length === 1 ? 'contrato' : 'contratos'} con esta empresa
+                </p>
+                <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
+                  {previos.map((c) => (
+                    <li key={c.id} className="tabular-nums">
+                      {formatDate(c.startDate)} — {c.endDate ? formatDate(c.endDate) : 'sigue activo'}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  Este será el contrato {posicionNueva} de {previos.length + 1}. Se ordenan solos por fecha de inicio,
+                  no hace falta numerarlos en el cargo.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="position">Cargo</Label>
             <Input id="position" placeholder="Ej. Desarrollador Fullstack" {...register('position')} />
+            <p className="text-[11px] text-muted-foreground">Tu puesto, no el nombre de la empresa</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

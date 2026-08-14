@@ -13,10 +13,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { EmploymentContract } from '@/lib/api.types';
-import { formatDate, formatDaysRemaining } from '@/lib/utils';
+import { cn, formatDateMedium, formatDaysRemaining, formatDurationExact } from '@/lib/utils';
 
 interface Props {
   contracts: EmploymentContract[];
+}
+
+function restanteCorto(days?: number | null): string {
+  const texto = formatDaysRemaining(days);
+  if (!texto) return 'Sin fecha de fin';
+  return texto.replace(/^Faltan /, '');
 }
 
 export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
@@ -64,14 +70,29 @@ export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
                       : '-'}
                   </span>
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 text-xs text-muted-foreground">
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 text-muted-foreground text-xs">
                   <span>{c.type ?? 'Sin tipo'}</span>
                   <span>
-                    {formatDate(c.startDate)} → {c.endDate ? formatDate(c.endDate) : 'indefinido'}
+                    {formatDateMedium(c.startDate)} → {c.endDate ? formatDateMedium(c.endDate) : 'indefinido'}
                   </span>
-                  <span className={c.state === 'EXPIRING' ? 'font-medium text-warning' : undefined}>
-                    {formatDaysRemaining(c.daysRemaining) ?? 'Sin fecha de fin'}
-                  </span>
+                </div>
+
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Llevas</p>
+                    <p className="font-semibold text-sm">{formatDurationExact(c.startDate)}</p>
+                  </div>
+                  <div
+                    className={cn(
+                      'rounded-lg border px-3 py-2',
+                      c.state === 'EXPIRING' ? 'border-warning/40 bg-warning/8' : 'bg-muted/30',
+                    )}
+                  >
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Te falta</p>
+                    <p className={cn('font-semibold text-sm', c.state === 'EXPIRING' && 'text-warning-foreground')}>
+                      {restanteCorto(c.daysRemaining)}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}

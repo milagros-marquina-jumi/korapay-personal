@@ -26,7 +26,7 @@ import { apiFetch } from '@/lib/api';
 import type { EmploymentContract } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
-import { formatDate, formatDaysRemaining } from '@/lib/utils';
+import { formatDateMedium, formatDaysRemaining } from '@/lib/utils';
 
 const REINGRESO_OPTIONS = [
   { value: 'SI', label: 'Solo reingresos' },
@@ -34,7 +34,7 @@ const REINGRESO_OPTIONS = [
 ];
 
 function formatDateOrActive(value?: string | null) {
-  return value ? formatDate(value) : 'Actual';
+  return value ? formatDateMedium(value) : 'Actual';
 }
 
 function ContratosContent() {
@@ -149,7 +149,7 @@ function ContratosContent() {
       {
         accessorKey: 'startDate',
         header: ({ column }) => <SortableHeader column={column} label="Inicio" />,
-        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.startDate)}</span>,
+        cell: ({ row }) => <span className="text-sm">{formatDateMedium(row.original.startDate)}</span>,
       },
       {
         id: 'endDate',

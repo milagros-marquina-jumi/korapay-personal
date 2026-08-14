@@ -3,6 +3,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { buildContractSchedule } from './contract-schedule';
 
+function mesDe(fecha: Date): string {
+  return fecha.toISOString().slice(0, 7);
+}
+
 @Injectable()
 export class ContractIncomeService {
   private readonly logger = new Logger(ContractIncomeService.name);
@@ -15,8 +19,10 @@ export class ContractIncomeService {
     });
     if (!contract?.companyId) return { created: 0, removed: 0 };
 
-    const netSalary = contract.salary?.toString() ?? (await this.latestNetSalary(workspaceId, contract.companyId));
-    const grossSalary = await this.latestGrossSalary(workspaceId, contract.companyId);
+    // El sueldo del contrato es el BRUTO: el neto lo escribe el usuario en cada
+    // movimiento, porque los descuentos varian mes a mes.
+    const grossSalary = contract.salary?.toString() ?? (await this.latestGrossSalary(workspaceId, contract.companyId));
+    const netSalary = contract.salary ? null : await this.latestNetSalary(workspaceId, contract.companyId);
 
     const schedule = buildContractSchedule({
       startDate: contract.startDate,
@@ -36,12 +42,12 @@ export class ContractIncomeService {
     });
 
     const existing = await this.prisma.transaction.findMany({
-      where: { workspaceId, contractId },
+      where: { workspaceId, companyId: contract.companyId, deletedAt: null, type: 'INCOME', concept: SALARY_CONCEPT },
       select: { date: true },
     });
-    const taken = new Set(existing.map((t) => t.date.toISOString().slice(0, 10)));
+    const taken = new Set(existing.map((t) => mesDe(t.date)));
 
-    const pending = schedule.filter((s) => s.date > today && !taken.has(s.date.toISOString().slice(0, 10)));
+    const pending = schedule.filter((s) => !taken.has(mesDe(s.date)));
 
     for (const item of pending) {
       await this.prisma.transaction.create({

@@ -49,6 +49,18 @@ export function formatDateLong(value: string | Date): string {
   }).format(d);
 }
 
+export function formatDateMedium(value: string | Date): string {
+  const d = new Date(value);
+  const partes = new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'UTC',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).formatToParts(d);
+  const buscar = (t: string) => partes.find((p) => p.type === t)?.value ?? '';
+  return `${buscar('day')} ${buscar('month')} ${buscar('year')}`;
+}
+
 export function monthsBetween(from: string | Date, to?: string | Date | null): number {
   const start = new Date(from);
   const end = to ? new Date(to) : new Date();

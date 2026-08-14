@@ -47,7 +47,7 @@ export function buildContractSchedule({
       date,
       concept: SALARY_CONCEPT,
       amountBase: net.toFixed(2),
-      amountGross: gross && gross !== net ? gross.toFixed(2) : null,
+      amountGross: gross ? gross.toFixed(2) : null,
     });
     month += 1;
     if (month > 11) {

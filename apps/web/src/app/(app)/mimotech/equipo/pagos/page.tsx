@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
@@ -23,9 +24,11 @@ import { Button } from '@/components/ui/button';
 import { IconAction } from '@/components/ui/icon-action';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Paginated, Person, Transaction } from '@/lib/api.types';
+import { monthKeyOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
-import { formatDate } from '@/lib/utils';
+import { useOpenMonth } from '@/lib/use-open-month';
+import { formatDateMedium, formatMonthYear } from '@/lib/utils';
 
 function PagosEquipoContent() {
   const { activeWorkspaceId } = useWorkspace();
@@ -84,27 +87,63 @@ function PagosEquipoContent() {
 
   const [year, setYear] = useDefaultYear(availableYears);
 
-  const rows = useMemo(
-    () =>
-      (data?.data ?? []).filter((tx) => {
-        if (status !== FILTER_ALL && tx.status !== status) return false;
-        if (personId !== FILTER_ALL && tx.personId !== personId) return false;
-        const d = new Date(tx.date);
-        if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
-        if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
-        return true;
-      }),
-    [data?.data, status, personId, year, month],
-  );
+  const rows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return (data?.data ?? []).filter((tx) => {
+      if (status !== FILTER_ALL && tx.status !== status) return false;
+      if (personId !== FILTER_ALL && tx.personId !== personId) return false;
+      const d = new Date(tx.date);
+      if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
+      if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
+      // La tabla ya no filtra sola: al agrupar por mes la busqueda se aplica aqui.
+      if (term) {
+        const persona = tx.person?.name ?? personName(tx.personId) ?? tx.concept;
+        if (!`${persona} ${tx.description ?? ''}`.toLowerCase().includes(term)) return false;
+      }
+      return true;
+    });
+  }, [data?.data, status, personId, year, month, search, peopleData]);
 
   const totalPagado = rows.reduce((sum, tx) => sum + Number(tx.amountBase), 0);
+
+  const monthGroups = useMemo(() => {
+    const map = new Map<string, Transaction[]>();
+    for (const tx of rows) {
+      const key = monthKeyOf(tx.date);
+      const bucket = map.get(key) ?? [];
+      bucket.push(tx);
+      map.set(key, bucket);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, items]) => {
+        const total = items.reduce((s, t) => s + Number(t.amountBase), 0);
+        const pagados = items.filter((t) => t.status === 'PAID').length;
+        return {
+          key,
+          label: formatMonthYear(`${key}-01T00:00:00.000Z`),
+          items,
+          metrics: [
+            { label: 'Total', value: formatMoney(String(total), 'PEN'), className: 'text-destructive' },
+            { label: 'Pagados', value: `${pagados}/${items.length}` },
+          ],
+        };
+      });
+  }, [rows]);
+
+  const now = new Date();
+  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const defaultMonthKey = monthGroups.some((g) => g.key === currentMonthKey)
+    ? currentMonthKey
+    : (monthGroups[0]?.key ?? null);
+  const { isOpen: isMonthOpen, toggle: toggleMonth } = useOpenMonth('korapay.pagos-equipo.openMonth', defaultMonthKey);
 
   const columns = useMemo<ColumnDef<Transaction, unknown>[]>(
     () => [
       {
         accessorKey: 'date',
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
-        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
+        cell: ({ row }) => <span className="text-sm">{formatDateMedium(row.original.date)}</span>,
       },
       {
         id: 'person',
@@ -235,16 +274,38 @@ function PagosEquipoContent() {
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        isLoading={isLoading}
-        globalFilter={search}
-        onGlobalFilterChange={setSearch}
-        emptyState={
-          <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el botón de arriba." />
-        }
-      />
+      {isLoading && <p className="py-12 text-center text-muted-foreground text-sm">Cargando pagos...</p>}
+
+      {!isLoading && monthGroups.length === 0 && (
+        <EmptyState title="Sin pagos" description="Registra tu primer pago al equipo con el botón de arriba." />
+      )}
+
+      {!isLoading && monthGroups.length > 0 && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3 text-sm">
+            <span className="text-muted-foreground">
+              {rows.length} de {data?.data.length ?? 0} pagos en {monthGroups.length}{' '}
+              {monthGroups.length === 1 ? 'mes' : 'meses'}
+            </span>
+            <span className="text-muted-foreground">
+              Total:{' '}
+              <span className="font-semibold text-destructive tabular-nums">
+                {formatMoney(String(totalPagado), 'PEN')}
+              </span>
+            </span>
+          </div>
+
+          <MonthAccordion
+            groups={monthGroups}
+            currentMonthKey={currentMonthKey}
+            isOpen={isMonthOpen}
+            onToggle={toggleMonth}
+            countLabel={(n) => `${n} ${n === 1 ? 'pago' : 'pagos'}`}
+          >
+            {(group) => <DataTable columns={columns} data={group.items} embedded />}
+          </MonthAccordion>
+        </>
+      )}
 
       <TransactionDetailDialog
         transaction={detailTx}

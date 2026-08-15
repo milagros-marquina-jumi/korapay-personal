@@ -388,16 +388,17 @@ export default function ConfiguracionPage() {
             {activeWorkspace?.type !== 'BUSINESS' && (
               <Card>
                 <CardContent className="pt-6">
+                  {/* En ingresos laborales esta lista alimenta el concepto del
+                      movimiento, asi que se nombra igual que en el formulario. */}
                   <CatalogManager
-                    title="Categorías"
+                    title={activeWorkspace?.type === 'EMPLOYMENT' ? 'Conceptos' : 'Categorías'}
+                    singular={activeWorkspace?.type === 'EMPLOYMENT' ? 'concepto' : 'categoría'}
+                    articulo={activeWorkspace?.type === 'EMPLOYMENT' ? 'Nuevo' : 'Nueva'}
                     endpoint="/categories"
                     queryKey={queryKeys.categories(ws)}
                     extraBody={{ workspaceId: ws }}
-                    fields={[
-                      { name: 'name', label: 'Nombre', required: true },
-                      { name: 'emoji', label: 'Emoji', placeholder: '📁' },
-                    ]}
-                    display={(c) => `${c.emoji ?? ''} ${c.name}`}
+                    fields={[{ name: 'name', label: 'Nombre', required: true }]}
+                    display={(c) => String(c.name ?? '')}
                   />
                 </CardContent>
               </Card>

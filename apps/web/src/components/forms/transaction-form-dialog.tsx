@@ -194,7 +194,7 @@ export function TransactionFormDialog({
   const showTeamFields = currentType === 'TEAM_PAYMENT';
   // Los costos de MIMOTECH se clasifican por aplicacion y proyecto, y los pagos
   // al equipo por persona: en ninguno de los dos se usan categorias.
-  const showCategory = !showBusinessFields && !showTeamFields;
+  const showConcept = !showBusinessFields && !showTeamFields;
   const showDueDate = currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE';
   const { data: applications } = useQuery({
     queryKey: queryKeys.applications(workspaceId),
@@ -283,6 +283,12 @@ export function TransactionFormDialog({
         const persona = people?.find((x) => x.id === personId)?.name;
         rest.concept = persona ? `Pago ${persona}` : 'Pago equipo';
       }
+      // En ingresos laborales ya no se elige categoria: se deriva del concepto,
+      // que sale del mismo catalogo. Sin esto, editar borraria la categoria.
+      const categoriaFinal = showCompany
+        ? (categories?.find((c) => c.name === rest.concept)?.id ?? transaction?.categoryId ?? null)
+        : rest.categoryId || null;
+
       if (editing && transaction) {
         const editPayload = {
           type: rest.type,
@@ -292,7 +298,7 @@ export function TransactionFormDialog({
           currency: rest.currency,
           date: rest.date,
           status: rest.status,
-          categoryId: rest.categoryId || null,
+          categoryId: categoriaFinal,
           companyId: showCompany ? rest.companyId || null : undefined,
           applicationId: isBusinessCost ? (rest.applicationId ?? null) : undefined,
           projectIds: isBusinessCost ? (projectIds ?? []) : undefined,
@@ -310,6 +316,7 @@ export function TransactionFormDialog({
         ...rest,
         workspaceId,
         amountGross: rest.amountGross || rest.amount,
+        categoryId: categoriaFinal ?? undefined,
         applicationId: isBusinessCost ? rest.applicationId : undefined,
         projectIds: isBusinessCost && projectIds?.length ? projectIds : undefined,
         personId: isTeamPayment ? personId : undefined,
@@ -381,7 +388,7 @@ export function TransactionFormDialog({
             </div>
           </div>
 
-          {showCategory && (
+          {showConcept && !showCompany && (
             <div className="space-y-1.5">
               <Label>Concepto</Label>
               <SearchSelect
@@ -436,17 +443,25 @@ export function TransactionFormDialog({
                 />
               </div>
             )}
-            {showCategory && (
+            {/* En ingresos laborales el concepto ya es el catalogo: mostrar
+                ademas "Categoria" duplicaba el mismo dato. */}
+            {showConcept && (
               <div className="space-y-1.5">
-                <Label>Categoría</Label>
+                <Label>{showCompany ? 'Concepto' : 'Categoría'}</Label>
                 <SearchSelect
-                  placeholder="Opcional"
-                  searchPlaceholder="Buscar categoría..."
-                  value={watch('categoryId') ?? ''}
-                  onValueChange={(v) => setValue('categoryId', v)}
-                  options={(categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
-                  clearable
+                  placeholder={showCompany ? 'Selecciona un concepto' : 'Opcional'}
+                  searchPlaceholder={showCompany ? 'Buscar concepto...' : 'Buscar categoría...'}
+                  value={showCompany ? (watch('concept') ?? '') : (watch('categoryId') ?? '')}
+                  onValueChange={(v) =>
+                    showCompany ? setValue('concept', v, { shouldValidate: true }) : setValue('categoryId', v)
+                  }
+                  options={(categories ?? []).map((c) => ({
+                    value: showCompany ? c.name : c.id,
+                    label: c.name,
+                  }))}
+                  clearable={!showCompany}
                 />
+                {showCompany && errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
               </div>
             )}
           </div>

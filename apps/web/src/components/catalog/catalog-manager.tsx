@@ -40,6 +40,8 @@ interface CatalogItem {
 
 interface Props {
   title: string;
+  singular?: string;
+  articulo?: 'Nuevo' | 'Nueva';
   deleteWarning?: (item: CatalogItem) => ReactNode;
   endpoint: string;
   queryKey: readonly unknown[];
@@ -56,6 +58,8 @@ interface Props {
 
 export function CatalogManager({
   title,
+  singular,
+  articulo = 'Nuevo',
   deleteWarning,
   endpoint,
   queryKey,
@@ -187,7 +191,7 @@ export function CatalogManager({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {editing ? 'Editar' : 'Nuevo'} {title.toLowerCase()}
+                {editing ? 'Editar' : articulo} {(singular ?? title).toLowerCase()}
               </DialogTitle>
             </DialogHeader>
             <form
@@ -318,7 +322,7 @@ export function CatalogManager({
                     destructive
                     onClick={async () => {
                       const ok = await confirm({
-                        title: `Eliminar ${title.toLowerCase()}`,
+                        title: `Eliminar ${(singular ?? title).toLowerCase()}`,
                         description: (
                           <>
                             <p>

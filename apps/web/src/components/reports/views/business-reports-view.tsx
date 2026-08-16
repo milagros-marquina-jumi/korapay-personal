@@ -85,6 +85,7 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
     ? data.yearlyTotals.map((y) => ({
         key: String(y.year),
         income: y.income,
+        grossIncome: y.grossIncome,
         cost: y.cost,
         teamPayment: y.teamPayment,
         utility: y.utility,
@@ -92,6 +93,7 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
     : data.monthlyFlow.map((m) => ({
         key: m.label,
         income: m.income,
+        grossIncome: m.grossIncome,
         cost: m.cost,
         teamPayment: m.teamPayment,
         utility: m.utility,
@@ -149,6 +151,10 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           <Card>
             <CardHeader>
               <CardTitle>Ingresos vs egresos por {allYearsView ? 'año' : 'mes'}</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                El ingreso es la comisión que queda en MIMOTECH, no lo que factura el cliente: de ese bruto la mayor
+                parte se le paga al talento.
+              </p>
             </CardHeader>
             <CardContent>
               {flowSeries.length ? (
@@ -159,7 +165,8 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
                       <thead>
                         <tr className="border-b bg-muted/40 text-left">
                           <th className="px-3 py-2.5 font-medium">{allYearsView ? 'Año' : 'Mes'}</th>
-                          <th className="px-3 py-2.5 text-right font-medium">Ingresos</th>
+                          <th className="px-3 py-2.5 text-right font-medium">Facturado</th>
+                          <th className="px-3 py-2.5 text-right font-medium">Comisión</th>
                           <th className="px-3 py-2.5 text-right font-medium">Costos</th>
                           <th className="px-3 py-2.5 text-right font-medium">Equipo</th>
                           <th className="px-3 py-2.5 text-right font-medium">Utilidad</th>
@@ -169,6 +176,9 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
                         {flowRows.map((row) => (
                           <tr key={row.key} className="border-b last:border-0">
                             <td className="px-3 py-2.5 font-semibold capitalize">{row.key}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+                              {row.grossIncome ? formatMoney(row.grossIncome, 'PEN') : '—'}
+                            </td>
                             <td className="px-3 py-2.5 text-right tabular-nums text-success">
                               {formatMoney(row.income, 'PEN')}
                             </td>

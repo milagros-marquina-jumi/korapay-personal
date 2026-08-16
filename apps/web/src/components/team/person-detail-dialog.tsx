@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { StatusBadge } from '@korapay/ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Person, Transaction } from '@/lib/api.types';
-import { formatDate } from '@/lib/utils';
+import { formatDateMedium } from '@/lib/utils';
 
 interface PersonDetailDialogProps {
   readonly person: Person | null;
@@ -82,8 +82,8 @@ export function PersonDetailDialog({ person, payments, onOpenChange }: PersonDet
                   <tbody>
                     {propios.slice(0, 10).map((t) => (
                       <tr key={t.id} className="border-b last:border-0">
-                        <td className="w-24 whitespace-nowrap px-2 py-2 text-xs text-muted-foreground">
-                          {formatDate(t.date)}
+                        <td className="w-28 whitespace-nowrap px-2 py-2 text-muted-foreground text-xs">
+                          {formatDateMedium(t.date)}
                         </td>
                         <td className="px-2 py-2">
                           <p className="truncate" title={t.description ?? undefined}>

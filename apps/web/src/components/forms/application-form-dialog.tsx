@@ -82,6 +82,8 @@ export function ApplicationFormDialog({
         workspaceId,
         name: values.name,
         provider: values.provider || undefined,
+        // Ya no se edita, pero se reenvia tal cual para no borrar el valor de una
+        // aplicacion antigua que si lo tuviera.
         category: values.category || undefined,
         url: values.url || undefined,
       };
@@ -115,19 +117,17 @@ export function ApplicationFormDialog({
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
             <Input id="name" placeholder="Ej. Vercel, GitHub, Figma" {...register('name')} />
+            <p className="text-muted-foreground text-xs">Cómo la reconoces tú al revisar los costos.</p>
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 
           <CollapsibleSection label="Ver más opciones">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="provider">Proveedor</Label>
-                <Input id="provider" placeholder="Opcional" {...register('provider')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoría</Label>
-                <Input id="category" placeholder="Opcional" {...register('category')} />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="provider">Proveedor</Label>
+              <Input id="provider" placeholder="Opcional" {...register('provider')} />
+              <p className="text-muted-foreground text-xs">
+                Quién te cobra, si no coincide con el nombre. Ej. la app es "Fly" y el proveedor "Fly.io".
+              </p>
             </div>
 
             <div className="space-y-2">

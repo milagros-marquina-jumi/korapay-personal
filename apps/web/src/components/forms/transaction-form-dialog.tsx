@@ -44,7 +44,7 @@ import type {
 import { contractDatesInverted, contractOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { buildTags, isFixedExpense, splitTags } from '@/lib/transaction-tags';
-import { formatDateMedium } from '@/lib/utils';
+import { cn, formatDateMedium } from '@/lib/utils';
 
 const TYPE_OPTIONS = [
   { value: 'INCOME', label: 'Ingreso' },
@@ -195,6 +195,9 @@ export function TransactionFormDialog({
   // Los costos de MIMOTECH se clasifican por aplicacion y proyecto, y los pagos
   // al equipo por persona: en ninguno de los dos se usan categorias.
   const showConcept = !showBusinessFields && !showTeamFields;
+  // Un ingreso laboral llega con descuentos de planilla, por eso separa bruto y
+  // neto. Lo que yo pago (equipo, costos, ahorro) tiene un unico monto.
+  const showGross = currentType === 'INCOME';
   const showDueDate = currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE';
   const { data: applications } = useQuery({
     queryKey: queryKeys.applications(workspaceId),
@@ -402,18 +405,22 @@ export function TransactionFormDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* El bruto solo existe donde hay descuentos de planilla. En un pago que
+              tu haces (equipo, costos) el monto es uno solo. */}
+          <div className={cn('grid gap-3', showGross ? 'grid-cols-2' : 'grid-cols-1')}>
+            {showGross && (
+              <div className="space-y-1.5">
+                <Label htmlFor="amountGross">Monto bruto</Label>
+                <MoneyInput
+                  id="amountGross"
+                  value={watch('amountGross') ?? ''}
+                  onValueChange={(raw) => setValue('amountGross', raw)}
+                />
+                <p className="text-muted-foreground text-xs">Antes de descuentos. Si lo dejas vacío, se usa el neto.</p>
+              </div>
+            )}
             <div className="space-y-1.5">
-              <Label htmlFor="amountGross">Monto bruto</Label>
-              <MoneyInput
-                id="amountGross"
-                value={watch('amountGross') ?? ''}
-                onValueChange={(raw) => setValue('amountGross', raw)}
-              />
-              <p className="text-muted-foreground text-xs">Antes de descuentos. Si lo dejas vacío, se usa el neto.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="amount">Monto neto</Label>
+              <Label htmlFor="amount">{showGross ? 'Monto neto' : 'Monto'}</Label>
               <div className="flex gap-2">
                 <div className="min-w-0 flex-1">
                   <MoneyInput
@@ -424,7 +431,9 @@ export function TransactionFormDialog({
                 </div>
                 <CurrencyToggle value={watch('currency')} onChange={(v) => setValue('currency', v)} />
               </div>
-              <p className="text-muted-foreground text-xs">Lo que realmente recibiste.</p>
+              <p className="text-muted-foreground text-xs">
+                {showGross ? 'Lo que realmente recibiste.' : 'Lo que se pagó.'}
+              </p>
               {errors.amount && <p className="text-destructive text-xs">{errors.amount.message}</p>}
             </div>
           </div>

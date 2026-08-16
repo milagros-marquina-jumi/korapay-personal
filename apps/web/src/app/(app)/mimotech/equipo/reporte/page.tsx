@@ -5,10 +5,12 @@ import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Percent, Users, Wallet } from 'lucide-react';
 import Link from 'next/link';
+import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
 import { PersonBar, type PersonBarDatum } from '@/components/charts/person-bar';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { MONTH_SHORT } from '@/components/reports/report-constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,13 +40,27 @@ function ReporteEquipoContent() {
 
   const porPersona = data.teamByPerson ?? [];
   const totalEquipo = porPersona.reduce((s, p) => s + Number(p.total), 0);
-  const totalIngresos = Number(data.income ?? 0);
+  // Se mide contra la comision que gana MIMOTECH, no contra lo que factura el
+  // cliente: de ese bruto la mayor parte se le paga al talento.
+  const totalIngresos = Number(data.receivedIncome ?? data.income ?? 0);
   const pesoSobreIngresos = totalIngresos > 0 ? (totalEquipo / totalIngresos) * 100 : 0;
 
   const barras: PersonBarDatum[] = porPersona.map((p) => ({ name: p.name, value: Number(p.total) }));
 
   const anios = (data.yearlyTotals ?? []).filter((y) => Number(y.teamPayment) > 0);
   const meses = (data.monthlyFlow ?? []).filter((m) => Number(m.teamPayment) > 0);
+
+  const porPersonaMes = data.teamByPersonMonth ?? [];
+  const heatmapEquipo: HeatmapRow[] = porPersonaMes.map((p) => ({
+    key: p.name,
+    label: p.name,
+    values: p.months,
+    total: p.total,
+  }));
+  const totalesPorMes = Array.from({ length: 12 }, (_, i) =>
+    porPersonaMes.reduce((s, p) => s + Number(p.months[i] ?? 0), 0),
+  );
+  const totalHeatmap = totalesPorMes.reduce((s, v) => s + v, 0);
 
   return (
     <div className="space-y-6">
@@ -179,10 +195,30 @@ function ReporteEquipoContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="mes" className="mt-4">
+        <TabsContent value="mes" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pagos al equipo por mes</CardTitle>
+              <CardTitle>Pagos por colaborador y mes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {heatmapEquipo.length ? (
+                <HeatmapTable
+                  rowHeader="Colaborador"
+                  columns={MONTH_SHORT}
+                  rows={heatmapEquipo}
+                  columnTotals={totalesPorMes}
+                  grandTotal={totalHeatmap}
+                  minWidth="52rem"
+                />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin pagos registrados.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Total por mes</CardTitle>
             </CardHeader>
             <CardContent>
               {meses.length ? (

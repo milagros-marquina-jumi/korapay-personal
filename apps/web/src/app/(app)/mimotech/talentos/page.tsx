@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, GraduationCap, Pencil, Plus, Trash2 } from 'lucide-react';
+import { AlertTriangle, ExternalLink, GraduationCap, Pencil, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -39,6 +39,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { Talent, TalentLedgerSummary } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { estadoEsperado, primerContrato, type TalentDateIssue, validarFechasTalento } from '@/lib/talent-dates';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { cn, formatDuration } from '@/lib/utils';
 
@@ -79,6 +80,21 @@ const TERMINATION_LABELS: Record<string, string> = {
   OTHER: 'Otro',
 };
 
+function Aviso({ issues, field }: Readonly<{ issues: TalentDateIssue[]; field: TalentDateIssue['field'] }>) {
+  const propio = issues.filter((i) => i.field === field);
+  if (!propio.length) return null;
+  return (
+    <>
+      {propio.map((i) => (
+        <p key={i.message} className="flex items-start gap-1.5 text-[11px] text-warning">
+          <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{i.message}</span>
+        </p>
+      ))}
+    </>
+  );
+}
+
 function TalentFormDialog({
   workspaceId,
   talent,
@@ -112,6 +128,17 @@ function TalentFormDialog({
     defaultValues: { name: '', status: 'ACTIVE' },
   });
 
+  // El primer trabajo se deriva del contrato mas antiguo; el campo manual solo
+  // sirve mientras no haya ninguno registrado.
+  const contratoMasAntiguo = primerContrato(talent?.contracts);
+  const issues = validarFechasTalento({
+    status: watch('status'),
+    startedWithMeAt: watch('startedWithMeAt'),
+    endedWithMeAt: watch('endedWithMeAt'),
+    firstJobAt: contratoMasAntiguo ?? watch('firstJobAt'),
+    contracts: talent?.contracts,
+  });
+
   useEffect(() => {
     if (open && talent) {
       reset({
@@ -138,12 +165,14 @@ function TalentFormDialog({
       const payload = {
         workspaceId,
         name: values.name,
-        status: values.status,
+        // La fecha de fin manda sobre el estado: si ya se cumplio, el talento
+        // esta inactivo aunque el select se haya quedado atras.
+        status: estadoEsperado(values.endedWithMeAt) === 'INACTIVE' ? 'INACTIVE' : values.status,
         terminationReason: values.terminationReason || undefined,
         role: values.role || undefined,
         startedWithMeAt: values.startedWithMeAt || undefined,
         endedWithMeAt: values.endedWithMeAt || undefined,
-        firstJobAt: values.firstJobAt || undefined,
+        firstJobAt: contratoMasAntiguo ?? values.firstJobAt ?? undefined,
         studyPlace: values.studyPlace || undefined,
         studyStartAt: values.studyStartAt || undefined,
         studyEndAt: values.studyEndAt || undefined,
@@ -199,6 +228,7 @@ function TalentFormDialog({
                   <SelectItem value="INACTIVE">Inactivo</SelectItem>
                 </SelectContent>
               </Select>
+              <Aviso issues={issues} field="status" />
             </div>
           </div>
 
@@ -210,18 +240,34 @@ function TalentFormDialog({
             <div className="space-y-2">
               <Label htmlFor="startedWithMeAt">Inicio conmigo</Label>
               <Input id="startedWithMeAt" type="date" {...register('startedWithMeAt')} />
+              <p className="text-[11px] text-muted-foreground">Desde cuándo forma parte de MimoTalents.</p>
+              <Aviso issues={issues} field="startedWithMeAt" />
             </div>
           </div>
 
           <CollapsibleSection label="Ver más datos">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="firstJobAt">Inicio primer trabajo</Label>
-                <Input id="firstJobAt" type="date" {...register('firstJobAt')} />
-              </div>
-              <div className="space-y-2">
                 <Label htmlFor="endedWithMeAt">Fin conmigo</Label>
                 <Input id="endedWithMeAt" type="date" {...register('endedWithMeAt')} />
+                <p className="text-[11px] text-muted-foreground">
+                  Vacío mientras siga contigo. Al ponerla, el estado pasa a inactivo.
+                </p>
+                <Aviso issues={issues} field="endedWithMeAt" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="firstJobAt">Inicio primer trabajo</Label>
+                {contratoMasAntiguo ? (
+                  <Input id="firstJobAt" type="date" value={contratoMasAntiguo} readOnly className="bg-muted/50" />
+                ) : (
+                  <Input id="firstJobAt" type="date" {...register('firstJobAt')} />
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  {contratoMasAntiguo
+                    ? 'Sale de su contrato más antiguo, no se escribe a mano.'
+                    : 'Solo mientras no tenga contratos: al registrar uno, se toma su fecha.'}
+                </p>
+                <Aviso issues={issues} field="firstJobAt" />
               </div>
             </div>
 

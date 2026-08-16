@@ -28,7 +28,6 @@ function AplicacionesContent() {
   const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState(FILTER_ALL);
   const [provider, setProvider] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<Application | null>(null);
 
@@ -49,15 +48,6 @@ function AplicacionesContent() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const categoryOptions = useMemo(
-    () =>
-      [...new Set(allApplications.map((a) => a.category).filter(Boolean) as string[])].map((v) => ({
-        value: v,
-        label: v,
-      })),
-    [allApplications],
-  );
-
   const providerOptions = useMemo(
     () =>
       [...new Set(allApplications.map((a) => a.provider).filter(Boolean) as string[])].map((v) => ({
@@ -68,17 +58,12 @@ function AplicacionesContent() {
   );
 
   const applications = useMemo(
-    () =>
-      allApplications.filter(
-        (a) =>
-          (category === FILTER_ALL || a.category === category) && (provider === FILTER_ALL || a.provider === provider),
-      ),
-    [allApplications, category, provider],
+    () => allApplications.filter((a) => provider === FILTER_ALL || a.provider === provider),
+    [allApplications, provider],
   );
 
   const handleClear = () => {
     setSearch('');
-    setCategory(FILTER_ALL);
     setProvider(FILTER_ALL);
   };
 
@@ -93,11 +78,6 @@ function AplicacionesContent() {
         id: 'provider',
         header: 'Proveedor',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.provider ?? '-'}</span>,
-      },
-      {
-        id: 'category',
-        header: 'Categoría',
-        cell: ({ row }) => <span className="text-muted-foreground">{row.original.category ?? '-'}</span>,
       },
       {
         id: 'actions',
@@ -148,17 +128,11 @@ function AplicacionesContent() {
         search={search}
         onSearchChange={setSearch}
         placeholder="Buscar aplicaciones..."
-        showClear={search !== '' || category !== FILTER_ALL || provider !== FILTER_ALL}
+        showClear={search !== '' || provider !== FILTER_ALL}
         onClear={handleClear}
         filters={
-          <>
-            <FilterSelect
-              value={category}
-              onValueChange={setCategory}
-              options={categoryOptions}
-              placeholder="Categoría"
-              allLabel="Toda categoría"
-            />
+          // Filtrar por un campo que nadie llena solo estorba: aparece cuando hay algo que elegir.
+          providerOptions.length > 0 ? (
             <FilterSelect
               value={provider}
               onValueChange={setProvider}
@@ -166,7 +140,7 @@ function AplicacionesContent() {
               placeholder="Proveedor"
               allLabel="Todo proveedor"
             />
-          </>
+          ) : null
         }
       />
 

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { isNeverPaid } from '@korapay/domain';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
@@ -638,6 +638,9 @@ export class TalentService {
     }
     for (const key of ['startedWithMeAt', 'endedWithMeAt', 'firstJobAt', 'studyStartAt', 'studyEndAt'] as const) {
       if (data[key] !== undefined) out[key] = data[key] ? new Date(data[key]) : null;
+    }
+    if (data.startedWithMeAt && data.endedWithMeAt && data.endedWithMeAt < data.startedWithMeAt) {
+      throw new BadRequestException('La fecha de fin no puede ser anterior a la de inicio');
     }
     return out;
   }

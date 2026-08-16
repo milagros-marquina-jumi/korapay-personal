@@ -97,15 +97,15 @@ export function TransactionDetailDialog({
               )}
               <DetailLine label="Forma de pago" value={paymentMethods(transaction.tags)} />
               {account && <DetailLine label="Número de cuenta" value={account} />}
-              <DetailLine label="Vencimiento" value={transaction.dueDate ? formatDateLong(transaction.dueDate) : '—'} />
-              <DetailLine
-                label="Se repite"
-                value={
-                  transaction.isRecurring
-                    ? (RECURRENCE_LABELS[transaction.recurrenceRule?.frequency ?? ''] ?? 'Sí')
-                    : 'No'
-                }
-              />
+              {/* Vencimiento y recurrencia solo se listan si existen: un "—" y un
+                  "No" ocupan sitio sin decir nada del movimiento. */}
+              {transaction.dueDate && <DetailLine label="Vencimiento" value={formatDateLong(transaction.dueDate)} />}
+              {transaction.isRecurring && (
+                <DetailLine
+                  label="Se repite"
+                  value={RECURRENCE_LABELS[transaction.recurrenceRule?.frequency ?? ''] ?? 'Sí'}
+                />
+              )}
             </dl>
 
             {contract && (

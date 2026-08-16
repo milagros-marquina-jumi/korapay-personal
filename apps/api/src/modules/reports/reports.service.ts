@@ -411,8 +411,8 @@ export class ReportsService {
       }),
       this.prisma.project.findMany({ where: { workspaceId, deletedAt: null } }),
       this.prisma.talentIncomeDistribution.findMany({
-        where: { contract: { talentProfile: { workspaceId } }, ...(year ? { year } : {}) },
-        select: { amountReceived: true },
+        where: { contract: { talentProfile: { workspaceId } } },
+        select: { amountReceived: true, amountRetained: true, amountWithDiscount: true, year: true, month: true },
       }),
     ]);
 
@@ -443,14 +443,32 @@ export class ReportsService {
       } else if (t.type === 'TEAM_PAYMENT') bucket.team = bucket.team.add(amount);
     }
 
+    // La comision por periodo reemplaza al bruto facturado: sin esto los años y
+    // meses comparaban el sueldo del cliente contra los costos de MIMOTECH.
+    const comisionAnio = new Map<number, Decimal>();
+    const comisionMes = new Map<string, Decimal>();
+    for (const d of distributions) {
+      const retenido = new Decimal(d.amountRetained);
+      if (d.year) comisionAnio.set(d.year, (comisionAnio.get(d.year) ?? new Decimal(0)).add(retenido));
+      if (d.year && d.month) {
+        const key = `${d.year}-${d.month}`;
+        comisionMes.set(key, (comisionMes.get(key) ?? new Decimal(0)).add(retenido));
+      }
+    }
+    const hayComision = comisionAnio.size > 0;
+
     const yearlyTotals = [...yearAgg.entries()]
-      .map(([y, v]) => ({
-        year: y,
-        income: v.income.toFixed(2),
-        cost: v.cost.toFixed(2),
-        teamPayment: v.team.toFixed(2),
-        utility: v.income.minus(v.cost).minus(v.team).toFixed(2),
-      }))
+      .map(([y, v]) => {
+        const ingreso = hayComision ? (comisionAnio.get(y) ?? new Decimal(0)) : v.income;
+        return {
+          year: y,
+          income: ingreso.toFixed(2),
+          grossIncome: v.income.toFixed(2),
+          cost: v.cost.toFixed(2),
+          teamPayment: v.team.toFixed(2),
+          utility: ingreso.minus(v.cost).minus(v.team).toFixed(2),
+        };
+      })
       .sort((a, b) => a.year - b.year);
 
     const costByAppMonth = [...appMonthAgg.entries()]
@@ -489,14 +507,16 @@ export class ReportsService {
     const monthlyFlow = [...monthlyAgg.entries()]
       .map(([key, v]) => {
         const [y = 0, m = 1] = key.split('-').map(Number);
+        const ingreso = hayComision ? (comisionMes.get(`${y}-${m}`) ?? new Decimal(0)) : v.income;
         return {
           year: y,
           month: m,
           label: `${MONTH_NAMES[m - 1]} ${y}`,
-          income: v.income.toFixed(2),
+          income: ingreso.toFixed(2),
+          grossIncome: v.income.toFixed(2),
           cost: v.cost.toFixed(2),
           teamPayment: v.team.toFixed(2),
-          utility: v.income.minus(v.cost).minus(v.team).toFixed(2),
+          utility: ingreso.minus(v.cost).minus(v.team).toFixed(2),
         };
       })
       .sort((a, b) => a.year - b.year || a.month - b.month);
@@ -508,6 +528,7 @@ export class ReportsService {
     let teamPayment = new Decimal(0);
     const byApp = new Map<string, Decimal>();
     const byPerson = new Map<string, Decimal>();
+    const teamPersonMonth = new Map<string, Decimal[]>();
     for (const t of transactions) {
       const amount = new Decimal(t.amountBase);
       if (t.type === 'INCOME') income = income.add(amount);
@@ -519,6 +540,15 @@ export class ReportsService {
         teamPayment = teamPayment.add(amount);
         const name = personName.get(t.personId ?? '') ?? t.concept;
         byPerson.set(name, (byPerson.get(name) ?? new Decimal(0)).add(amount));
+        if (!teamPersonMonth.has(name)) {
+          teamPersonMonth.set(
+            name,
+            Array.from({ length: 12 }, () => new Decimal(0)),
+          );
+        }
+        const meses = teamPersonMonth.get(name);
+        const idx = t.date.getUTCMonth();
+        if (meses?.[idx]) meses[idx] = meses[idx].add(amount);
       }
     }
 
@@ -527,6 +557,14 @@ export class ReportsService {
       .sort((a, b) => Number(b.total) - Number(a.total));
     const teamByPerson = [...byPerson.entries()]
       .map(([name, total]) => ({ name, total: total.toFixed(2) }))
+      .sort((a, b) => Number(b.total) - Number(a.total));
+
+    const teamByPersonMonth = [...teamPersonMonth.entries()]
+      .map(([name, months]) => ({
+        name,
+        months: months.map((m) => m.toFixed(2)),
+        total: months.reduce((s, m) => s.add(m), new Decimal(0)).toFixed(2),
+      }))
       .sort((a, b) => Number(b.total) - Number(a.total));
 
     let talentPaid = new Decimal(0);
@@ -538,15 +576,22 @@ export class ReportsService {
       talentPending = talentPending.add(new Decimal(e.pendingAmount));
     }
 
-    // Los ingresos por talentos se registran con el sueldo del cliente; MIMOTECH
-    // solo recibe una parte. La utilidad se calcula sobre lo realmente recibido.
-    const received = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
-    const realIncome = received.gt(0) ? received : income;
+    // El ingreso de un talento se registra con el monto que factura el cliente,
+    // pero de ahi el talento cobra amountReceived y MIMOTECH se queda con
+    // amountRetained: esa comision es el ingreso real de la empresa.
+    const paraTalento = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
+    const comision = distributions.reduce((s, d) => s.plus(new Decimal(d.amountRetained)), new Decimal(0));
+    const facturado = distributions.reduce((s, d) => s.plus(new Decimal(d.amountWithDiscount)), new Decimal(0));
+    const realIncome = comision.gt(0) ? comision : income;
 
     return {
       years,
       income: income.toFixed(2),
       receivedIncome: realIncome.toFixed(2),
+      talentBilled: facturado.toFixed(2),
+      talentPayout: paraTalento.toFixed(2),
+      talentCommission: comision.toFixed(2),
+      teamByPersonMonth,
       cost: cost.toFixed(2),
       teamPayment: teamPayment.toFixed(2),
       utility: realIncome.minus(cost).minus(teamPayment).toFixed(2),

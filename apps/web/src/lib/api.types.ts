@@ -427,12 +427,24 @@ export interface BusinessReports {
   costByProject: { name: string; total: string }[];
   costByAppMonth: { name: string; months: string[]; total: string }[];
   teamByPerson: { name: string; total: string }[];
-  yearlyTotals: { year: number; income: string; cost: string; teamPayment: string; utility: string }[];
+  teamByPersonMonth: { name: string; months: string[]; total: string }[];
+  talentBilled: string;
+  talentPayout: string;
+  talentCommission: string;
+  yearlyTotals: {
+    year: number;
+    income: string;
+    grossIncome?: string;
+    cost: string;
+    teamPayment: string;
+    utility: string;
+  }[];
   monthlyFlow: {
     year: number;
     month: number;
     label: string;
     income: string;
+    grossIncome?: string;
     cost: string;
     teamPayment: string;
     utility: string;

@@ -53,6 +53,7 @@ import type {
   TalentReport,
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
 import { formatDate, formatDuration, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
@@ -241,6 +242,14 @@ function TalentDetailContent() {
   }
 
   const contracts = talent.contracts ?? [];
+  const primerTrabajo = primerTrabajoDe(talent);
+  const avisos = validarFechasTalento({
+    status: talent.status,
+    startedWithMeAt: talent.startedWithMeAt,
+    endedWithMeAt: talent.endedWithMeAt,
+    firstJobAt: primerTrabajo,
+    contracts,
+  });
   const portalUrl = talent.accessToken
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/t/${talent.accessToken}`
     : null;
@@ -273,13 +282,28 @@ function TalentDetailContent() {
               label="Fin conmigo"
               value={talent.endedWithMeAt ? formatDate(talent.endedWithMeAt) : 'Actual'}
             />
-            <DetailItem label="Inicio primer trabajo" value={talent.firstJobAt ? formatDate(talent.firstJobAt) : '—'} />
-            <DetailItem label="Tiempo trabajando" value={talent.firstJobAt ? formatDuration(talent.firstJobAt) : '—'} />
+            {/* El primer trabajo sale del contrato mas antiguo; el campo suelto
+                solo se usa si aun no hay contratos. */}
+            <DetailItem label="Inicio primer trabajo" value={primerTrabajo ? formatDate(primerTrabajo) : '—'} />
+            <DetailItem
+              label="Tiempo trabajando"
+              value={primerTrabajo ? formatDuration(primerTrabajo, talent.endedWithMeAt) : '—'}
+            />
             <DetailItem label="Lugar de estudio" value={talent.studyPlace ?? '—'} />
             <DetailItem label="Inicio estudios" value={talent.studyStartAt ? formatDate(talent.studyStartAt) : '—'} />
             <DetailItem label="Correo" value={talent.email ?? '—'} />
             <DetailItem label="Teléfono" value={talent.phone ?? '—'} />
           </dl>
+          {avisos.length > 0 && (
+            <div className="space-y-1.5 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+              {avisos.map((a) => (
+                <p key={a.message} className="flex items-start gap-1.5 text-warning text-xs">
+                  <AlertTriangle className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{a.message}</span>
+                </p>
+              ))}
+            </div>
+          )}
           {talent.slideUrl && (
             <a
               href={talent.slideUrl}

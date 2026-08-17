@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsDateString,
   IsEmail,
@@ -26,6 +26,12 @@ export class TalentReportQueryDto {
   @Min(2000)
   @Max(2100)
   year?: number;
+}
+
+// Vaciar una fecha en el formulario manda '': sin esto @IsDateString la rechaza
+// con 400 y no hay forma de borrar una fecha ya guardada.
+function FechaOpcional() {
+  return Transform(({ value }) => (value === '' || value === null ? undefined : value));
 }
 
 export class CreateTalentDto {
@@ -59,7 +65,7 @@ export class CreateTalentDto {
   @IsIn(['ACTIVE', 'INACTIVE'])
   status?: string;
 
-  @ApiPropertyOptional({ enum: ['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER'] })
+  @ApiPropertyOptional({ enum: ['FRAUD', 'ENDED', 'RESIGNED', 'OTHER'] })
   @IsOptional()
   @IsIn(['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER'])
   terminationReason?: string;
@@ -71,16 +77,19 @@ export class CreateTalentDto {
 
   @ApiPropertyOptional({ example: '2025-01-01' })
   @IsOptional()
+  @FechaOpcional()
   @IsDateString()
   startedWithMeAt?: string;
 
   @ApiPropertyOptional({ example: '2025-12-31' })
   @IsOptional()
+  @FechaOpcional()
   @IsDateString()
   endedWithMeAt?: string;
 
   @ApiPropertyOptional({ example: '2025-03-01' })
   @IsOptional()
+  @FechaOpcional()
   @IsDateString()
   firstJobAt?: string;
 
@@ -91,11 +100,13 @@ export class CreateTalentDto {
 
   @ApiPropertyOptional({ example: '2024-11-01' })
   @IsOptional()
+  @FechaOpcional()
   @IsDateString()
   studyStartAt?: string;
 
   @ApiPropertyOptional({ example: '2025-06-01' })
   @IsOptional()
+  @FechaOpcional()
   @IsDateString()
   studyEndAt?: string;
 

@@ -55,7 +55,7 @@ function initials(name: string) {
 const schema = z.object({
   name: z.string().min(1, 'Requerido'),
   status: z.enum(['ACTIVE', 'INACTIVE']),
-  terminationReason: z.enum(['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER']).optional().or(z.literal('')),
+  terminationReason: z.enum(['FRAUD', 'ENDED', 'RESIGNED', 'OTHER']).optional().or(z.literal('')),
   role: z.string().optional(),
   startedWithMeAt: z.string().optional(),
   endedWithMeAt: z.string().optional(),
@@ -74,7 +74,6 @@ type FormValues = z.infer<typeof schema>;
 const STATUS_LABELS: Record<string, string> = { ACTIVE: 'Activo', INACTIVE: 'Inactivo' };
 const TERMINATION_LABELS: Record<string, string> = {
   FRAUD: 'Fraude',
-  INDECISIVE: 'Indeciso',
   ENDED: 'Finalizó contrato',
   RESIGNED: 'Renunció',
   OTHER: 'Otro',
@@ -247,14 +246,7 @@ function TalentFormDialog({
 
           <CollapsibleSection label="Ver más datos">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="endedWithMeAt">Fin conmigo</Label>
-                <Input id="endedWithMeAt" type="date" {...register('endedWithMeAt')} />
-                <p className="text-[11px] text-muted-foreground">
-                  Vacío mientras siga contigo. Al ponerla, el estado pasa a inactivo.
-                </p>
-                <Aviso issues={issues} field="endedWithMeAt" />
-              </div>
+              {/* Orden cronologico: primero cuando lo coloque, luego cuando termino. */}
               <div className="space-y-2">
                 <Label htmlFor="firstJobAt">Inicio primer trabajo</Label>
                 {contratoMasAntiguo ? (
@@ -268,6 +260,14 @@ function TalentFormDialog({
                     : 'Solo mientras no tenga contratos: al registrar uno, se toma su fecha.'}
                 </p>
                 <Aviso issues={issues} field="firstJobAt" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endedWithMeAt">Fin conmigo</Label>
+                <Input id="endedWithMeAt" type="date" {...register('endedWithMeAt')} />
+                <p className="text-[11px] text-muted-foreground">
+                  Vacío mientras siga contigo. Al ponerla, el estado pasa a inactivo.
+                </p>
+                <Aviso issues={issues} field="endedWithMeAt" />
               </div>
             </div>
 

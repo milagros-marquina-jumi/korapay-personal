@@ -55,7 +55,6 @@ import type {
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
-import { ledgerCategoryLabel } from '@/lib/talent-ledger-labels';
 import { formatDate, formatDurationExact, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
@@ -395,24 +394,28 @@ function TalentDetailContent() {
                   value={formatMoney(report.income.receivedByMe, 'PEN')}
                   icon={ArrowDownLeft}
                   color="text-info"
+                  tooltip="Comisión que queda en MIMOTECH de lo que factura el cliente por este talento."
                 />
                 <KPICard
                   label="Se quedó (talento)"
                   value={formatMoney(report.income.keptByTalent, 'PEN')}
                   icon={ArrowUpRight}
                   color="text-teal"
+                  tooltip="Lo que cobra el talento por su trabajo en el cliente."
                 />
                 <KPICard
-                  label="Pagado a talento"
+                  label="Invertido en él"
                   value={formatMoney(report.expense.paid, 'PEN')}
                   icon={Wallet}
-                  color="text-success"
+                  color="text-coral"
+                  tooltip="Gasto de MIMOTECH en esta persona (formación, equipos, pruebas). No es lo que cobra por su trabajo."
                 />
                 <KPICard
                   label="Neto (MIMOTECH)"
                   value={formatMoney(report.net, 'PEN')}
                   icon={Landmark}
-                  color="text-brand"
+                  color={Number(report.net) < 0 ? 'text-destructive' : 'text-brand'}
+                  tooltip="Comisión recibida menos lo invertido en el talento."
                 />
               </div>
               <div className="grid gap-4 sm:grid-cols-4">
@@ -421,12 +424,14 @@ function TalentDetailContent() {
                   value={formatMoney(report.income.salary, 'PEN')}
                   icon={Banknote}
                   color="text-muted-foreground"
+                  tooltip="Suma de los sueldos que el cliente paga por este talento."
                 />
                 <KPICard
                   label="Deuda"
                   value={formatMoney(report.expense.debt, 'PEN')}
                   icon={ReceiptText}
                   color="text-warning"
+                  tooltip="Lo que el talento debe devolver a MIMOTECH."
                 />
                 <KPICard
                   label="Falta pagar"
@@ -504,8 +509,8 @@ function TalentDetailContent() {
                 </div>
               )}
 
-              {(report.byPaymentType.length > 0 || report.expenseByCategory.length > 0) && (
-                <div className="grid gap-4 lg:grid-cols-2">
+              {report.byPaymentType.length > 0 && (
+                <div className="grid gap-4">
                   {report.byPaymentType.length > 0 && (
                     <Card>
                       <CardHeader>
@@ -537,41 +542,6 @@ function TalentDetailContent() {
                       </CardContent>
                     </Card>
                   )}
-                  {report.expenseByCategory.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Egresos por categoría</CardTitle>
-                      </CardHeader>
-                      <CardContent className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Categoría</TableHead>
-                              <TableHead className="text-right">Pagado</TableHead>
-                              <TableHead className="text-right">Deuda</TableHead>
-                              <TableHead className="text-right">Falta</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {report.expenseByCategory.map((c) => (
-                              <TableRow key={c.name}>
-                                <TableCell className="text-sm font-medium">{ledgerCategoryLabel(c.name)}</TableCell>
-                                <TableCell className="text-right tabular-nums text-success">
-                                  {formatMoney(c.paid, 'PEN')}
-                                </TableCell>
-                                <TableCell className="text-right tabular-nums text-warning">
-                                  {formatMoney(c.debt, 'PEN')}
-                                </TableCell>
-                                <TableCell className="text-right tabular-nums text-destructive">
-                                  {formatMoney(c.pending, 'PEN')}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </CardContent>
-                    </Card>
-                  )}
                 </div>
               )}
 
@@ -589,7 +559,7 @@ function TalentDetailContent() {
                             <TableHead className="text-right">Sueldo</TableHead>
                             <TableHead className="text-right">Recibí (MIMOTECH)</TableHead>
                             <TableHead className="text-right">Se quedó (talento)</TableHead>
-                            <TableHead className="text-right">Egreso (pagado)</TableHead>
+                            <TableHead className="text-right">Invertido</TableHead>
                             <TableHead className="text-right">Falta pagar</TableHead>
                             <TableHead className="text-right">Neto</TableHead>
                           </TableRow>
@@ -605,7 +575,7 @@ function TalentDetailContent() {
                                 {formatMoney(m.income, 'PEN')}
                               </TableCell>
                               <TableCell className="text-right tabular-nums">{formatMoney(m.kept, 'PEN')}</TableCell>
-                              <TableCell className="text-right tabular-nums text-success">
+                              <TableCell className="text-right text-coral tabular-nums">
                                 {formatMoney(m.expense, 'PEN')}
                               </TableCell>
                               <TableCell className="text-right tabular-nums text-destructive">

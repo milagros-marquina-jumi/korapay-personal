@@ -40,35 +40,70 @@ function TimeSeriesBars({
     return <p className="py-12 text-center text-sm text-muted-foreground">Sin datos.</p>;
   }
   const max = Math.max(...data.map((d) => Math.max(Number(d.income), Number(d.expense))), 1);
+  const money = (v: string | number) => formatMoney(String(v), 'PEN');
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-4 text-xs">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-info" /> Ingresos
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+        <span className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-coral" /> Egresos
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-2.5 rounded-sm bg-success" /> Ingresos
+          </span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2.5 w-2.5 rounded-sm bg-success" /> Egresos
+        <span className="text-muted-foreground">
+          Cada barra sale del centro: a la izquierda lo que salió, a la derecha lo que entró.
         </span>
       </div>
-      <div className="space-y-2">
+
+      <div className="grid grid-cols-[7rem_1fr_7rem] gap-3 border-b px-2 pb-1.5 text-[11px] text-muted-foreground uppercase tracking-wide">
+        <span>Mes</span>
+        <span className="text-center">Egresos · Ingresos</span>
+        <span className="text-right">Neto</span>
+      </div>
+
+      <div className="space-y-1">
         {data.map((d) => {
-          const incomeWidth = (Number(d.income) / max) * 100;
-          const expenseWidth = (Number(d.expense) / max) * 100;
+          const income = Number(d.income);
+          const expense = Number(d.expense);
+          const net = Number(d.net);
           return (
-            <div key={`${d.year}-${d.month}`} className="grid grid-cols-[10rem_1fr_9rem] items-center gap-3">
-              <span className="truncate text-xs capitalize text-muted-foreground">{d.label}</span>
-              <div className="space-y-1">
-                <div className="h-3 rounded-full bg-muted/40">
-                  <div className="h-full rounded-full bg-info" style={{ width: `${incomeWidth}%` }} />
+            <div
+              key={`${d.year}-${d.month}`}
+              className="grid grid-cols-[7rem_1fr_7rem] items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-muted/40"
+            >
+              <span className="truncate text-muted-foreground text-xs capitalize">{d.label}</span>
+
+              <div className="flex items-center">
+                <div className="flex flex-1 justify-end">
+                  {expense > 0 && (
+                    <div
+                      className="flex items-center justify-end gap-1.5"
+                      style={{ width: `${(expense / max) * 100}%` }}
+                    >
+                      <span className="whitespace-nowrap text-[11px] text-coral tabular-nums">{money(expense)}</span>
+                      <div className="h-4 min-w-1 flex-1 rounded-l-sm bg-coral" />
+                    </div>
+                  )}
                 </div>
-                <div className="h-3 rounded-full bg-muted/40">
-                  <div className="h-full rounded-full bg-success" style={{ width: `${expenseWidth}%` }} />
+                <div className="h-5 w-px shrink-0 bg-border" />
+                <div className="flex flex-1 justify-start">
+                  {income > 0 && (
+                    <div className="flex items-center gap-1.5" style={{ width: `${(income / max) * 100}%` }}>
+                      <div className="h-4 min-w-1 flex-1 rounded-r-sm bg-success" />
+                      <span className="whitespace-nowrap text-[11px] text-success tabular-nums">{money(income)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="text-right text-xs tabular-nums">
-                <div className="text-info">+{Number(d.income).toFixed(0)}</div>
-                <div className="text-success">−{Number(d.expense).toFixed(0)}</div>
-              </div>
+
+              <span
+                className={`text-right font-medium text-xs tabular-nums ${net < 0 ? 'text-destructive' : 'text-foreground'}`}
+              >
+                {money(net)}
+              </span>
             </div>
           );
         })}
@@ -182,10 +217,11 @@ function GlobalReportContent() {
           color="text-teal"
         />
         <KPICard
-          label="Pagado a talentos"
+          label="Invertido en talentos"
           value={formatMoney(data.totals.paid, 'PEN')}
           icon={Wallet}
-          color="text-success"
+          color="text-coral"
+          tooltip="Gasto de MIMOTECH en los talentos (formación, equipos, pruebas). No es lo que cobran por su trabajo."
         />
         <KPICard
           label="Neto (MIMOTECH)"
@@ -319,7 +355,7 @@ function GlobalReportContent() {
                     {data.expenseByPerson.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3 font-medium">{p.name}</td>
-                        <td className="p-3 text-right font-medium tabular-nums text-success">
+                        <td className="p-3 text-right font-medium text-coral tabular-nums">
                           {formatMoney(p.paid, 'PEN')}
                         </td>
                         <td className="p-3 text-right tabular-nums text-warning">{formatMoney(p.debt, 'PEN')}</td>
@@ -383,7 +419,7 @@ function GlobalReportContent() {
                     <tr key={p.talentId} className="border-b last:border-0">
                       <td className="p-3 font-medium">{p.name}</td>
                       <td className="p-3 text-right tabular-nums text-info">{formatMoney(p.received, 'PEN')}</td>
-                      <td className="p-3 text-right tabular-nums text-success">{formatMoney(p.paid, 'PEN')}</td>
+                      <td className="p-3 text-right text-coral tabular-nums">{formatMoney(p.paid, 'PEN')}</td>
                       <td
                         className={`p-3 text-right font-semibold tabular-nums ${Number(p.net) < 0 ? 'text-destructive' : ''}`}
                       >

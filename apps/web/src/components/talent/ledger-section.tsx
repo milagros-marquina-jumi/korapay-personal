@@ -211,38 +211,39 @@ export function LedgerSection({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="font-display text-lg font-semibold">Estado de cuenta</h3>
-        <LedgerFormDialog onSubmit={onCreate} isPending={isMutating} />
-      </div>
-
-      <div className="inline-flex w-fit gap-0.5 rounded-lg border bg-muted/40 p-0.5">
-        {TIPOS.map((t) => {
-          const activo = type === t.value;
-          const total = entries.filter((e) => e.type === t.value).length;
-          return (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setType(t.value)}
-              aria-pressed={activo}
-              className={cn(
-                'flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium text-sm transition-colors',
-                activo ? 'bg-card text-foreground shadow-soft' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {t.label}
-              <span
-                className={cn(
-                  'rounded px-1.5 py-0.5 text-[11px] tabular-nums',
-                  activo ? 'bg-muted text-muted-foreground' : 'bg-transparent text-muted-foreground/70',
-                )}
-              >
-                {total}
-              </span>
-            </button>
-          );
-        })}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex w-fit gap-0.5 rounded-lg border bg-muted/40 p-0.5">
+            {TIPOS.map((t) => {
+              const activo = type === t.value;
+              const total = entries.filter((e) => e.type === t.value).length;
+              return (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => setType(t.value)}
+                  aria-pressed={activo}
+                  className={cn(
+                    'flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium text-sm transition-colors',
+                    activo ? 'bg-card text-foreground shadow-soft' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  {t.label}
+                  <span
+                    className={cn(
+                      'rounded px-1.5 py-0.5 text-[11px] tabular-nums',
+                      activo ? 'bg-muted text-muted-foreground' : 'bg-transparent text-muted-foreground/70',
+                    )}
+                  >
+                    {total}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <LedgerFormDialog onSubmit={onCreate} isPending={isMutating} />
+        </div>
       </div>
 
       <DataTableToolbar

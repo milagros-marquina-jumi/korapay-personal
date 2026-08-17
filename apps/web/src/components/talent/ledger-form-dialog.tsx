@@ -21,7 +21,6 @@ const money = z
 const schema = z.object({
   date: z.string().min(1, 'Requerido'),
   type: z.enum(['EGRESO', 'DEUDA']),
-  category: z.string().optional(),
   paidAmount: money,
   debtAmount: money,
   pendingAmount: money,
@@ -37,20 +36,6 @@ const STATUS_OPTIONS = [
   { value: 'PARTIAL', label: 'Parcial' },
   { value: 'OVERDUE', label: 'Vencido' },
   { value: 'NUNCA_PAGO', label: 'Nunca pagó (pérdida)' },
-];
-
-const CATEGORY_OPTIONS = [
-  { value: 'EDUCACION', label: 'Educación (Cibertec, ISIL...)' },
-  { value: 'SUSCRIPCION', label: 'Suscripción (Platzi...)' },
-  { value: 'TRABAJO', label: 'Trabajo (prueba técnica, entrevista)' },
-  { value: 'ALQUILER', label: 'Alquiler' },
-  { value: 'PRESTAMO', label: 'Préstamo' },
-  { value: 'MOBILIARIO', label: 'Mobiliario' },
-  { value: 'EQUIPO', label: 'Equipo (laptop, monitor...)' },
-  { value: 'TRANSPORTE', label: 'Transporte' },
-  { value: 'COMIDA', label: 'Comida' },
-  { value: 'FRAUDE', label: 'Fraude' },
-  { value: 'OTRO', label: 'Otro' },
 ];
 
 interface Props {
@@ -81,7 +66,6 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
     defaultValues: {
       date: entry?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
       type: (entry?.type as 'EGRESO' | 'DEUDA') ?? 'EGRESO',
-      category: entry?.category ?? '',
       paidAmount: entry?.paidAmount ?? '',
       debtAmount: entry?.debtAmount ?? '',
       pendingAmount: entry?.pendingAmount ?? '',
@@ -95,7 +79,6 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
       reset({
         date: entry.date.slice(0, 10),
         type: entry.type as 'EGRESO' | 'DEUDA',
-        category: entry.category ?? '',
         paidAmount: entry.paidAmount,
         debtAmount: entry.debtAmount,
         pendingAmount: entry.pendingAmount,
@@ -142,22 +125,6 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Categoría</Label>
-            <Select value={watch('category') ?? ''} onValueChange={(v) => setValue('category', v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sin categoría" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORY_OPTIONS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {esDeuda ? (

@@ -14,24 +14,14 @@ import { SortableHeader } from '@/components/data-table/sortable-header';
 import { IconAction } from '@/components/ui/icon-action';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
 import { useOpenMonth } from '@/lib/use-open-month';
-import { formatDate, formatMonthYear } from '@/lib/utils';
+import { cn, formatDate, formatMonthYear } from '@/lib/utils';
 import { TalentLedgerDetailDialog } from './ledger-detail-dialog';
 import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
 
-const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
-const CATEGORY_LABELS: Record<string, string> = {
-  EDUCACION: 'Educación',
-  SUSCRIPCION: 'Suscripción',
-  TRABAJO: 'Trabajo',
-  ALQUILER: 'Alquiler',
-  PRESTAMO: 'Préstamo',
-  MOBILIARIO: 'Mobiliario',
-  EQUIPO: 'Equipo',
-  TRANSPORTE: 'Transporte',
-  COMIDA: 'Comida',
-  FRAUDE: 'Fraude',
-  OTRO: 'Otro',
-};
+const TIPOS = [
+  { value: 'DEUDA', label: 'Deudas' },
+  { value: 'EGRESO', label: 'Egresos' },
+] as const;
 
 interface LedgerSectionProps {
   entries: TalentLedgerEntry[];
@@ -58,8 +48,7 @@ export function LedgerSection({
 }: LedgerSectionProps) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(FILTER_ALL);
-  const [type, setType] = useState(FILTER_ALL);
-  const [category, setCategory] = useState(FILTER_ALL);
+  const [type, setType] = useState('DEUDA');
   const [year, setYear] = useState(FILTER_ALL);
   const [month, setMonth] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<TalentLedgerEntry | null>(null);
@@ -68,14 +57,6 @@ export function LedgerSection({
   const cur = currency as 'PEN' | 'USD';
   const statusOptions = useMemo(
     () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: statusLabel(v) })),
-    [entries],
-  );
-  const categoryOptions = useMemo(
-    () =>
-      [...new Set(entries.map((e) => e.category ?? '').filter(Boolean))].map((v) => ({
-        value: v,
-        label: CATEGORY_LABELS[v] ?? v,
-      })),
     [entries],
   );
   const availableYears = useMemo(() => [...new Set(entries.map((e) => e.year))].sort((a, b) => b - a), [entries]);
@@ -87,11 +68,10 @@ export function LedgerSection({
         (!q || (e.description ?? '').toLowerCase().includes(q)) &&
         (status === FILTER_ALL || e.status === status) &&
         (type === FILTER_ALL || e.type === type) &&
-        (category === FILTER_ALL || (e.category ?? '') === category) &&
         (year === FILTER_ALL || String(e.year) === year) &&
         (month === FILTER_ALL || String(e.month) === month),
     );
-  }, [entries, search, status, type, category, year, month]);
+  }, [entries, search, status, type, year, month]);
 
   const monthGroups = useMemo(() => {
     const map = new Map<string, TalentLedgerEntry[]>();
@@ -130,18 +110,10 @@ export function LedgerSection({
     defaultMonthKey,
   );
 
-  const hasFilters =
-    search !== '' ||
-    status !== FILTER_ALL ||
-    type !== FILTER_ALL ||
-    category !== FILTER_ALL ||
-    year !== FILTER_ALL ||
-    month !== FILTER_ALL;
+  const hasFilters = search !== '' || status !== FILTER_ALL || year !== FILTER_ALL || month !== FILTER_ALL;
   const clear = () => {
     setSearch('');
     setStatus(FILTER_ALL);
-    setType(FILTER_ALL);
-    setCategory(FILTER_ALL);
     setYear(FILTER_ALL);
     setMonth(FILTER_ALL);
   };
@@ -153,57 +125,54 @@ export function LedgerSection({
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
         cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
       },
-      {
-        accessorKey: 'type',
-        header: 'Tipo',
-        cell: ({ row }) => <span className="text-sm">{TYPE_LABELS[row.original.type] ?? row.original.type}</span>,
-      },
-      {
-        accessorKey: 'category',
-        header: 'Categoría',
-        cell: ({ row }) => (
-          <span className="text-xs text-muted-foreground">
-            {row.original.category ? (CATEGORY_LABELS[row.original.category] ?? row.original.category) : '—'}
-          </span>
-        ),
-      },
-      {
+    ];
+
+    if (type === 'DEUDA') {
+      base.push(
+        {
+          id: 'debt',
+          accessorFn: (r) => Number(r.debtAmount),
+          header: ({ column }) => <SortableHeader column={column} label="Deuda" className="ml-auto" />,
+          cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.debtAmount, cur)}</div>,
+        },
+        {
+          id: 'pending',
+          accessorFn: (r) => Number(r.pendingAmount),
+          header: ({ column }) => <SortableHeader column={column} label="Falta pagar" className="ml-auto" />,
+          cell: ({ row }) => (
+            <div
+              className={`text-right font-semibold tabular-nums ${
+                Number(row.original.pendingAmount) > 0 ? 'text-destructive' : ''
+              }`}
+            >
+              {formatMoney(row.original.pendingAmount, cur)}
+            </div>
+          ),
+        },
+        {
+          accessorKey: 'status',
+          header: 'Estado',
+          cell: ({ row }) => <StatusBadge status={row.original.status} />,
+        },
+      );
+    } else {
+      base.push({
         id: 'paid',
         accessorFn: (r) => Number(r.paidAmount),
-        header: ({ column }) => <SortableHeader column={column} label="Pagado" className="ml-auto" />,
-        cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.paidAmount, cur)}</div>,
-      },
-      {
-        id: 'debt',
-        accessorFn: (r) => Number(r.debtAmount),
-        header: ({ column }) => <SortableHeader column={column} label="Deuda" className="ml-auto" />,
-        cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.debtAmount, cur)}</div>,
-      },
-      {
-        id: 'pending',
-        accessorFn: (r) => Number(r.pendingAmount),
-        header: ({ column }) => <SortableHeader column={column} label="Falta pagar" className="ml-auto" />,
+        header: ({ column }) => <SortableHeader column={column} label="Desembolsado" className="ml-auto" />,
         cell: ({ row }) => (
-          <div
-            className={`text-right font-semibold tabular-nums ${
-              Number(row.original.pendingAmount) > 0 ? 'text-destructive' : ''
-            }`}
-          >
-            {formatMoney(row.original.pendingAmount, cur)}
+          <div className="text-right font-medium text-coral tabular-nums">
+            {formatMoney(row.original.paidAmount, cur)}
           </div>
         ),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Estado',
-        cell: ({ row }) => <StatusBadge status={row.original.status} />,
-      },
-      {
-        id: 'description',
-        header: 'Descripción',
-        cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.description ?? '-'}</span>,
-      },
-    ];
+      });
+    }
+
+    base.push({
+      id: 'description',
+      header: 'Descripción',
+      cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.description ?? '-'}</span>,
+    });
     base.push({
       id: 'actions',
       header: '',
@@ -218,7 +187,7 @@ export function LedgerSection({
       ),
     });
     return base;
-  }, [cur, canDelete, onDelete]);
+  }, [cur, canDelete, onDelete, type]);
 
   return (
     <div className="space-y-6">
@@ -247,6 +216,35 @@ export function LedgerSection({
         <LedgerFormDialog onSubmit={onCreate} isPending={isMutating} />
       </div>
 
+      <div className="inline-flex w-fit gap-0.5 rounded-lg border bg-muted/40 p-0.5">
+        {TIPOS.map((t) => {
+          const activo = type === t.value;
+          const total = entries.filter((e) => e.type === t.value).length;
+          return (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setType(t.value)}
+              aria-pressed={activo}
+              className={cn(
+                'flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium text-sm transition-colors',
+                activo ? 'bg-card text-foreground shadow-soft' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {t.label}
+              <span
+                className={cn(
+                  'rounded px-1.5 py-0.5 text-[11px] tabular-nums',
+                  activo ? 'bg-muted text-muted-foreground' : 'bg-transparent text-muted-foreground/70',
+                )}
+              >
+                {total}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <DataTableToolbar
         sticky={false}
         search={search}
@@ -257,31 +255,12 @@ export function LedgerSection({
         filters={
           <>
             <FilterSelect
-              value={type}
-              onValueChange={setType}
-              options={[
-                { value: 'EGRESO', label: 'Egreso' },
-                { value: 'DEUDA', label: 'Deuda' },
-              ]}
-              placeholder="Tipo"
-              allLabel="Todo tipo"
-            />
-            <FilterSelect
               value={status}
               onValueChange={setStatus}
               options={statusOptions}
               placeholder="Estado"
               allLabel="Todo estado"
             />
-            {categoryOptions.length > 0 && (
-              <FilterSelect
-                value={category}
-                onValueChange={setCategory}
-                options={categoryOptions}
-                placeholder="Categoría"
-                allLabel="Toda categoría"
-              />
-            )}
             <MonthYearFilter
               year={year}
               month={month}

@@ -55,6 +55,7 @@ import type {
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
+import { ledgerCategoryLabel } from '@/lib/talent-ledger-labels';
 import { formatDate, formatDurationExact, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
@@ -266,24 +267,16 @@ function TalentDetailContent() {
       }
       title={talent.name}
       description={talent.role ?? undefined}
-      action={
-        <div className="flex items-center gap-2">
-          <StatusBadge status={talent.status} />
+      action={<StatusBadge status={talent.status} />}
+    >
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="text-base">Perfil del talento</CardTitle>
           <TalentFormDialog
             workspaceId={ws}
             talent={talent}
-            trigger={
-              <Button variant="outline" size="sm">
-                <Pencil className="mr-2 h-4 w-4" /> Editar
-              </Button>
-            }
+            trigger={<IconAction icon={Pencil} label="Editar talento" />}
           />
-        </div>
-      }
-    >
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Perfil del talento</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -562,7 +555,7 @@ function TalentDetailContent() {
                           <TableBody>
                             {report.expenseByCategory.map((c) => (
                               <TableRow key={c.name}>
-                                <TableCell className="text-sm font-medium">{c.name}</TableCell>
+                                <TableCell className="text-sm font-medium">{ledgerCategoryLabel(c.name)}</TableCell>
                                 <TableCell className="text-right tabular-nums text-success">
                                   {formatMoney(c.paid, 'PEN')}
                                 </TableCell>
@@ -1055,7 +1048,6 @@ function normalize(values: LedgerFormValues) {
   return {
     date: values.date,
     type: values.type,
-    category: values.category || undefined,
     paidAmount: values.paidAmount || '0',
     debtAmount: values.debtAmount || '0',
     pendingAmount: values.pendingAmount || '0',

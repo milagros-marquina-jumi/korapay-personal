@@ -28,7 +28,7 @@ export class TalentReportQueryDto {
   year?: number;
 }
 
-function FechaOpcional() {
+function VacioComoNulo() {
   return Transform(({ value }) => (value === '' || value === null ? undefined : value));
 }
 
@@ -45,6 +45,7 @@ export class CreateTalentDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @VacioComoNulo()
   @IsEmail()
   email?: string;
 
@@ -65,6 +66,7 @@ export class CreateTalentDto {
 
   @ApiPropertyOptional({ enum: ['FRAUD', 'ENDED', 'RESIGNED', 'OTHER'] })
   @IsOptional()
+  @VacioComoNulo()
   @IsIn(['FRAUD', 'INDECISIVE', 'ENDED', 'RESIGNED', 'OTHER'])
   terminationReason?: string;
 
@@ -75,19 +77,19 @@ export class CreateTalentDto {
 
   @ApiPropertyOptional({ example: '2025-01-01' })
   @IsOptional()
-  @FechaOpcional()
+  @VacioComoNulo()
   @IsDateString()
   startedWithMeAt?: string;
 
   @ApiPropertyOptional({ example: '2025-12-31' })
   @IsOptional()
-  @FechaOpcional()
+  @VacioComoNulo()
   @IsDateString()
   endedWithMeAt?: string;
 
   @ApiPropertyOptional({ example: '2025-03-01' })
   @IsOptional()
-  @FechaOpcional()
+  @VacioComoNulo()
   @IsDateString()
   firstJobAt?: string;
 
@@ -98,13 +100,13 @@ export class CreateTalentDto {
 
   @ApiPropertyOptional({ example: '2024-11-01' })
   @IsOptional()
-  @FechaOpcional()
+  @VacioComoNulo()
   @IsDateString()
   studyStartAt?: string;
 
   @ApiPropertyOptional({ example: '2025-06-01' })
   @IsOptional()
-  @FechaOpcional()
+  @VacioComoNulo()
   @IsDateString()
   studyEndAt?: string;
 

@@ -50,7 +50,6 @@ export function TalentLedgerDetailDialog({ entry, currency, onOpenChange }: Read
                 value={formatMoney(entry.pendingAmount, currency)}
                 destacar={Number(entry.pendingAmount) > 0}
               />
-              {entry.category && <Line label="Categoría" value={entry.category} />}
               <Line label="Periodo" value={`${String(entry.month).padStart(2, '0')}/${entry.year}`} />
             </dl>
 

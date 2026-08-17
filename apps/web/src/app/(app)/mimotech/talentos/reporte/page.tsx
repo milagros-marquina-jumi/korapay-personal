@@ -291,7 +291,7 @@ function GlobalReportContent() {
               {expenseBars.length ? (
                 <PersonBar
                   data={expenseBars}
-                  color="bg-success"
+                  color="bg-coral"
                   secondaryColor="bg-destructive/60"
                   secondaryLabel="Falta pagar"
                 />

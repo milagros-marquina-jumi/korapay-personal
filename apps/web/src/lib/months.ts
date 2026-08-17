@@ -1,6 +1,6 @@
 import { MONTH_NAMES } from '@korapay/domain';
 
-export { MONTH_NAMES };
+export { MONTH_NAMES } from '@korapay/domain';
 
 export const MONTH_OPTIONS = MONTH_NAMES.map((label, index) => ({
   value: String(index + 1),

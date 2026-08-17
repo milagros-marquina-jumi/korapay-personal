@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEmail,
@@ -12,6 +12,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class TalentReportQueryDto {
   @ApiProperty()
@@ -26,10 +27,6 @@ export class TalentReportQueryDto {
   @Min(2000)
   @Max(2100)
   year?: number;
-}
-
-function VacioComoNulo() {
-  return Transform(({ value }) => (value === '' || value === null ? undefined : value));
 }
 
 export class CreateTalentDto {

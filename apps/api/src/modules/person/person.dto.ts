@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsEmail, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class CreatePersonDto {
   @ApiProperty()
@@ -14,6 +15,7 @@ export class CreatePersonDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @VacioComoNulo()
   @IsEmail()
   email?: string;
 

@@ -3,16 +3,19 @@
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Banknote, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
+import { Banknote, Eye, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { IconAction } from '@/components/ui/icon-action';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
-import { formatDate } from '@/lib/utils';
+import { useOpenMonth } from '@/lib/use-open-month';
+import { formatDate, formatMonthYear } from '@/lib/utils';
+import { TalentLedgerDetailDialog } from './ledger-detail-dialog';
 import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
 
 const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
@@ -60,6 +63,7 @@ export function LedgerSection({
   const [year, setYear] = useState(FILTER_ALL);
   const [month, setMonth] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<TalentLedgerEntry | null>(null);
+  const [detalle, setDetalle] = useState<TalentLedgerEntry | null>(null);
 
   const cur = currency as 'PEN' | 'USD';
   const statusOptions = useMemo(
@@ -88,6 +92,43 @@ export function LedgerSection({
         (month === FILTER_ALL || String(e.month) === month),
     );
   }, [entries, search, status, type, category, year, month]);
+
+  const monthGroups = useMemo(() => {
+    const map = new Map<string, TalentLedgerEntry[]>();
+    for (const e of rows) {
+      const key = `${e.year}-${String(e.month).padStart(2, '0')}`;
+      const bucket = map.get(key) ?? [];
+      bucket.push(e);
+      map.set(key, bucket);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, items]) => {
+        const pagado = items.reduce((s, e) => s + Number(e.paidAmount), 0);
+        const falta = items.reduce((s, e) => s + Number(e.pendingAmount), 0);
+        return {
+          key,
+          label: formatMonthYear(`${key}-01T00:00:00.000Z`),
+          items,
+          metrics: [
+            { label: 'Pagado', value: formatMoney(String(pagado), cur) },
+            ...(falta > 0
+              ? [{ label: 'Falta pagar', value: formatMoney(String(falta), cur), className: 'text-destructive' }]
+              : []),
+          ],
+        };
+      });
+  }, [rows, cur]);
+
+  const now = new Date();
+  const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const defaultMonthKey = monthGroups.some((g) => g.key === currentMonthKey)
+    ? currentMonthKey
+    : (monthGroups[0]?.key ?? null);
+  const { isOpen: isMonthOpen, toggle: toggleMonth } = useOpenMonth(
+    'korapay.talento.ledger.openMonth',
+    defaultMonthKey,
+  );
 
   const hasFilters =
     search !== '' ||
@@ -168,6 +209,7 @@ export function LedgerSection({
       header: '',
       cell: ({ row }) => (
         <div className="flex justify-end gap-0.5">
+          <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(row.original)} />
           <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
           {canDelete && onDelete && (
             <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onDelete(row.original.id)} />
@@ -250,13 +292,25 @@ export function LedgerSection({
         }
       />
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        isLoading={isLoading}
-        pageSize={20}
-        emptyState={<EmptyState title="Sin registros" description="Aún no hay movimientos registrados." />}
-      />
+      {isLoading && <p className="py-12 text-center text-muted-foreground text-sm">Cargando movimientos...</p>}
+
+      {!isLoading && monthGroups.length === 0 && (
+        <EmptyState title="Sin registros" description="Aún no hay movimientos registrados." />
+      )}
+
+      {!isLoading && monthGroups.length > 0 && (
+        <MonthAccordion
+          groups={monthGroups}
+          currentMonthKey={currentMonthKey}
+          isOpen={isMonthOpen}
+          onToggle={toggleMonth}
+          countLabel={(n) => `${n} ${n === 1 ? 'movimiento' : 'movimientos'}`}
+        >
+          {(group) => <DataTable columns={columns} data={group.items} embedded />}
+        </MonthAccordion>
+      )}
+
+      <TalentLedgerDetailDialog entry={detalle} currency={cur} onOpenChange={(next) => !next && setDetalle(null)} />
 
       {editing && (
         <LedgerFormDialog

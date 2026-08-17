@@ -124,9 +124,20 @@ export function formatDurationDays(days: number): string {
   if (days <= 0) return formatYmd(0, 0, 0);
   const years = Math.floor(days / 365);
   const afterYears = days - years * 365;
-  const months = Math.floor(afterYears / 30);
+  // 365/30 deja restos de 12 meses ("1 año, 12 meses"): se reparte el sobrante.
+  const months = Math.min(11, Math.floor(afterYears / 30));
   const rest = afterYears - months * 30;
   return formatYmd(years, months, rest);
+}
+
+// Version compacta para lecturas rapidas: omite lo que vale cero.
+export function formatDurationDaysCompact(days: number): string {
+  if (days <= 0) return '0 días';
+  const years = Math.floor(days / 365);
+  const afterYears = days - years * 365;
+  const months = Math.min(11, Math.floor(afterYears / 30));
+  const rest = afterYears - months * 30;
+  return formatYmdCompact(years, months, rest);
 }
 
 export function formatDuration(from?: string | Date | null, to?: string | Date | null): string {

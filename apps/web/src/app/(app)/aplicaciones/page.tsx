@@ -131,7 +131,6 @@ function AplicacionesContent() {
         showClear={search !== '' || provider !== FILTER_ALL}
         onClear={handleClear}
         filters={
-          // Filtrar por un campo que nadie llena solo estorba: aparece cuando hay algo que elegir.
           providerOptions.length > 0 ? (
             <FilterSelect
               value={provider}

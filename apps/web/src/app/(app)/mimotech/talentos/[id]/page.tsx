@@ -35,6 +35,7 @@ import { DistributionFormDialog, type DistributionFormValues } from '@/component
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
 import { TalentContractDetailDialog } from '@/components/talent/talent-contract-detail-dialog';
+import { TalentFormDialog } from '@/components/talent/talent-form-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +55,7 @@ import type {
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
-import { formatDate, formatDuration, formatMonthYear } from '@/lib/utils';
+import { formatDate, formatDurationExact, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
   return value ? formatDate(value) : 'Actual';
@@ -265,7 +266,20 @@ function TalentDetailContent() {
       }
       title={talent.name}
       description={talent.role ?? undefined}
-      action={<StatusBadge status={talent.status} />}
+      action={
+        <div className="flex items-center gap-2">
+          <StatusBadge status={talent.status} />
+          <TalentFormDialog
+            workspaceId={ws}
+            talent={talent}
+            trigger={
+              <Button variant="outline" size="sm">
+                <Pencil className="mr-2 h-4 w-4" /> Editar
+              </Button>
+            }
+          />
+        </div>
+      }
     >
       <Card>
         <CardHeader>
@@ -277,17 +291,18 @@ function TalentDetailContent() {
               label="Inicio conmigo"
               value={talent.startedWithMeAt ? formatDate(talent.startedWithMeAt) : '—'}
             />
-            <DetailItem label="Tiempo conmigo" value={formatDuration(talent.startedWithMeAt, talent.endedWithMeAt)} />
+            <DetailItem
+              label="Tiempo conmigo"
+              value={formatDurationExact(talent.startedWithMeAt, talent.endedWithMeAt)}
+            />
             <DetailItem
               label="Fin conmigo"
               value={talent.endedWithMeAt ? formatDate(talent.endedWithMeAt) : 'Actual'}
             />
-            {/* El primer trabajo sale del contrato mas antiguo; el campo suelto
-                solo se usa si aun no hay contratos. */}
             <DetailItem label="Inicio primer trabajo" value={primerTrabajo ? formatDate(primerTrabajo) : '—'} />
             <DetailItem
               label="Tiempo trabajando"
-              value={primerTrabajo ? formatDuration(primerTrabajo, talent.endedWithMeAt) : '—'}
+              value={primerTrabajo ? formatDurationExact(primerTrabajo, talent.endedWithMeAt) : '—'}
             />
             <DetailItem label="Lugar de estudio" value={talent.studyPlace ?? '—'} />
             <DetailItem label="Inicio estudios" value={talent.studyStartAt ? formatDate(talent.studyStartAt) : '—'} />
@@ -766,7 +781,9 @@ function TalentDetailContent() {
                         <span>
                           {formatDate(contract.startDate)} – {formatDateOrActive(contract.endDate)}
                         </span>
-                        <span className="italic">Duró: {formatDuration(contract.startDate, contract.endDate)}</span>
+                        <span className="italic">
+                          Duró: {formatDurationExact(contract.startDate, contract.endDate)}
+                        </span>
                         {contract.rate && (
                           <span className="font-medium tabular-nums text-foreground">
                             Sueldo: {formatMoney(contract.rate, contract.currency as 'PEN' | 'USD')}

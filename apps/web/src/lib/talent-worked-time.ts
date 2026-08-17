@@ -10,7 +10,6 @@ export interface WorkedTime {
   totalDays: number;
   idleDays: number;
   neverPlaced: boolean;
-  /** Dias que faltan para la fecha de fin, si esa fecha aun no llego. */
   remainingDays: number;
 }
 
@@ -38,8 +37,6 @@ export function computeWorkedTime(
 ): WorkedTime {
   const hoy = startOfDay(today);
   const fin = endedWithMeAt ? startOfDay(endedWithMeAt) : null;
-  // El tiempo transcurrido nunca pasa de hoy: una fecha de fin futura es un plan,
-  // no tiempo ya cumplido. Un contrato abierto tampoco corre hacia el futuro.
   const limit = fin !== null ? Math.min(fin, hoy) : hoy;
   const start = startedWithMeAt ? startOfDay(startedWithMeAt) : null;
   const totalDays = start !== null ? Math.max(0, Math.round((limit - start) / DAY_MS)) : 0;

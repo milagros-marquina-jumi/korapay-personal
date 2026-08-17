@@ -45,6 +45,24 @@ export function StatusToggle({ transactionId, workspaceId, status, onChanged }: 
   });
 
   return (
+    <StatusPicker
+      status={status}
+      options={STATUS_OPTIONS}
+      isPending={mutation.isPending}
+      onSelect={(next) => mutation.mutate(next)}
+    />
+  );
+}
+
+interface StatusPickerProps {
+  status: string;
+  options: { value: string; label: string }[];
+  isPending?: boolean;
+  onSelect: (next: string) => void;
+}
+
+export function StatusPicker({ status, options, isPending, onSelect }: Readonly<StatusPickerProps>) {
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="rounded-md transition-opacity hover:opacity-80" aria-label="Cambiar estado">
@@ -52,13 +70,13 @@ export function StatusToggle({ transactionId, workspaceId, status, onChanged }: 
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {STATUS_OPTIONS.map((option) => (
+        {options.map((option) => (
           <DropdownMenuItem
             key={option.value}
-            disabled={option.value === status || mutation.isPending}
+            disabled={option.value === status || isPending}
             onSelect={(e) => {
               e.preventDefault();
-              if (option.value !== status) mutation.mutate(option.value);
+              if (option.value !== status) onSelect(option.value);
             }}
           >
             {option.label}

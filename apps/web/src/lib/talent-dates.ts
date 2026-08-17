@@ -22,16 +22,12 @@ export function hoyIso(): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 }
 
-// La fecha del primer trabajo no es un dato aparte: es cuando arranca el
-// contrato mas antiguo. Se deriva para que no haya que escribirla a mano.
 export function primerContrato(contracts?: { startDate: string }[]): string | null {
   const fechas = (contracts ?? []).map((c) => dia(c.startDate)).filter((d): d is string => !!d);
   if (!fechas.length) return null;
   return fechas.reduce((min, f) => (f < min ? f : min));
 }
 
-// Un talento sigue conmigo mientras no tenga fecha de fin. Poner esa fecha es lo
-// que lo cierra, y el estado debe acompañarla en vez de contradecirla.
 export function estadoEsperado(endedWithMeAt?: string | null, hoy: string = hoyIso()): 'ACTIVE' | 'INACTIVE' {
   const fin = dia(endedWithMeAt);
   if (!fin) return 'ACTIVE';

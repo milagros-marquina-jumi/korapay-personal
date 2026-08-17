@@ -179,24 +179,17 @@ export function TransactionFormDialog({
 
   const isRecurring = watch('isRecurring');
   const currentType = watch('type');
-  // En ingresos laborales la repeticion la define el contrato, no la recurrencia del movimiento.
   const contractDrivenIncome = showCompany;
   const currentStatus = watch('status');
   const companySeleccionada = watch('companyId');
   const fechaElegida = watch('date');
-  // Solo informativo: ubica el contrato que cubria esa empresa en esa fecha para
-  // dar contexto al movimiento. No altera nada de lo que se guarda.
   const contratoVigente = useMemo(() => {
     if (!showCompany || !companySeleccionada || !fechaElegida) return null;
     return contractOf({ companyId: companySeleccionada, date: fechaElegida }, contracts ?? []);
   }, [showCompany, companySeleccionada, fechaElegida, contracts]);
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
-  // Los costos de MIMOTECH se clasifican por aplicacion y proyecto, y los pagos
-  // al equipo por persona: en ninguno de los dos se usan categorias.
   const showConcept = !showBusinessFields && !showTeamFields;
-  // Un ingreso laboral llega con descuentos de planilla, por eso separa bruto y
-  // neto. Lo que yo pago (equipo, costos, ahorro) tiene un unico monto.
   const showGross = currentType === 'INCOME';
   const showDueDate = currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE';
   const { data: applications } = useQuery({
@@ -238,15 +231,12 @@ export function TransactionFormDialog({
         isRecurring: false,
       });
     }
-    // Los catalogos deciden si un tag es medio de pago o banco: sin ellos no se puede repartir.
     if (open && transaction && catalogsReady) {
       const split = splitTags(transaction.tags, catalogs);
       reset({
         type: (transaction.type as FormValues['type']) ?? defaultType,
         concept: transaction.concept,
         amount: Number(transaction.amountOriginal).toString(),
-        // Sin descuento no se guarda bruto, pero el formulario debe mostrar el
-        // mismo valor que la tabla: ahi el bruto sin dato ya se muestra como el neto.
         amountGross: Number(transaction.amountGross ?? transaction.amountOriginal).toString(),
         currency: (transaction.currency as 'PEN' | 'USD') ?? 'PEN',
         date: transaction.date.slice(0, 10),
@@ -274,20 +264,16 @@ export function TransactionFormDialog({
         applyExpenseType: rest.type === 'EXPENSE',
         paymentMethod,
         bank,
-        // Los tags ajenos a los catalogos (cargos, meses heredados) se conservan tal cual.
         rest: splitTags(transaction?.tags, catalogs).rest,
       });
       const isBusinessCost = rest.type === 'BUSINESS_COST';
       const isTeamPayment = rest.type === 'TEAM_PAYMENT';
-      // En MIMOTECH el concepto no se pide: se toma de la aplicacion o de la persona.
       if (isBusinessCost) {
         rest.concept = applications?.find((a) => a.id === rest.applicationId)?.name || 'Costo';
       } else if (isTeamPayment) {
         const persona = people?.find((x) => x.id === personId)?.name;
         rest.concept = persona ? `Pago ${persona}` : 'Pago equipo';
       }
-      // En ingresos laborales ya no se elige categoria: se deriva del concepto,
-      // que sale del mismo catalogo. Sin esto, editar borraria la categoria.
       const categoriaFinal = showCompany
         ? (categories?.find((c) => c.name === rest.concept)?.id ?? transaction?.categoryId ?? null)
         : rest.categoryId || null;
@@ -377,8 +363,6 @@ export function TransactionFormDialog({
             <div className="space-y-1.5">
               <Label htmlFor="date">{showCompany ? 'Mes' : 'Fecha'}</Label>
               {showCompany ? (
-                // Un sueldo pertenece a un mes, no a un dia: se pide mes y anio y
-                // se guarda el dia 1, que es como esta registrado todo el historico.
                 <Input
                   id="date"
                   type="month"
@@ -405,8 +389,6 @@ export function TransactionFormDialog({
             </div>
           )}
 
-          {/* El bruto solo existe donde hay descuentos de planilla. En un pago que
-              tu haces (equipo, costos) el monto es uno solo. */}
           <div className={cn('grid gap-3', showGross ? 'grid-cols-2' : 'grid-cols-1')}>
             {showGross && (
               <div className="space-y-1.5">
@@ -452,8 +434,6 @@ export function TransactionFormDialog({
                 />
               </div>
             )}
-            {/* En ingresos laborales el concepto ya es el catalogo: mostrar
-                ademas "Categoria" duplicaba el mismo dato. */}
             {showConcept && (
               <div className="space-y-1.5">
                 <Label>{showCompany ? 'Concepto' : 'Categoría'}</Label>

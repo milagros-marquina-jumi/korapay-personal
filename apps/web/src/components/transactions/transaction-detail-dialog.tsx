@@ -97,8 +97,6 @@ export function TransactionDetailDialog({
               )}
               <DetailLine label="Forma de pago" value={paymentMethods(transaction.tags)} />
               {account && <DetailLine label="Número de cuenta" value={account} />}
-              {/* Vencimiento y recurrencia solo se listan si existen: un "—" y un
-                  "No" ocupan sitio sin decir nada del movimiento. */}
               {transaction.dueDate && <DetailLine label="Vencimiento" value={formatDateLong(transaction.dueDate)} />}
               {transaction.isRecurring && (
                 <DetailLine

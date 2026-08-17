@@ -388,8 +388,6 @@ export default function ConfiguracionPage() {
             {activeWorkspace?.type !== 'BUSINESS' && (
               <Card>
                 <CardContent className="pt-6">
-                  {/* En ingresos laborales esta lista alimenta el concepto del
-                      movimiento, asi que se nombra igual que en el formulario. */}
                   <CatalogManager
                     title={activeWorkspace?.type === 'EMPLOYMENT' ? 'Conceptos' : 'Categorías'}
                     singular={activeWorkspace?.type === 'EMPLOYMENT' ? 'concepto' : 'categoría'}

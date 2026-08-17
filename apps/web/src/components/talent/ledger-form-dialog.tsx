@@ -105,8 +105,11 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
     }
   }, [open, entry, reset]);
 
+  const esDeuda = watch('type') === 'DEUDA';
+
   const submit = handleSubmit(async (values) => {
-    await onSubmit(values);
+    const limpio = esDeuda ? { ...values, paidAmount: '0' } : { ...values, debtAmount: '0', pendingAmount: '0' };
+    await onSubmit(limpio);
     if (!isEdit) reset();
     setOpen(false);
   });
@@ -157,20 +160,28 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
             </Select>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          {esDeuda ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="ledger-debt">Deuda</Label>
+                <MoneyField control={control} name="debtAmount" id="ledger-debt" />
+                <p className="text-[11px] text-muted-foreground">Lo que el talento te debe.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ledger-pending">Falta pagar</Label>
+                <MoneyField control={control} name="pendingAmount" id="ledger-pending" />
+                <p className="text-[11px] text-muted-foreground">De esa deuda, cuánto sigue sin devolver.</p>
+              </div>
+            </div>
+          ) : (
             <div className="space-y-2">
-              <Label htmlFor="ledger-paid">Pagado</Label>
+              <Label htmlFor="ledger-paid">Monto desembolsado</Label>
               <MoneyField control={control} name="paidAmount" id="ledger-paid" />
+              <p className="text-[11px] text-muted-foreground">
+                Lo que invertiste en esta persona. No se cobra, es gasto de MIMOTECH.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="ledger-debt">Deuda</Label>
-              <MoneyField control={control} name="debtAmount" id="ledger-debt" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="ledger-pending">Falta pagar</Label>
-              <MoneyField control={control} name="pendingAmount" id="ledger-pending" />
-            </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label>Estado</Label>

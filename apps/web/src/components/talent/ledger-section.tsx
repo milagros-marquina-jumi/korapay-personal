@@ -225,10 +225,11 @@ export function LedgerSection({
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
-            label="Total pagado"
+            label="Total desembolsado"
             value={formatMoney(summary.totalPaid, cur)}
             icon={Wallet}
-            color="text-success"
+            color="text-coral"
+            tooltip="Lo que MIMOTECH gastó en esta persona. Es salida de dinero, no ingreso."
           />
           <KPICard label="Total deuda" value={formatMoney(summary.totalDebt, cur)} icon={Banknote} color="text-info" />
           <KPICard

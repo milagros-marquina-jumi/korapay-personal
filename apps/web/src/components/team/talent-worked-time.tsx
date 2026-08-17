@@ -29,7 +29,6 @@ export function TalentWorkedTime({ talent }: TalentWorkedTimeProps) {
           <span className="font-medium text-muted-foreground">{formatDurationDaysCompact(idleDays)}</span>
         </div>
       )}
-      {/* Con fecha de fin futura interesa lo que queda por delante, no solo lo corrido. */}
       {remainingDays > 0 && (
         <div className="pointer-events-none flex items-center justify-between">
           <span className="text-muted-foreground">Le queda conmigo</span>

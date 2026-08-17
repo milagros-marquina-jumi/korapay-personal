@@ -82,8 +82,6 @@ export function ApplicationFormDialog({
         workspaceId,
         name: values.name,
         provider: values.provider || undefined,
-        // Ya no se edita, pero se reenvia tal cual para no borrar el valor de una
-        // aplicacion antigua que si lo tuviera.
         category: values.category || undefined,
         url: values.url || undefined,
       };

@@ -28,8 +28,6 @@ export class TalentReportQueryDto {
   year?: number;
 }
 
-// Vaciar una fecha en el formulario manda '': sin esto @IsDateString la rechaza
-// con 400 y no hay forma de borrar una fecha ya guardada.
 function FechaOpcional() {
   return Transform(({ value }) => (value === '' || value === null ? undefined : value));
 }

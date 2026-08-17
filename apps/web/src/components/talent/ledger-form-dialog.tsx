@@ -30,12 +30,17 @@ const schema = z.object({
 
 export type LedgerFormValues = z.infer<typeof schema>;
 
-const STATUS_OPTIONS = [
-  { value: 'PAID', label: 'Pagado' },
+const STATUS_DEUDA = [
   { value: 'PENDING', label: 'Pendiente' },
   { value: 'PARTIAL', label: 'Parcial' },
-  { value: 'OVERDUE', label: 'Vencido' },
+  { value: 'PAID', label: 'Devuelta' },
+  { value: 'OVERDUE', label: 'Vencida' },
   { value: 'NUNCA_PAGO', label: 'Nunca pagó (pérdida)' },
+];
+
+const STATUS_EGRESO = [
+  { value: 'PAID', label: 'Gasto normal' },
+  { value: 'NUNCA_PAGO', label: 'Se dio por perdido' },
 ];
 
 interface Props {
@@ -115,7 +120,17 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
             </div>
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select value={watch('type')} onValueChange={(v) => setValue('type', v as 'EGRESO' | 'DEUDA')}>
+              <Select
+                value={watch('type')}
+                onValueChange={(v) => {
+                  const tipo = v as 'EGRESO' | 'DEUDA';
+                  setValue('type', tipo);
+                  const permitidos = (tipo === 'DEUDA' ? STATUS_DEUDA : STATUS_EGRESO).map((s) => s.value);
+                  if (!permitidos.includes(watch('status'))) {
+                    setValue('status', tipo === 'DEUDA' ? 'PENDING' : 'PAID');
+                  }
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -157,13 +172,18 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map((s) => (
+                {(esDeuda ? STATUS_DEUDA : STATUS_EGRESO).map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {!esDeuda && (
+              <p className="text-[11px] text-muted-foreground">
+                El dinero ya salió. Marca "Se dio por perdido" solo si el talento se fue sin devolver nada.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

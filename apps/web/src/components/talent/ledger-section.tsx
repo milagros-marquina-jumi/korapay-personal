@@ -242,7 +242,11 @@ export function LedgerSection({
               );
             })}
           </div>
-          <LedgerFormDialog onSubmit={onCreate} isPending={isMutating} />
+          <LedgerFormDialog
+            defaultType={type === 'EGRESO' ? 'EGRESO' : 'DEUDA'}
+            onSubmit={onCreate}
+            isPending={isMutating}
+          />
         </div>
       </div>
 

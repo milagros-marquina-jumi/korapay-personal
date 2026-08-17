@@ -45,6 +45,7 @@ const STATUS_EGRESO = [
 
 interface Props {
   entry?: TalentLedgerEntry;
+  defaultType?: 'EGRESO' | 'DEUDA';
   trigger?: ReactNode;
   onSubmit: (values: LedgerFormValues) => Promise<void>;
   isPending?: boolean;
@@ -52,7 +53,15 @@ interface Props {
   onOpenChange?: (open: boolean) => void;
 }
 
-export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: controlledOpen, onOpenChange }: Props) {
+export function LedgerFormDialog({
+  entry,
+  defaultType = 'DEUDA',
+  trigger,
+  onSubmit,
+  isPending,
+  open: controlledOpen,
+  onOpenChange,
+}: Props) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -70,11 +79,11 @@ export function LedgerFormDialog({ entry, trigger, onSubmit, isPending, open: co
     resolver: zodResolver(schema),
     defaultValues: {
       date: entry?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
-      type: (entry?.type as 'EGRESO' | 'DEUDA') ?? 'EGRESO',
+      type: (entry?.type as 'EGRESO' | 'DEUDA') ?? defaultType,
       paidAmount: entry?.paidAmount ?? '',
       debtAmount: entry?.debtAmount ?? '',
       pendingAmount: entry?.pendingAmount ?? '',
-      status: entry?.status ?? 'PENDING',
+      status: entry?.status ?? (defaultType === 'DEUDA' ? 'PENDING' : 'PAID'),
       description: entry?.description ?? '',
     },
   });

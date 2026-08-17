@@ -1,5 +1,5 @@
-import { Transform } from 'class-transformer';
+import { ValidateIf } from 'class-validator';
 
 export function VacioComoNulo() {
-  return Transform(({ value }) => (value === '' || value === null ? undefined : value));
+  return ValidateIf((_obj, value) => value !== '' && value !== null);
 }

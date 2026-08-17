@@ -159,11 +159,9 @@ export function LedgerSection({
       base.push({
         id: 'paid',
         accessorFn: (r) => Number(r.paidAmount),
-        header: ({ column }) => <SortableHeader column={column} label="Desembolsado" className="ml-auto" />,
+        header: ({ column }) => <SortableHeader column={column} label="Desembolsado" />,
         cell: ({ row }) => (
-          <div className="text-right font-medium text-coral tabular-nums">
-            {formatMoney(row.original.paidAmount, cur)}
-          </div>
+          <div className="font-medium text-coral tabular-nums">{formatMoney(row.original.paidAmount, cur)}</div>
         ),
       });
     }

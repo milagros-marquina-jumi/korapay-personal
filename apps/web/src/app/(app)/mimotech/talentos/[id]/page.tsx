@@ -110,6 +110,8 @@ function TalentDetailContent() {
     queryClient.invalidateQueries({ queryKey: queryKeys.talentLedger(ws, id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.talentLedgerSummary(ws) });
     queryClient.invalidateQueries({ queryKey: queryKeys.talentAudit(ws, id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.talentReport(ws, id) });
+    queryClient.invalidateQueries({ queryKey: ['talent-global-report', ws] });
   };
 
   const createMut = useMutation({
@@ -147,7 +149,11 @@ function TalentDetailContent() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const invalidateTalent = () => queryClient.invalidateQueries({ queryKey: queryKeys.talent(ws, id) });
+  const invalidateTalent = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.talent(ws, id) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.talentReport(ws, id) });
+    queryClient.invalidateQueries({ queryKey: ['talent-global-report', ws] });
+  };
 
   const createContractMut = useMutation({
     mutationFn: (values: ContractFormValues) =>
@@ -244,6 +250,8 @@ function TalentDetailContent() {
 
   const contracts = talent.contracts ?? [];
   const primerTrabajo = primerTrabajoDe(talent);
+  const hayIngresos = (report?.byMonth ?? []).some((m) => Number(m.income) > 0 || Number(m.salary) > 0);
+  const hayDeuda = (report?.byMonth ?? []).some((m) => Number(m.pending) > 0);
   const avisos = validarFechasTalento({
     status: talent.status,
     startedWithMeAt: talent.startedWithMeAt,
@@ -556,11 +564,11 @@ function TalentDetailContent() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Mes</TableHead>
-                            <TableHead className="text-right">Sueldo</TableHead>
-                            <TableHead className="text-right">Recibí (MIMOTECH)</TableHead>
-                            <TableHead className="text-right">Se quedó (talento)</TableHead>
+                            {hayIngresos && <TableHead className="text-right">Sueldo</TableHead>}
+                            {hayIngresos && <TableHead className="text-right">Recibí (MIMOTECH)</TableHead>}
+                            {hayIngresos && <TableHead className="text-right">Se quedó (talento)</TableHead>}
                             <TableHead className="text-right">Invertido</TableHead>
-                            <TableHead className="text-right">Falta pagar</TableHead>
+                            {hayDeuda && <TableHead className="text-right">Falta pagar</TableHead>}
                             <TableHead className="text-right">Neto</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -568,19 +576,27 @@ function TalentDetailContent() {
                           {report.byMonth.map((m) => (
                             <TableRow key={`${m.year}-${m.month}`}>
                               <TableCell className="whitespace-nowrap text-sm capitalize">{m.label}</TableCell>
-                              <TableCell className="text-right tabular-nums text-muted-foreground">
-                                {formatMoney(m.salary, 'PEN')}
-                              </TableCell>
-                              <TableCell className="text-right tabular-nums text-info">
-                                {formatMoney(m.income, 'PEN')}
-                              </TableCell>
-                              <TableCell className="text-right tabular-nums">{formatMoney(m.kept, 'PEN')}</TableCell>
+                              {hayIngresos && (
+                                <TableCell className="text-right tabular-nums text-muted-foreground">
+                                  {formatMoney(m.salary, 'PEN')}
+                                </TableCell>
+                              )}
+                              {hayIngresos && (
+                                <TableCell className="text-right tabular-nums text-info">
+                                  {formatMoney(m.income, 'PEN')}
+                                </TableCell>
+                              )}
+                              {hayIngresos && (
+                                <TableCell className="text-right tabular-nums">{formatMoney(m.kept, 'PEN')}</TableCell>
+                              )}
                               <TableCell className="text-right text-coral tabular-nums">
                                 {formatMoney(m.expense, 'PEN')}
                               </TableCell>
-                              <TableCell className="text-right tabular-nums text-destructive">
-                                {formatMoney(m.pending, 'PEN')}
-                              </TableCell>
+                              {hayDeuda && (
+                                <TableCell className="text-right tabular-nums text-destructive">
+                                  {formatMoney(m.pending, 'PEN')}
+                                </TableCell>
+                              )}
                               <TableCell className="text-right font-semibold tabular-nums">
                                 {formatMoney(m.net, 'PEN')}
                               </TableCell>

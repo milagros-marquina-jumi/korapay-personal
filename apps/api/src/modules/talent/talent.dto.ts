@@ -152,6 +152,7 @@ export class CreateTalentContractDto {
 
   @ApiPropertyOptional({ example: '2026-12-31' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   endDate?: string;
 
@@ -181,6 +182,7 @@ export class CreateTalentDistributionDto {
 
   @ApiPropertyOptional({ example: '2025-01-01' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   date?: string;
 

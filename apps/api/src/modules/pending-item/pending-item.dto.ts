@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class CreatePendingItemDto {
   @ApiProperty()
@@ -62,6 +63,7 @@ export class PayPendingItemDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   date?: string;
 }

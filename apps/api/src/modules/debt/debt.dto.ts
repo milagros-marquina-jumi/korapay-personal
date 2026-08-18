@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsDateString, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class CreateDebtDto {
   @ApiProperty()
@@ -32,6 +33,7 @@ export class CreateDebtDto {
 
   @ApiPropertyOptional({ example: '2026-12-31' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   dueDate?: string;
 

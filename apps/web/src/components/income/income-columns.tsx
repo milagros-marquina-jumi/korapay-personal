@@ -8,8 +8,9 @@ import { StatusToggle } from '@/components/data-table/status-toggle';
 import { IconAction, IconActions } from '@/components/ui/icon-action';
 import type { Transaction } from '@/lib/api.types';
 import { accountNumber, type ConceptOrdinal, grossOf } from '@/lib/employment-income';
+import { esPagoExcepcional } from '@/lib/payment-split';
 import { splitTags, type TagCatalogs } from '@/lib/transaction-tags';
-import { formatMonthYear } from '@/lib/utils';
+import { cn, formatMonthYear } from '@/lib/utils';
 
 interface Options {
   workspaceId: string | null;
@@ -62,7 +63,9 @@ export function buildIncomeColumns({
                 : row.original.concept
             }
           >
-            <span className="truncate font-medium">{row.original.concept}</span>
+            <span className={cn('truncate', esPagoExcepcional(row.original.concept) ? 'font-bold' : 'font-medium')}>
+              {row.original.concept}
+            </span>
             {orden && (
               <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
                 ({orden.position}/{orden.total})

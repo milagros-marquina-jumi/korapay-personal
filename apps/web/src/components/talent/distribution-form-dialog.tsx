@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Calculator } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -15,13 +16,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoneyField } from '@/components/ui/money-input';
+import { MonthInput } from '@/components/ui/month-input';
 import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { TalentIncomeDistribution } from '@/lib/api.types';
+import { avisoReparto } from '@/lib/payment-split';
 import { useGlobalCatalog } from '@/lib/use-global-catalog';
+import { SplitCalculator } from './split-calculator';
 
 const schema = z.object({
   date: z.string().min(1, 'Requerido'),
@@ -60,6 +63,7 @@ export function DistributionFormDialog({
   defaultSalary,
 }: Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const [calcAbierta, setCalcAbierta] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const editing = !!distribution;
@@ -75,7 +79,7 @@ export function DistributionFormDialog({
   } = useForm<DistributionFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      date: new Date().toISOString().slice(0, 10),
+      date: `${new Date().toISOString().slice(0, 7)}-01`,
       paymentType: loose ? 'CTS' : 'Mensual',
       status: 'PAID',
     },
@@ -85,6 +89,14 @@ export function DistributionFormDialog({
     enabled: open,
   });
 
+  const montos = {
+    salary: watch('salary'),
+    amountWithDiscount: watch('amountWithDiscount'),
+    amountReceived: watch('amountReceived'),
+    amountRetained: watch('amountRetained'),
+  };
+  const avisoMontos = avisoReparto(montos);
+
   const empresaSel = companyByName(watch('companyName'));
   const opcionesCliente = clientOptionsFor(empresaSel?.id);
 
@@ -92,7 +104,7 @@ export function DistributionFormDialog({
     if (open && !distribution) {
       // Al registrar un pago nuevo el sueldo casi siempre es el del contrato.
       reset({
-        date: new Date().toISOString().slice(0, 10),
+        date: `${new Date().toISOString().slice(0, 7)}-01`,
         paymentType: loose ? 'CTS' : 'Mensual',
         status: 'PAID',
         salary: defaultSalary ? Number(defaultSalary).toString() : '',
@@ -101,7 +113,7 @@ export function DistributionFormDialog({
     }
     if (open && distribution) {
       reset({
-        date: distribution.date ? distribution.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+        date: distribution.date ? distribution.date.slice(0, 10) : `${new Date().toISOString().slice(0, 7)}-01`,
         paymentType: (distribution.paymentType as DistributionFormValues['paymentType']) ?? 'Mensual',
         companyName: distribution.companyName ?? '',
         clientName: distribution.clientName ?? '',
@@ -118,7 +130,17 @@ export function DistributionFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent>
+      <DialogContent
+        onInteractOutside={(e) => {
+          // La calculadora se dibuja fuera del contenido: interactuar con ella
+          // no debe contar como un click fuera que cierre el dialogo.
+          if ((e.target as HTMLElement | null)?.closest('[data-calculadora]')) e.preventDefault();
+        }}
+        onFocusOutside={(e) => {
+          // Sin esto el foco vuelve al dialogo y no se puede escribir en la calculadora.
+          if ((e.target as HTMLElement | null)?.closest('[data-calculadora]')) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>{editing ? 'Editar pago' : 'Nuevo pago'}</DialogTitle>
           <DialogDescription>Pago del mes: sueldo, montos y estado.</DialogDescription>
@@ -134,7 +156,7 @@ export function DistributionFormDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="date">Mes del pago</Label>
-              <Input id="date" type="date" {...register('date')} />
+              <MonthInput id="date" value={watch('date') ?? ''} onChange={(v) => setValue('date', v)} />
               {errors.date && <p className="text-xs text-destructive">{errors.date.message}</p>}
             </div>
             <div className="space-y-2">
@@ -210,6 +232,22 @@ export function DistributionFormDialog({
             </div>
           </div>
 
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-muted-foreground text-xs">Reparto entre MIMOTECH y el talento</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => setCalcAbierta((v) => !v)}
+            >
+              <Calculator className="mr-1 size-3.5" />
+              {calcAbierta ? 'Ocultar' : 'Calculadora'}
+            </Button>
+          </div>
+
+          {avisoMontos && <p className="rounded-md bg-warning/10 px-3 py-2 text-warning text-xs">{avisoMontos}</p>}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="amountReceived">Recibí (MIMOTECH)</Label>
@@ -251,6 +289,13 @@ export function DistributionFormDialog({
             </Button>
           </DialogFooter>
         </form>
+        {calcAbierta && (
+          <SplitCalculator
+            values={montos}
+            onApply={(campo, valor) => setValue(campo, valor, { shouldValidate: true })}
+            onClose={() => setCalcAbierta(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

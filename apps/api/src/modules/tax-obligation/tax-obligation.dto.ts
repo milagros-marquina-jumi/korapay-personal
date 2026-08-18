@@ -13,6 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 const TAX_STATUS = ['PENDING', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED'];
 
@@ -29,6 +30,7 @@ export class ScheduleRowDto {
 
   @ApiPropertyOptional({ example: '2025-07-31' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   dueDate?: string;
 

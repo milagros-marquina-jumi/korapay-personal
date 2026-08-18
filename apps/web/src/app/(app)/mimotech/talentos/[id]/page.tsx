@@ -10,6 +10,7 @@ import {
   ArrowUpRight,
   Banknote,
   Copy,
+  CopyPlus,
   ExternalLink,
   Eye,
   KeyRound,
@@ -58,7 +59,9 @@ import type {
   TalentLedgerSummary,
   TalentReport,
 } from '@/lib/api.types';
+import { diasParaVencer } from '@/lib/contract-expiry';
 import { DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
+import { esPagoExcepcional } from '@/lib/payment-split';
 import { queryKeys } from '@/lib/query-keys';
 import { ordenarPagosRecientePrimero } from '@/lib/sort-payments';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
@@ -182,6 +185,29 @@ function TalentDetailContent() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  // Duplicar sirve para repetir el pago del mes siguiente: mismo contrato,
+  // mismos montos, avanzando un mes para no chocar con el original.
+  const duplicarPago = (contractId: string, dist: TalentIncomeDistribution) => {
+    const base = dist.date ? new Date(`${dist.date.slice(0, 10)}T00:00:00Z`) : new Date();
+    base.setUTCMonth(base.getUTCMonth() + 1);
+    const fecha = `${base.toISOString().slice(0, 7)}-01`;
+    createDistMut.mutate({
+      contractId,
+      values: {
+        date: fecha,
+        paymentType: dist.paymentType as DistributionFormValues['paymentType'],
+        companyName: dist.companyName ?? undefined,
+        clientName: dist.clientName ?? undefined,
+        salary: dist.salary ?? undefined,
+        amountWithDiscount: dist.amountWithDiscount,
+        amountReceived: dist.amountReceived,
+        amountRetained: dist.amountRetained,
+        status: dist.status as DistributionFormValues['status'],
+        notes: dist.notes ?? undefined,
+      },
+    });
+  };
 
   const invalidateTalent = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.talent(ws, id) });
@@ -818,6 +844,7 @@ function TalentDetailContent() {
                 options={empresasDeContratos.map((n) => ({ value: n, label: n }))}
                 placeholder="Empresa"
                 allLabel="Todas las empresas"
+                className="w-[16rem] min-w-[16rem] max-w-[16rem]"
               />
               <FilterSelect
                 value={contractPayment}
@@ -880,7 +907,11 @@ function TalentDetailContent() {
                             <TableCell className="whitespace-nowrap text-sm">
                               {dist.date ? formatDate(dist.date) : '—'}
                             </TableCell>
-                            <TableCell className="text-sm">{dist.paymentType}</TableCell>
+                            <TableCell
+                              className={cn('text-sm', esPagoExcepcional(dist.paymentType) && 'font-semibold')}
+                            >
+                              {dist.paymentType}
+                            </TableCell>
                             <TableCell className="text-sm">
                               {[dist.companyName, dist.clientName].filter(Boolean).join(' / ') || '—'}
                             </TableCell>
@@ -1008,8 +1039,27 @@ function TalentDetailContent() {
                           {formatDate(contract.startDate)} – {formatDateOrActive(contract.endDate)}
                         </span>
                         <span className="italic">
-                          Duró: {formatDurationExact(contract.startDate, contract.endDate)}
+                          {contract.status === 'ACTIVE' ? 'Lleva' : 'Duró'}:{' '}
+                          {formatDurationExact(contract.startDate, contract.endDate)}
                         </span>
+                        {(() => {
+                          if (contract.status !== 'ACTIVE') return null;
+                          const v = diasParaVencer(contract.endDate);
+                          if (!v) return null;
+                          if (v.vencido) {
+                            return (
+                              <span className="font-medium text-destructive">
+                                Venció hace {formatDurationDaysCompact(Math.abs(v.dias))}
+                              </span>
+                            );
+                          }
+                          if (v.dias === 0) return <span className="font-medium text-destructive">Vence hoy</span>;
+                          return (
+                            <span className={cn('font-medium', v.porVencer ? 'text-warning' : 'text-foreground')}>
+                              Vence en {formatDurationDaysCompact(v.dias)}
+                            </span>
+                          );
+                        })()}
                         {contract.rate && (
                           <span className="font-medium tabular-nums text-foreground">
                             Sueldo: {formatMoney(contract.rate, contract.currency as 'PEN' | 'USD')}
@@ -1056,7 +1106,11 @@ function TalentDetailContent() {
                                   <TableCell className="whitespace-nowrap text-sm capitalize">
                                     {dist.date ? formatMonthYear(dist.date) : '-'}
                                   </TableCell>
-                                  <TableCell className="text-sm">{dist.paymentType}</TableCell>
+                                  <TableCell
+                                    className={cn('text-sm', esPagoExcepcional(dist.paymentType) && 'font-semibold')}
+                                  >
+                                    {dist.paymentType}
+                                  </TableCell>
                                   <TableCell className="text-right tabular-nums">
                                     <Money
                                       value={formatMoney(dist.amountWithDiscount, contract.currency as 'PEN' | 'USD')}
@@ -1077,6 +1131,12 @@ function TalentDetailContent() {
                                   </TableCell>
                                   <TableCell>
                                     <IconActions>
+                                      <IconAction
+                                        icon={CopyPlus}
+                                        label="Duplicar en este contrato"
+                                        disabled={createDistMut.isPending}
+                                        onClick={() => duplicarPago(contract.id, dist)}
+                                      />
                                       <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
                                       <IconAction
                                         icon={Trash2}

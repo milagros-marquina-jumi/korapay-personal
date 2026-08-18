@@ -13,6 +13,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 const TX_TYPES = [
   'INCOME',
@@ -124,6 +125,7 @@ export class CreateTransactionDto {
 
   @ApiPropertyOptional({ example: '2026-08-15', description: 'Fecha de vencimiento del pago' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   dueDate?: string;
 
@@ -146,6 +148,7 @@ export class CreateTransactionDto {
 
   @ApiPropertyOptional({ example: '2027-06-30', description: 'Fin de la recurrencia' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   recurrenceEndDate?: string;
 
@@ -222,11 +225,13 @@ export class ListTransactionsDto {
 
   @ApiPropertyOptional({ example: '2026-01-01' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   startDate?: string;
 
   @ApiPropertyOptional({ example: '2026-12-31' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   endDate?: string;
 }
@@ -258,6 +263,7 @@ export class TransferDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   date?: string;
 

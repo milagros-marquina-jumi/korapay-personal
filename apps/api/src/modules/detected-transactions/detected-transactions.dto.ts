@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class ListDetectedDto {
   @IsOptional()
@@ -84,6 +85,7 @@ export class ConfirmDetectedDto {
   description?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   occurredAt?: string;
 

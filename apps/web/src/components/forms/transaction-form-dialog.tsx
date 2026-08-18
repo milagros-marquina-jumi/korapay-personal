@@ -24,6 +24,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoneyInput } from '@/components/ui/money-input';
+import { MonthInput } from '@/components/ui/month-input';
 import { MultiSelectCreatable } from '@/components/ui/multi-select-creatable';
 import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -363,12 +364,7 @@ export function TransactionFormDialog({
             <div className="space-y-1.5">
               <Label htmlFor="date">{showCompany ? 'Mes' : 'Fecha'}</Label>
               {showCompany ? (
-                <Input
-                  id="date"
-                  type="month"
-                  value={(watch('date') ?? '').slice(0, 7)}
-                  onChange={(e) => setValue('date', e.target.value ? `${e.target.value}-01` : '')}
-                />
+                <MonthInput id="date" value={watch('date') ?? ''} onChange={(v) => setValue('date', v)} />
               ) : (
                 <Input id="date" type="date" {...register('date')} />
               )}

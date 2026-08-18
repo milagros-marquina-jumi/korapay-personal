@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsDateString, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class CreateCompanyDto {
   @ApiProperty()
@@ -29,11 +30,13 @@ export class CreateCompanyDto {
 
   @ApiPropertyOptional({ example: '2025-01-01' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   startDate?: string;
 
   @ApiPropertyOptional({ example: '2025-12-31' })
   @IsOptional()
+  @VacioComoNulo()
   @IsDateString()
   endDate?: string;
 }

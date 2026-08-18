@@ -1035,8 +1035,17 @@ function TalentDetailContent() {
                           {formatDate(contract.startDate)} – {formatDateOrActive(contract.endDate)}
                         </span>
                         <span className="italic">
-                          {contract.status === 'ACTIVE' ? 'Lleva' : 'Duró'}:{' '}
-                          {formatDurationExact(contract.startDate, contract.endDate)}
+                          {contract.startDate.slice(0, 10) > new Date().toISOString().slice(0, 10) ? (
+                            <>Aún no empieza</>
+                          ) : (
+                            <>
+                              {contract.status === 'ACTIVE' ? 'Lleva' : 'Duró'}:{' '}
+                              {formatDurationExact(
+                                contract.startDate,
+                                contract.status === 'ACTIVE' ? null : contract.endDate,
+                              )}
+                            </>
+                          )}
                         </span>
                         {(() => {
                           if (contract.status !== 'ACTIVE') return null;

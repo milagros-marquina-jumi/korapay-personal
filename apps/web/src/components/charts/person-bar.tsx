@@ -4,6 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { cn } from '@/lib/utils';
 
 export interface PersonBarDatum {
+  id?: string;
   name: string;
   value: number;
   secondary?: number;
@@ -43,7 +44,7 @@ export function PersonBar({
       {conTotal.map((d) => {
         const pct = d.total > 0 ? Math.round((d.value / d.total) * 100) : 0;
         return (
-          <div key={d.name} className="space-y-1.5">
+          <div key={d.id ?? d.name} className="space-y-1.5">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-sm">
               <span className="truncate font-medium">{d.name}</span>
               <span className="tabular-nums">

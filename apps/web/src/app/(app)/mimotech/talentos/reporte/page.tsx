@@ -169,8 +169,11 @@ function GlobalReportContent() {
   );
   const inactiveCount = (talents ?? []).length - activeNames.size;
 
-  const pickColumns = (list: { name: string }[]) =>
-    list.map((p) => p.name).filter((name) => showInactive || activeNames.size === 0 || activeNames.has(name));
+  const pickColumns = (list: { name: string }[]) => [
+    ...new Set(
+      list.map((p) => p.name).filter((name) => showInactive || activeNames.size === 0 || activeNames.has(name)),
+    ),
+  ];
 
   const incomeColumns = useMemo(
     () => (data ? pickColumns(data.incomeByPerson) : []),
@@ -200,11 +203,13 @@ function GlobalReportContent() {
   const yearlyPersons = visible(data.yearlyByTalent);
 
   const incomeBars: PersonBarDatum[] = incomePersons.map((p) => ({
+    id: p.talentId,
     name: p.name,
     value: Number(p.received),
     secondary: Number(p.kept),
   }));
   const expenseBars: PersonBarDatum[] = expensePersons.map((p) => ({
+    id: p.talentId,
     name: p.name,
     value: Number(p.paid),
   }));

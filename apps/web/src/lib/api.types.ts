@@ -635,6 +635,7 @@ export interface TalentGlobalReport {
     totalWithDiscount: string;
   };
   yearlyByTalent: {
+    talentId: string;
     name: string;
     status: string;
     role: string | null;

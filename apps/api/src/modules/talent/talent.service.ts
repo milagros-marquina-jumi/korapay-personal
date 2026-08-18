@@ -676,6 +676,7 @@ export class TalentService {
       projection: this.proyeccionMesSiguiente(talents),
       yearlyByTalent: [...yearlyByTalent.entries()]
         .map(([talentId, porAnio]) => ({
+          talentId,
           name: nombrePorId.get(talentId) ?? 'Sin nombre',
           status: estadoPorId.get(talentId) ?? 'ACTIVE',
           role: rolPorId.get(talentId) ?? null,

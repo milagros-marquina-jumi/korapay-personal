@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils';
 
 interface FilaTalento {
+  talentId?: string;
   name: string;
   status: string;
   role?: string | null;
@@ -70,7 +71,7 @@ export function YearlyHeatmap({ data, metric = 'received' }: Readonly<Props>) {
             {data.map((fila) => {
               const total = years.reduce((s, y) => s + (valorDe(fila, y) ?? 0), 0);
               return (
-                <TableRow key={fila.name}>
+                <TableRow key={fila.talentId ?? fila.name}>
                   <TableCell className="sticky left-0 z-10 bg-card font-medium">
                     <TalentName name={fila.name} role={fila.role} status={fila.status} />
                   </TableCell>

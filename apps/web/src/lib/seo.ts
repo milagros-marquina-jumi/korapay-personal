@@ -3,7 +3,7 @@ export const SITE_TAGLINE = 'Gestión financiera inteligente';
 export const SITE_DESCRIPTION =
   'KoraPay centraliza tus finanzas personales y de negocio: movimientos, ahorros, deudas, contratos y reportes en un solo lugar.';
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3060').replace(/\/$/, '');
 
 export const SITE_LOCALE = 'es_PE';
 

@@ -538,6 +538,7 @@ export interface GlobalClient {
   id: string;
   name: string;
   globalCompanyId?: string | null;
+  companyIds?: string[];
 }
 
 export interface TalentDebtRow {

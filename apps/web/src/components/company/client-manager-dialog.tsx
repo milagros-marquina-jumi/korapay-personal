@@ -77,7 +77,10 @@ export function ClientManagerDialog({ workspaceId, company, open, onOpenChange }
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const clients = (data ?? []).filter((c) => c.globalCompanyId && c.globalCompanyId === company.globalCompanyId);
+  const clients = (data ?? []).filter(
+    (c) =>
+      company.globalCompanyId && (c.companyIds ?? [c.globalCompanyId]).some((id) => id === company.globalCompanyId),
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -201,6 +201,7 @@ model GlobalCompany {
 
   clients   GlobalClient[]
   companies Company[]
+  clientLinks GlobalCompanyClient[]
 
   @@map("global_companies")
 }
@@ -214,9 +215,24 @@ model GlobalClient {
 
   globalCompany GlobalCompany?             @relation(fields: [globalCompanyId], references: [id], onDelete: SetNull)
   contracts     EmploymentContractClient[]
+  companyLinks  GlobalCompanyClient[]
 
   @@index([globalCompanyId])
   @@map("global_clients")
+}
+
+/// Un cliente puede trabajar con varias empresas y una empresa tener varios clientes.
+model GlobalCompanyClient {
+  globalCompanyId String   @map("global_company_id")
+  globalClientId  String   @map("global_client_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  globalCompany GlobalCompany @relation(fields: [globalCompanyId], references: [id], onDelete: Cascade)
+  globalClient  GlobalClient  @relation(fields: [globalClientId], references: [id], onDelete: Cascade)
+
+  @@id([globalCompanyId, globalClientId])
+  @@index([globalClientId])
+  @@map("global_company_clients")
 }
 
 model Person {

@@ -60,6 +60,7 @@ import type {
 } from '@/lib/api.types';
 import { DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
 import { queryKeys } from '@/lib/query-keys';
+import { ordenarPagosRecientePrimero } from '@/lib/sort-payments';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
 import { computeWorkedTime } from '@/lib/talent-worked-time';
 import { useProfile } from '@/lib/use-profile';
@@ -80,6 +81,8 @@ function TalentDetailContent() {
   const [editingContract, setEditingContract] = useState<TalentContract | null>(null);
   const [detalleContrato, setDetalleContrato] = useState<TalentContract | null>(null);
   const [contractFilter, setContractFilter] = useState('ACTIVE');
+  const [contractCompany, setContractCompany] = useState(FILTER_ALL);
+  const [contractPayment, setContractPayment] = useState(FILTER_ALL);
   const [editingDist, setEditingDist] = useState<TalentIncomeDistribution | null>(null);
 
   const { data: talent, isLoading } = useQuery({
@@ -280,6 +283,16 @@ function TalentDetailContent() {
   }
 
   const contracts = talent.contracts ?? [];
+  const empresasDeContratos = [...new Set(contracts.map((c) => c.companyName ?? '').filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const tiposDePago = [
+    ...new Set(
+      contracts.flatMap((c) => [c.paymentType ?? '', ...(c.incomeDistributions ?? []).map((d) => d.paymentType ?? '')]),
+    ),
+  ]
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
   const primerTrabajo = primerTrabajoDe(talent);
   const tiempo = computeWorkedTime(talent.startedWithMeAt, talent.endedWithMeAt, talent.contracts);
   const hayIngresos = (report?.byMonth ?? []).some((m) => Number(m.income) > 0 || Number(m.salary) > 0);
@@ -788,16 +801,32 @@ function TalentDetailContent() {
 
         <TabsContent value="contracts" className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <FilterSelect
-              value={contractFilter}
-              onValueChange={setContractFilter}
-              options={[
-                { value: 'ACTIVE', label: 'Activos' },
-                { value: 'FINISHED', label: 'Finalizados' },
-              ]}
-              placeholder="Estado"
-              allLabel="Todos"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <FilterSelect
+                value={contractFilter}
+                onValueChange={setContractFilter}
+                options={[
+                  { value: 'ACTIVE', label: 'Activos' },
+                  { value: 'FINISHED', label: 'Finalizados' },
+                ]}
+                placeholder="Estado"
+                allLabel="Todos"
+              />
+              <FilterSelect
+                value={contractCompany}
+                onValueChange={setContractCompany}
+                options={empresasDeContratos.map((n) => ({ value: n, label: n }))}
+                placeholder="Empresa"
+                allLabel="Todas las empresas"
+              />
+              <FilterSelect
+                value={contractPayment}
+                onValueChange={setContractPayment}
+                options={tiposDePago.map((n) => ({ value: n, label: n }))}
+                placeholder="Tipo de pago"
+                allLabel="Todos los tipos"
+              />
+            </div>
             <div className="flex items-center gap-2">
               <DistributionFormDialog
                 loose
@@ -926,7 +955,14 @@ function TalentDetailContent() {
           )}
 
           {(() => {
-            const filtered = contracts.filter((c) => contractFilter === FILTER_ALL || c.status === contractFilter);
+            const filtered = contracts.filter(
+              (c) =>
+                (contractFilter === FILTER_ALL || c.status === contractFilter) &&
+                (contractCompany === FILTER_ALL || (c.companyName ?? '') === contractCompany) &&
+                (contractPayment === FILTER_ALL ||
+                  c.paymentType === contractPayment ||
+                  (c.incomeDistributions ?? []).some((d) => d.paymentType === contractPayment)),
+            );
             return filtered.length ? (
               <div className="space-y-4">
                 {filtered.map((contract) => (
@@ -988,6 +1024,7 @@ function TalentDetailContent() {
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">Pagos por mes</p>
                         <DistributionFormDialog
+                          defaultSalary={contract.rate}
                           onSubmit={(v) =>
                             createDistMut.mutateAsync({ contractId: contract.id, values: v }).then(() => undefined)
                           }
@@ -1014,53 +1051,51 @@ function TalentDetailContent() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {[...contract.incomeDistributions]
-                                .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
-                                .map((dist) => (
-                                  <TableRow key={dist.id}>
-                                    <TableCell className="whitespace-nowrap text-sm capitalize">
-                                      {dist.date ? formatMonthYear(dist.date) : '-'}
-                                    </TableCell>
-                                    <TableCell className="text-sm">{dist.paymentType}</TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      <Money
-                                        value={formatMoney(dist.amountWithDiscount, contract.currency as 'PEN' | 'USD')}
+                              {[...contract.incomeDistributions].sort(ordenarPagosRecientePrimero).map((dist) => (
+                                <TableRow key={dist.id}>
+                                  <TableCell className="whitespace-nowrap text-sm capitalize">
+                                    {dist.date ? formatMonthYear(dist.date) : '-'}
+                                  </TableCell>
+                                  <TableCell className="text-sm">{dist.paymentType}</TableCell>
+                                  <TableCell className="text-right tabular-nums">
+                                    <Money
+                                      value={formatMoney(dist.amountWithDiscount, contract.currency as 'PEN' | 'USD')}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-nums">
+                                    <Money
+                                      value={formatMoney(dist.amountReceived, contract.currency as 'PEN' | 'USD')}
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right tabular-nums">
+                                    <Money
+                                      value={formatMoney(dist.amountRetained, contract.currency as 'PEN' | 'USD')}
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <StatusBadge status={dist.status} />
+                                  </TableCell>
+                                  <TableCell>
+                                    <IconActions>
+                                      <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
+                                      <IconAction
+                                        icon={Trash2}
+                                        label="Eliminar"
+                                        destructive
+                                        onClick={async () => {
+                                          const ok = await confirm({
+                                            title: 'Eliminar pago',
+                                            description: 'Esta acción no se puede deshacer.',
+                                            confirmLabel: 'Eliminar',
+                                            destructive: true,
+                                          });
+                                          if (ok) deleteDistMut.mutate(dist.id);
+                                        }}
                                       />
-                                    </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      <Money
-                                        value={formatMoney(dist.amountReceived, contract.currency as 'PEN' | 'USD')}
-                                      />
-                                    </TableCell>
-                                    <TableCell className="text-right tabular-nums">
-                                      <Money
-                                        value={formatMoney(dist.amountRetained, contract.currency as 'PEN' | 'USD')}
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      <StatusBadge status={dist.status} />
-                                    </TableCell>
-                                    <TableCell>
-                                      <IconActions>
-                                        <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
-                                        <IconAction
-                                          icon={Trash2}
-                                          label="Eliminar"
-                                          destructive
-                                          onClick={async () => {
-                                            const ok = await confirm({
-                                              title: 'Eliminar pago',
-                                              description: 'Esta acción no se puede deshacer.',
-                                              confirmLabel: 'Eliminar',
-                                              destructive: true,
-                                            });
-                                            if (ok) deleteDistMut.mutate(dist.id);
-                                          }}
-                                        />
-                                      </IconActions>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
+                                    </IconActions>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
                             </TableBody>
                           </Table>
                         </div>

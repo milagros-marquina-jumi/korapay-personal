@@ -45,8 +45,8 @@ interface Props {
   onOpenChange?: (open: boolean) => void;
   onSubmit: (values: DistributionFormValues) => Promise<void> | void;
   isPending?: boolean;
-  /** Si true, muestra los campos empresa/cliente (para distribuciones sueltas sin contrato) */
   loose?: boolean;
+  defaultSalary?: string | null;
 }
 
 export function DistributionFormDialog({
@@ -57,6 +57,7 @@ export function DistributionFormDialog({
   onSubmit,
   isPending,
   loose = false,
+  defaultSalary,
 }: Props) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = controlledOpen ?? uncontrolledOpen;
@@ -88,6 +89,16 @@ export function DistributionFormDialog({
   const opcionesCliente = clientOptionsFor(empresaSel?.id);
 
   useEffect(() => {
+    if (open && !distribution) {
+      // Al registrar un pago nuevo el sueldo casi siempre es el del contrato.
+      reset({
+        date: new Date().toISOString().slice(0, 10),
+        paymentType: loose ? 'CTS' : 'Mensual',
+        status: 'PAID',
+        salary: defaultSalary ? Number(defaultSalary).toString() : '',
+      });
+      return;
+    }
     if (open && distribution) {
       reset({
         date: distribution.date ? distribution.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -102,7 +113,7 @@ export function DistributionFormDialog({
         notes: distribution.notes ?? '',
       });
     }
-  }, [open, distribution, reset]);
+  }, [open, distribution, reset, defaultSalary, loose]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

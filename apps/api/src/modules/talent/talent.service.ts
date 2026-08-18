@@ -700,7 +700,10 @@ export class TalentService {
       conSecuencia.sequenceIndex = next;
       conSecuencia.sequenceTotal = totalPorEmpresa.get(key) ?? 1;
     }
-    return { ...talent, contracts: sortedContracts, looseDistributions };
+    // La numeracion se calcula del mas antiguo al mas nuevo, pero se listan al reves:
+    // el contrato vigente es el que interesa ver primero.
+    const contracts = [...sortedContracts].reverse();
+    return { ...talent, contracts, looseDistributions };
   }
   private mapTalentData(data: CreateTalentDto | UpdateTalentDto): Prisma.TalentProfileUncheckedUpdateInput {
     const out: Prisma.TalentProfileUncheckedUpdateInput = {};

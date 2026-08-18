@@ -24,6 +24,7 @@ import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { TalentContract } from '@/lib/api.types';
+import { avisoContrato, normalizarContrato } from '@/lib/contract-status';
 import { useGlobalCatalog } from '@/lib/use-global-catalog';
 
 const schema = z.object({
@@ -81,6 +82,12 @@ export function TalentContractFormDialog({
     defaultValues: { currency: 'PEN', status: 'ACTIVE', startDate: new Date().toISOString().slice(0, 10) },
   });
 
+  const avisoEstado = avisoContrato({
+    status: watch('status'),
+    startDate: watch('startDate'),
+    endDate: watch('endDate'),
+  });
+
   const empresaSel = companyByName(watch('companyName'));
   const opcionesCliente = clientOptionsFor(empresaSel?.id);
 
@@ -112,7 +119,7 @@ export function TalentContractFormDialog({
         </DialogHeader>
         <form
           onSubmit={handleSubmit(async (v) => {
-            await onSubmit(v);
+            await onSubmit({ ...v, endDate: normalizarContrato(v) });
             if (!editing) reset();
             setOpen(false);
           })}
@@ -201,7 +208,11 @@ export function TalentContractFormDialog({
               <Label>Estado</Label>
               <Select
                 value={watch('status')}
-                onValueChange={(v) => setValue('status', v as ContractFormValues['status'])}
+                onValueChange={(v) => {
+                  const next = v as ContractFormValues['status'];
+                  setValue('status', next);
+                  if (next === 'ACTIVE') setValue('endDate', '');
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -214,13 +225,18 @@ export function TalentContractFormDialog({
             </div>
           </div>
 
-          <CollapsibleSection label="Ver más opciones">
+          {watch('status') === 'FINISHED' && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="endDate">Fin</Label>
                 <Input id="endDate" type="date" {...register('endDate')} />
               </div>
             </div>
+          )}
+
+          {avisoEstado && <p className="rounded-md bg-warning/10 px-3 py-2 text-warning text-xs">{avisoEstado}</p>}
+
+          <CollapsibleSection label="Ver más opciones">
             <div className="space-y-2">
               <Label htmlFor="contractTerm">Plazo del contrato</Label>
               <Input id="contractTerm" placeholder="Ej. 6 meses luego indefinido" {...register('contractTerm')} />

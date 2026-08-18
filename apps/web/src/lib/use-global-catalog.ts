@@ -36,7 +36,9 @@ export function useGlobalCatalog({ enabled = true, valueBy = 'name' }: Opciones 
 
   const clientOptionsFor = (globalCompanyId?: string | null) => {
     const todos = clients ?? [];
-    const suyos = globalCompanyId ? todos.filter((c) => c.globalCompanyId === globalCompanyId) : [];
+    const suyos = globalCompanyId
+      ? todos.filter((c) => (c.companyIds ?? [c.globalCompanyId]).some((id) => id === globalCompanyId))
+      : [];
     const resto = todos.filter((c) => !suyos.some((s) => s.id === c.id));
     const mapear = (lista: GlobalClient[], group: string) =>
       lista.map((c) => ({ value: valueBy === 'id' ? c.id : c.name, label: c.name, group }));

@@ -7,8 +7,9 @@ import type { PrismaService } from '@/common/prisma/prisma.service';
  * El nombre es unico en base de datos incluso para filas borradas, por eso una
  * coincidencia con deletedAt se revive en vez de crear un duplicado.
  *
- * Si el cliente ya pertenece a otra empresa no se reasigna: un cliente puede trabajar
- * con varias empresas y el modelo solo admite una, asi que gana la primera asociacion.
+ * La relacion vive en globalCompanyClient: un cliente puede trabajar con varias
+ * empresas. globalCompanyId se mantiene como la empresa principal, util para
+ * ordenar y para el codigo que aun lee el campo escalar.
  */
 export async function sincronizarEmpresaCliente(
   prisma: PrismaService,
@@ -42,15 +43,24 @@ export async function sincronizarEmpresaCliente(
     select: { id: true, globalCompanyId: true, deletedAt: true },
   });
 
-  if (!clienteExistente) {
-    await prisma.globalClient.create({ data: { name: cliente, globalCompanyId } });
-    return;
+  let globalClientId: string;
+  if (clienteExistente) {
+    globalClientId = clienteExistente.id;
+    const cambios: { deletedAt?: null; globalCompanyId?: string } = {};
+    if (clienteExistente.deletedAt) cambios.deletedAt = null;
+    if (globalCompanyId && !clienteExistente.globalCompanyId) cambios.globalCompanyId = globalCompanyId;
+    if (Object.keys(cambios).length) {
+      await prisma.globalClient.update({ where: { id: globalClientId }, data: cambios });
+    }
+  } else {
+    globalClientId = (await prisma.globalClient.create({ data: { name: cliente, globalCompanyId } })).id;
   }
 
-  const cambios: { deletedAt?: null; globalCompanyId?: string } = {};
-  if (clienteExistente.deletedAt) cambios.deletedAt = null;
-  if (globalCompanyId && !clienteExistente.globalCompanyId) cambios.globalCompanyId = globalCompanyId;
-  if (Object.keys(cambios).length) {
-    await prisma.globalClient.update({ where: { id: clienteExistente.id }, data: cambios });
+  if (globalCompanyId) {
+    await prisma.globalCompanyClient.upsert({
+      where: { globalCompanyId_globalClientId: { globalCompanyId, globalClientId } },
+      create: { globalCompanyId, globalClientId },
+      update: {},
+    });
   }
 }

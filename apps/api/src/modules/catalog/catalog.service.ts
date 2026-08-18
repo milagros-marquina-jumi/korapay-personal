@@ -184,6 +184,10 @@ export class CatalogService {
           where: { id: { in: finales }, globalCompanyId: null, deletedAt: null },
           data: { globalCompanyId },
         });
+        await this.prisma.globalCompanyClient.createMany({
+          data: finales.map((globalClientId) => ({ globalCompanyId, globalClientId })),
+          skipDuplicates: true,
+        });
       }
     }
   }
@@ -397,10 +401,17 @@ export class CatalogService {
       where: { globalCompanyId, deletedAt: null, id: { notIn: finales } },
       data: { globalCompanyId: null },
     });
+    await this.prisma.globalCompanyClient.deleteMany({
+      where: { globalCompanyId, globalClientId: { notIn: finales } },
+    });
     if (finales.length) {
       await this.prisma.globalClient.updateMany({
         where: { id: { in: finales }, deletedAt: null },
         data: { globalCompanyId },
+      });
+      await this.prisma.globalCompanyClient.createMany({
+        data: finales.map((globalClientId) => ({ globalCompanyId, globalClientId })),
+        skipDuplicates: true,
       });
     }
   }
@@ -517,12 +528,21 @@ export class CatalogService {
     return this.prisma.globalCompany.update({ where: { id }, data: { deletedAt: new Date() } });
   }
 
-  globalClients() {
-    return this.prisma.globalClient.findMany({
+  async globalClients() {
+    const clients = await this.prisma.globalClient.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },
-      include: { globalCompany: { select: { id: true, name: true } } },
+      include: {
+        globalCompany: { select: { id: true, name: true } },
+        companyLinks: { select: { globalCompanyId: true } },
+      },
     });
+    return clients.map(({ companyLinks, ...c }) => ({
+      ...c,
+      companyIds: [
+        ...new Set([...(c.globalCompanyId ? [c.globalCompanyId] : []), ...companyLinks.map((l) => l.globalCompanyId)]),
+      ],
+    }));
   }
 
   async createGlobalClient(data: { name: string; globalCompanyId?: string }) {
@@ -530,6 +550,16 @@ export class CatalogService {
       where: { name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
     });
     if (dup) throw new ConflictException('Ya existe un cliente con ese nombre');
+    if (data.globalCompanyId) {
+      const creado = await this.prisma.globalClient.create({
+        data: { name: data.name, globalCompanyId: data.globalCompanyId },
+      });
+      await this.prisma.globalCompanyClient.createMany({
+        data: [{ globalCompanyId: data.globalCompanyId, globalClientId: creado.id }],
+        skipDuplicates: true,
+      });
+      return creado;
+    }
     return this.prisma.globalClient.create({
       data: { name: data.name, globalCompanyId: data.globalCompanyId || null },
       include: { globalCompany: { select: { id: true, name: true } } },
@@ -548,6 +578,12 @@ export class CatalogService {
     const updateData: Prisma.GlobalClientUncheckedUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.globalCompanyId !== undefined) updateData.globalCompanyId = data.globalCompanyId || null;
+    if (data.globalCompanyId) {
+      await this.prisma.globalCompanyClient.createMany({
+        data: [{ globalCompanyId: data.globalCompanyId, globalClientId: id }],
+        skipDuplicates: true,
+      });
+    }
     return this.prisma.globalClient.update({
       where: { id },
       data: updateData,

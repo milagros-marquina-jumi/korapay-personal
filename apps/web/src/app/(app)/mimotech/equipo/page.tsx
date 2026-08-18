@@ -17,7 +17,7 @@ import { PersonFormDialog, type PersonFormValues } from '@/components/team/perso
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Paginated, Person, Transaction } from '@/lib/api.types';
@@ -191,7 +191,7 @@ function ColaboradoresContent() {
                     <span className="text-muted-foreground">Total pagado</span>
                     <span className="font-semibold tabular-nums">{formatMoney(String(pagado), 'PEN')}</span>
                   </div>
-                  <div className="mt-auto flex justify-end gap-1.5 pt-2">
+                  <IconActions className="mt-auto pt-2">
                     <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetailPerson(person)} />
                     <IconAction icon={Pencil} label="Editar" onClick={() => setEditingPerson(person)} />
                     <IconAction
@@ -208,7 +208,7 @@ function ColaboradoresContent() {
                         if (ok) removePersonMutation.mutate(person.id);
                       }}
                     />
-                  </div>
+                  </IconActions>
                 </CardContent>
               </Card>
             );

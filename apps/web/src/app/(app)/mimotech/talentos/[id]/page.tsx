@@ -41,7 +41,7 @@ import { TalentFormDialog } from '@/components/talent/talent-form-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -852,7 +852,7 @@ function TalentDetailContent() {
                                     if (ok) deleteDistMut.mutate(dist.id);
                                   }}
                                 />
-                              </div>
+                              </IconActions>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1019,7 +1019,7 @@ function TalentDetailContent() {
                                             if (ok) deleteDistMut.mutate(dist.id);
                                           }}
                                         />
-                                      </div>
+                                      </IconActions>
                                     </TableCell>
                                   </TableRow>
                                 ))}

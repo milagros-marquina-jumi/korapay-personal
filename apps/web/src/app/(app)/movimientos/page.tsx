@@ -23,7 +23,7 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { DueDateHint } from '@/components/transactions/due-date-hint';
 import { TransactionDetailDialog, UsdConversionDialog } from '@/components/transactions/transaction-detail-dialog';
 import { Button } from '@/components/ui/button';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { Category, Paginated, Transaction } from '@/lib/api.types';
@@ -321,7 +321,7 @@ export default function MovimientosPage() {
                 if (ok) removeMutation.mutate(row.original.id);
               }}
             />
-          </div>
+          </IconActions>
         ),
       },
     ],

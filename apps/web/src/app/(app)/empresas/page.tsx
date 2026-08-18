@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { apiFetch } from '@/lib/api';
@@ -276,7 +276,7 @@ function EmpresasContent() {
                 if (ok) removeMutation.mutate(row.original.id);
               }}
             />
-          </div>
+          </IconActions>
         ),
       },
     ],

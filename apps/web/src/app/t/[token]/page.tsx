@@ -14,7 +14,7 @@ import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerFormDialog } from '@/components/talent/ledger-form-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
@@ -198,7 +198,7 @@ export default function TalentPortalPage() {
                         <IconActions>
                           <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(entradaDe(d.id))} />
                           <IconAction icon={Pencil} label="Editar" onClick={() => setEditando(entradaDe(d.id))} />
-                        </div>
+                        </IconActions>
                       </TableCell>
                     </TableRow>
                   ))}

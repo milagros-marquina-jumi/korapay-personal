@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, StatusBadge, statusLabel } from '@korapay/ui';
+import { EmptyState, KPICard, statusLabel } from '@korapay/ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Banknote, Eye, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -12,7 +12,7 @@ import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusPicker } from '@/components/data-table/status-toggle';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
 import { DEBT_STATUS_OPTIONS } from '@/lib/debt-status';
 import { useOpenMonth } from '@/lib/use-open-month';
@@ -216,7 +216,7 @@ export function LedgerSection({
           {canDelete && onDelete && (
             <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onDelete(row.original.id)} />
           )}
-        </div>
+        </IconActions>
       ),
     });
     return base;

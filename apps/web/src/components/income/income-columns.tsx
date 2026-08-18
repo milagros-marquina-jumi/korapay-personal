@@ -5,7 +5,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import type { Transaction } from '@/lib/api.types';
 import { accountNumber, type ConceptOrdinal, grossOf } from '@/lib/employment-income';
 import { splitTags, type TagCatalogs } from '@/lib/transaction-tags';
@@ -171,7 +171,7 @@ export function buildIncomeColumns({
           <IconAction icon={Eye} label="Ver detalle" onClick={() => onShowDetail(row.original)} />
           <IconAction icon={Pencil} label="Editar" onClick={() => onEdit(row.original)} />
           <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onRemove(row.original)} />
-        </div>
+        </IconActions>
       ),
     },
   );

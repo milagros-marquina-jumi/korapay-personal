@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { DetectedSummary, DetectedTransaction, EmailSource, ExchangeRateInfo } from '@/lib/api.types';
@@ -323,7 +323,7 @@ export default function DetectadosPage() {
                   if (ok) deleteMutation.mutate(t.id);
                 }}
               />
-            </div>
+            </IconActions>
           );
         },
       },

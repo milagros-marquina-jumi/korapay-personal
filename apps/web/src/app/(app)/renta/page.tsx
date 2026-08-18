@@ -20,7 +20,7 @@ import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { apiFetch } from '@/lib/api';
 import type { TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
@@ -186,7 +186,7 @@ function RentaContent() {
                 if (ok) removeMutation.mutate(row.original.id);
               }}
             />
-          </div>
+          </IconActions>
         ),
       },
     ],

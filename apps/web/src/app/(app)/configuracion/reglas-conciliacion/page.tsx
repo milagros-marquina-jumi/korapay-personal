@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { IconAction } from '@/components/ui/icon-action';
+import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -282,7 +282,7 @@ export default function ReglasConciliacionPage() {
                           if (ok) removeMutation.mutate(rule.id);
                         }}
                       />
-                    </div>
+                    </IconActions>
                   </TableCell>
                 </TableRow>
               ))}

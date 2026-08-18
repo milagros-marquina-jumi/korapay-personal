@@ -36,12 +36,14 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { PeruLaboralCalendar } from '@/components/reports/peru-laboral-calendar';
 import { ActiveContractsSummary } from '@/components/talent/active-contracts-summary';
 import { type ContractFormValues, TalentContractFormDialog } from '@/components/talent/contract-form-dialog';
 import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { DistributionFormDialog, type DistributionFormValues } from '@/components/talent/distribution-form-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
+import { PaymentConversionDialog } from '@/components/talent/payment-conversion-dialog';
 import { ProjectedPaymentDialog } from '@/components/talent/projected-payment-dialog';
 import { TalentContractDetailDialog } from '@/components/talent/talent-contract-detail-dialog';
 import { TalentFormDialog } from '@/components/talent/talent-form-dialog';
@@ -92,6 +94,7 @@ function TalentDetailContent() {
   const [contractPayment, setContractPayment] = useState(FILTER_ALL);
   const [editingDist, setEditingDist] = useState<TalentIncomeDistribution | null>(null);
   const [usdContract, setUsdContract] = useState<TalentContract | null>(null);
+  const [usdDist, setUsdDist] = useState<TalentIncomeDistribution | null>(null);
 
   const { data: exchangeRate } = useQuery({
     queryKey: queryKeys.exchangeRate(),
@@ -305,6 +308,12 @@ function TalentDetailContent() {
   }
 
   const contracts = talent.contracts ?? [];
+  const sueldoPlanilla = contracts
+    .filter(
+      (c) =>
+        c.status === 'ACTIVE' && c.currency === 'PEN' && (c.paymentType ?? '').toLowerCase() === 'planilla' && c.rate,
+    )
+    .reduce((sum, c) => sum + Number(c.rate), 0);
   const empresasDeContratos = [...new Set(contracts.map((c) => c.companyName ?? '').filter(Boolean))].sort((a, b) =>
     a.localeCompare(b),
   );
@@ -867,6 +876,7 @@ function TalentDetailContent() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <PeruLaboralCalendar latestMonthlySalary={sueldoPlanilla} />
               <ProjectedPaymentDialog contracts={contracts} />
               <TalentContractFormDialog
                 onSubmit={(v) => createContractMut.mutateAsync(v).then(() => undefined)}
@@ -971,6 +981,13 @@ function TalentDetailContent() {
             rate={exchangeRate?.rate ?? null}
             rateDate={exchangeRate?.date}
             onOpenChange={(next) => !next && setUsdContract(null)}
+          />
+
+          <PaymentConversionDialog
+            distribution={usdDist}
+            rate={exchangeRate?.rate ?? null}
+            rateDate={exchangeRate?.date}
+            onOpenChange={(next) => !next && setUsdDist(null)}
           />
 
           {editingContract && (
@@ -1142,18 +1159,24 @@ function TalentDetailContent() {
                                     {dist.paymentType}
                                   </TableCell>
                                   <TableCell className="text-right tabular-nums">
-                                    <Money
-                                      value={formatMoney(dist.amountWithDiscount, contract.currency as 'PEN' | 'USD')}
+                                    <MontoConvertible
+                                      value={dist.amountWithDiscount}
+                                      currency={contract.currency}
+                                      onConvert={() => setUsdDist(dist)}
                                     />
                                   </TableCell>
                                   <TableCell className="text-right tabular-nums">
-                                    <Money
-                                      value={formatMoney(dist.amountReceived, contract.currency as 'PEN' | 'USD')}
+                                    <MontoConvertible
+                                      value={dist.amountReceived}
+                                      currency={contract.currency}
+                                      onConvert={() => setUsdDist(dist)}
                                     />
                                   </TableCell>
                                   <TableCell className="text-right tabular-nums">
-                                    <Money
-                                      value={formatMoney(dist.amountRetained, contract.currency as 'PEN' | 'USD')}
+                                    <MontoConvertible
+                                      value={dist.amountRetained}
+                                      currency={contract.currency}
+                                      onConvert={() => setUsdDist(dist)}
                                     />
                                   </TableCell>
                                   <TableCell>
@@ -1244,6 +1267,25 @@ function TalentDetailContent() {
         </TabsContent>
       </Tabs>
     </PageShell>
+  );
+}
+
+function MontoConvertible({
+  value,
+  currency,
+  onConvert,
+}: Readonly<{ value: string; currency: string; onConvert: () => void }>) {
+  const monto = <Money value={formatMoney(value, currency as 'PEN' | 'USD')} />;
+  if (currency !== 'USD') return monto;
+  return (
+    <button
+      type="button"
+      onClick={onConvert}
+      className="rounded-md px-1.5 py-0.5 hover:bg-muted"
+      title="Ver conversión a soles"
+    >
+      {monto}
+    </button>
   );
 }
 

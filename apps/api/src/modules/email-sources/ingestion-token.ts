@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
-const TOKEN_PREFIX = process.env.INGESTION_TOKEN_PREFIX;
+const TOKEN_PREFIX = process.env.INGESTION_TOKEN_PREFIX ?? 'kp_ing_';
 
 export function generateIngestionToken(): { token: string; hash: string; prefix: string } {
   const secret = randomBytes(32).toString('base64url');

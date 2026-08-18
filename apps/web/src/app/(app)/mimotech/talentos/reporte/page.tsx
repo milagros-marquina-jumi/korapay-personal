@@ -24,6 +24,7 @@ import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select'
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { PeruLaboralCalendar } from '@/components/reports/peru-laboral-calendar';
 import { GlobalProjectionDialog } from '@/components/talent/global-projection-dialog';
 import { TalentName } from '@/components/talent/talent-name';
 import { Button } from '@/components/ui/button';
@@ -151,6 +152,21 @@ function GlobalReportContent() {
     () => new Set((talents ?? []).filter((t) => t.status === 'ACTIVE').map((t) => t.name)),
     [talents],
   );
+  const sueldoPlanilla = useMemo(
+    () =>
+      (talents ?? [])
+        .filter((t) => t.status === 'ACTIVE')
+        .flatMap((t) => t.contracts ?? [])
+        .filter(
+          (c) =>
+            c.status === 'ACTIVE' &&
+            c.currency === 'PEN' &&
+            (c.paymentType ?? '').toLowerCase() === 'planilla' &&
+            c.rate,
+        )
+        .reduce((sum, c) => sum + Number(c.rate), 0),
+    [talents],
+  );
   const inactiveCount = (talents ?? []).length - activeNames.size;
 
   const pickColumns = (list: { name: string }[]) =>
@@ -206,6 +222,7 @@ function GlobalReportContent() {
       description="Ingresos y egresos por talento, calculados de sus pagos y estado de cuenta"
       action={
         <div className="flex flex-wrap items-center gap-2">
+          <PeruLaboralCalendar latestMonthlySalary={sueldoPlanilla} />
           <GlobalProjectionDialog projection={data.projection} />
           <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
           <FilterSelect

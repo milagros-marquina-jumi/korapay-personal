@@ -208,11 +208,7 @@ export function TalentContractFormDialog({
               <Label>Estado</Label>
               <Select
                 value={watch('status')}
-                onValueChange={(v) => {
-                  const next = v as ContractFormValues['status'];
-                  setValue('status', next);
-                  if (next === 'ACTIVE') setValue('endDate', '');
-                }}
+                onValueChange={(v) => setValue('status', v as ContractFormValues['status'])}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -225,14 +221,19 @@ export function TalentContractFormDialog({
             </div>
           </div>
 
-          {watch('status') === 'FINISHED' && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="endDate">Fin</Label>
-                <Input id="endDate" type="date" {...register('endDate')} />
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="endDate">
+                Fin {watch('status') === 'ACTIVE' && <span className="text-muted-foreground">(opcional)</span>}
+              </Label>
+              <Input id="endDate" type="date" {...register('endDate')} />
+              <p className="text-[11px] text-muted-foreground">
+                {watch('status') === 'ACTIVE'
+                  ? 'Si el contrato tiene plazo, ponlo aquí para ver cuánto falta para que venza.'
+                  : 'Hasta cuándo estuvo vigente.'}
+              </p>
             </div>
-          )}
+          </div>
 
           {avisoEstado && <p className="rounded-md bg-warning/10 px-3 py-2 text-warning text-xs">{avisoEstado}</p>}
 

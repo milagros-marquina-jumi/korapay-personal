@@ -1,5 +1,5 @@
 import { HelpCircle, type LucideIcon } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, esCero } from '../lib/utils';
 
 interface KPICardProps {
   label: string;
@@ -54,7 +54,14 @@ export function KPICard({ label, value, icon: Icon, color, trend, className, too
           </span>
         )}
       </div>
-      <p className="font-display text-3xl font-bold leading-none tracking-tight tabular-nums">{value}</p>
+      <p
+        className={cn(
+          'font-display text-3xl font-bold leading-none tracking-tight tabular-nums',
+          esCero(value) && 'text-muted-foreground/60',
+        )}
+      >
+        {value}
+      </p>
       {trend && (
         <p
           className={cn(

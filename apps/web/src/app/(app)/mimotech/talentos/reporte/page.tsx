@@ -25,6 +25,7 @@ import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Money } from '@/components/ui/money';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
@@ -303,12 +304,18 @@ function GlobalReportContent() {
                     {data.incomeByPerson.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3 font-medium">{p.name}</td>
-                        <td className="p-3 text-right tabular-nums">{formatMoney(p.salary, 'PEN')}</td>
-                        <td className="p-3 text-right tabular-nums">{formatMoney(p.withDiscount, 'PEN')}</td>
-                        <td className="p-3 text-right font-medium tabular-nums text-info">
-                          {formatMoney(p.received, 'PEN')}
+                        <td className="p-3 text-right tabular-nums">
+                          <Money value={formatMoney(p.salary, 'PEN')} />
                         </td>
-                        <td className="p-3 text-right tabular-nums">{formatMoney(p.kept, 'PEN')}</td>
+                        <td className="p-3 text-right tabular-nums">
+                          <Money value={formatMoney(p.withDiscount, 'PEN')} />
+                        </td>
+                        <td className="p-3 text-right font-medium tabular-nums text-info">
+                          <Money value={formatMoney(p.received, 'PEN')} />
+                        </td>
+                        <td className="p-3 text-right tabular-nums">
+                          <Money value={formatMoney(p.kept, 'PEN')} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -356,11 +363,13 @@ function GlobalReportContent() {
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3 font-medium">{p.name}</td>
                         <td className="p-3 text-right font-medium text-coral tabular-nums">
-                          {formatMoney(p.paid, 'PEN')}
+                          <Money value={formatMoney(p.paid, 'PEN')} />
                         </td>
-                        <td className="p-3 text-right tabular-nums text-warning">{formatMoney(p.debt, 'PEN')}</td>
+                        <td className="p-3 text-right tabular-nums text-warning">
+                          <Money value={formatMoney(p.debt, 'PEN')} />
+                        </td>
                         <td className="p-3 text-right tabular-nums text-destructive">
-                          {formatMoney(p.pending, 'PEN')}
+                          <Money value={formatMoney(p.pending, 'PEN')} />
                         </td>
                       </tr>
                     ))}
@@ -418,12 +427,16 @@ function GlobalReportContent() {
                   {data.profitabilityByPerson.map((p) => (
                     <tr key={p.talentId} className="border-b last:border-0">
                       <td className="p-3 font-medium">{p.name}</td>
-                      <td className="p-3 text-right tabular-nums text-info">{formatMoney(p.received, 'PEN')}</td>
-                      <td className="p-3 text-right text-coral tabular-nums">{formatMoney(p.paid, 'PEN')}</td>
+                      <td className="p-3 text-right tabular-nums text-info">
+                        <Money value={formatMoney(p.received, 'PEN')} />
+                      </td>
+                      <td className="p-3 text-right text-coral tabular-nums">
+                        <Money value={formatMoney(p.paid, 'PEN')} />
+                      </td>
                       <td
                         className={`p-3 text-right font-semibold tabular-nums ${Number(p.net) < 0 ? 'text-destructive' : ''}`}
                       >
-                        {formatMoney(p.net, 'PEN')}
+                        <Money value={formatMoney(p.net, 'PEN')} />
                       </td>
                       <td className="p-3 text-right tabular-nums text-muted-foreground">{p.margin}%</td>
                     </tr>
@@ -455,11 +468,15 @@ function GlobalReportContent() {
                   {data.byCompany.map((c) => (
                     <tr key={c.name} className="border-b last:border-0">
                       <td className="p-3 font-medium">{c.name}</td>
-                      <td className="p-3 text-right tabular-nums">{formatMoney(c.salary, 'PEN')}</td>
-                      <td className="p-3 text-right font-medium tabular-nums text-info">
-                        {formatMoney(c.received, 'PEN')}
+                      <td className="p-3 text-right tabular-nums">
+                        <Money value={formatMoney(c.salary, 'PEN')} />
                       </td>
-                      <td className="p-3 text-right tabular-nums">{formatMoney(c.kept, 'PEN')}</td>
+                      <td className="p-3 text-right font-medium tabular-nums text-info">
+                        <Money value={formatMoney(c.received, 'PEN')} />
+                      </td>
+                      <td className="p-3 text-right tabular-nums">
+                        <Money value={formatMoney(c.kept, 'PEN')} />
+                      </td>
                       <td className="p-3 text-right text-xs text-muted-foreground">{c.payments}</td>
                       <td className="p-3 text-xs text-muted-foreground">{c.talents.join(', ')}</td>
                     </tr>
@@ -490,9 +507,11 @@ function GlobalReportContent() {
                     <tr key={c.name} className="border-b last:border-0">
                       <td className="p-3 font-medium">{c.name}</td>
                       <td className="p-3 text-right font-medium tabular-nums text-info">
-                        {formatMoney(c.received, 'PEN')}
+                        <Money value={formatMoney(c.received, 'PEN')} />
                       </td>
-                      <td className="p-3 text-right tabular-nums">{formatMoney(c.kept, 'PEN')}</td>
+                      <td className="p-3 text-right tabular-nums">
+                        <Money value={formatMoney(c.kept, 'PEN')} />
+                      </td>
                       <td className="p-3 text-xs text-muted-foreground">{c.talents.join(', ')}</td>
                     </tr>
                   ))}
@@ -522,9 +541,11 @@ function GlobalReportContent() {
                     <tr key={p.name} className="border-b last:border-0">
                       <td className="p-3 font-medium">{p.name}</td>
                       <td className="p-3 text-right font-medium tabular-nums text-info">
-                        {formatMoney(p.received, 'PEN')}
+                        <Money value={formatMoney(p.received, 'PEN')} />
                       </td>
-                      <td className="p-3 text-right tabular-nums">{formatMoney(p.kept, 'PEN')}</td>
+                      <td className="p-3 text-right tabular-nums">
+                        <Money value={formatMoney(p.kept, 'PEN')} />
+                      </td>
                       <td className="p-3 text-right text-xs text-muted-foreground">{p.count}</td>
                     </tr>
                   ))}

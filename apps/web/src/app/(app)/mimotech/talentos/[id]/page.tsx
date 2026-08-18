@@ -15,6 +15,8 @@ import {
   KeyRound,
   Landmark,
   Pencil,
+  Percent,
+  PiggyBank,
   Plus,
   ReceiptText,
   ShieldOff,
@@ -42,6 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IconAction, IconActions } from '@/components/ui/icon-action';
+import { Money } from '@/components/ui/money';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -458,13 +461,23 @@ function TalentDetailContent() {
                   tooltip="Comisión recibida menos lo invertido en el talento."
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <KPICard
                   label="Sueldo total"
                   value={formatMoney(report.income.salary, 'PEN')}
                   icon={Banknote}
                   color="text-muted-foreground"
-                  tooltip="Suma de los sueldos que el cliente paga por este talento."
+                  tooltip="Suma de los sueldos que el cliente paga por este talento, antes de descuentos."
+                />
+                <KPICard
+                  label="Le llega (con descuento)"
+                  value={formatMoney(report.income.withDiscount, 'PEN')}
+                  icon={Percent}
+                  color="text-muted-foreground"
+                  tooltip={`Del sueldo total se descuenta ${formatMoney(
+                    String(Math.max(0, Number(report.income.salary) - Number(report.income.withDiscount))),
+                    'PEN',
+                  )}. Lo que queda es lo que se reparte entre MIMOTECH y el talento.`}
                 />
                 <KPICard
                   label="Deuda"
@@ -478,6 +491,17 @@ function TalentDetailContent() {
                   value={formatMoney(report.expense.pending, 'PEN')}
                   icon={AlertTriangle}
                   color="text-destructive"
+                  tooltip="De esa deuda, cuánto sigue sin devolver a día de hoy."
+                />
+                <KPICard
+                  label="Ya devuelto"
+                  value={formatMoney(
+                    String(Math.max(0, Number(report.expense.debt) - Number(report.expense.pending))),
+                    'PEN',
+                  )}
+                  icon={PiggyBank}
+                  color="text-success"
+                  tooltip="Parte de la deuda que el talento ya te devolvió."
                 />
                 {Number(report.expense.fraudLoss) > 0 && (
                   <KPICard
@@ -509,9 +533,11 @@ function TalentDetailContent() {
                             <TableRow key={c.name}>
                               <TableCell className="text-sm font-medium">{c.name}</TableCell>
                               <TableCell className="text-right tabular-nums text-info">
-                                {formatMoney(c.received, 'PEN')}
+                                <Money value={formatMoney(c.received, 'PEN')} />
                               </TableCell>
-                              <TableCell className="text-right tabular-nums">{formatMoney(c.kept, 'PEN')}</TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                <Money value={formatMoney(c.kept, 'PEN')} />
+                              </TableCell>
                               <TableCell className="text-right text-xs text-muted-foreground">{c.payments}</TableCell>
                             </TableRow>
                           ))}
@@ -537,9 +563,11 @@ function TalentDetailContent() {
                             <TableRow key={c.name}>
                               <TableCell className="text-sm font-medium">{c.name}</TableCell>
                               <TableCell className="text-right tabular-nums text-info">
-                                {formatMoney(c.received, 'PEN')}
+                                <Money value={formatMoney(c.received, 'PEN')} />
                               </TableCell>
-                              <TableCell className="text-right tabular-nums">{formatMoney(c.kept, 'PEN')}</TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                <Money value={formatMoney(c.kept, 'PEN')} />
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -571,9 +599,11 @@ function TalentDetailContent() {
                               <TableRow key={p.name}>
                                 <TableCell className="text-sm font-medium">{p.name}</TableCell>
                                 <TableCell className="text-right tabular-nums text-info">
-                                  {formatMoney(p.received, 'PEN')}
+                                  <Money value={formatMoney(p.received, 'PEN')} />
                                 </TableCell>
-                                <TableCell className="text-right tabular-nums">{formatMoney(p.kept, 'PEN')}</TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  <Money value={formatMoney(p.kept, 'PEN')} />
+                                </TableCell>
                                 <TableCell className="text-right text-xs text-muted-foreground">{p.count}</TableCell>
                               </TableRow>
                             ))}
@@ -610,27 +640,29 @@ function TalentDetailContent() {
                               <TableCell className="whitespace-nowrap text-sm capitalize">{m.label}</TableCell>
                               {hayIngresos && (
                                 <TableCell className="text-right tabular-nums text-muted-foreground">
-                                  {formatMoney(m.salary, 'PEN')}
+                                  <Money value={formatMoney(m.salary, 'PEN')} />
                                 </TableCell>
                               )}
                               {hayIngresos && (
                                 <TableCell className="text-right tabular-nums text-info">
-                                  {formatMoney(m.income, 'PEN')}
+                                  <Money value={formatMoney(m.income, 'PEN')} />
                                 </TableCell>
                               )}
                               {hayIngresos && (
-                                <TableCell className="text-right tabular-nums">{formatMoney(m.kept, 'PEN')}</TableCell>
+                                <TableCell className="text-right tabular-nums">
+                                  <Money value={formatMoney(m.kept, 'PEN')} />
+                                </TableCell>
                               )}
                               <TableCell className="text-right text-coral tabular-nums">
-                                {formatMoney(m.expense, 'PEN')}
+                                <Money value={formatMoney(m.expense, 'PEN')} />
                               </TableCell>
                               {hayDeuda && (
                                 <TableCell className="text-right tabular-nums text-destructive">
-                                  {formatMoney(m.pending, 'PEN')}
+                                  <Money value={formatMoney(m.pending, 'PEN')} />
                                 </TableCell>
                               )}
                               <TableCell className="text-right font-semibold tabular-nums">
-                                {formatMoney(m.net, 'PEN')}
+                                <Money value={formatMoney(m.net, 'PEN')} />
                               </TableCell>
                             </TableRow>
                           ))}
@@ -672,7 +704,7 @@ function TalentDetailContent() {
                                 {d.description || '—'}
                               </TableCell>
                               <TableCell className="text-right tabular-nums text-warning">
-                                {formatMoney(d.debt, 'PEN')}
+                                <Money value={formatMoney(d.debt, 'PEN')} />
                               </TableCell>
                               <TableCell
                                 className={cn(
@@ -697,10 +729,10 @@ function TalentDetailContent() {
                               Total
                             </TableCell>
                             <TableCell className="text-right font-semibold tabular-nums text-warning">
-                              {formatMoney(report.expense.debt, 'PEN')}
+                              <Money value={formatMoney(report.expense.debt, 'PEN')} />
                             </TableCell>
                             <TableCell className="text-right font-semibold tabular-nums text-destructive">
-                              {formatMoney(report.expense.pending, 'PEN')}
+                              <Money value={formatMoney(report.expense.pending, 'PEN')} />
                             </TableCell>
                             <TableCell />
                           </TableRow>
@@ -824,13 +856,13 @@ function TalentDetailContent() {
                               {[dist.companyName, dist.clientName].filter(Boolean).join(' / ') || '—'}
                             </TableCell>
                             <TableCell className="text-right tabular-nums">
-                              {formatMoney(dist.amountWithDiscount, 'PEN')}
+                              <Money value={formatMoney(dist.amountWithDiscount, 'PEN')} />
                             </TableCell>
                             <TableCell className="text-right tabular-nums text-info">
-                              {formatMoney(dist.amountReceived, 'PEN')}
+                              <Money value={formatMoney(dist.amountReceived, 'PEN')} />
                             </TableCell>
                             <TableCell className="text-right tabular-nums">
-                              {formatMoney(dist.amountRetained, 'PEN')}
+                              <Money value={formatMoney(dist.amountRetained, 'PEN')} />
                             </TableCell>
                             <TableCell>
                               <StatusBadge status={dist.status} />
@@ -991,13 +1023,19 @@ function TalentDetailContent() {
                                     </TableCell>
                                     <TableCell className="text-sm">{dist.paymentType}</TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatMoney(dist.amountWithDiscount, contract.currency as 'PEN' | 'USD')}
+                                      <Money
+                                        value={formatMoney(dist.amountWithDiscount, contract.currency as 'PEN' | 'USD')}
+                                      />
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatMoney(dist.amountReceived, contract.currency as 'PEN' | 'USD')}
+                                      <Money
+                                        value={formatMoney(dist.amountReceived, contract.currency as 'PEN' | 'USD')}
+                                      />
                                     </TableCell>
                                     <TableCell className="text-right tabular-nums">
-                                      {formatMoney(dist.amountRetained, contract.currency as 'PEN' | 'USD')}
+                                      <Money
+                                        value={formatMoney(dist.amountRetained, contract.currency as 'PEN' | 'USD')}
+                                      />
                                     </TableCell>
                                     <TableCell>
                                       <StatusBadge status={dist.status} />

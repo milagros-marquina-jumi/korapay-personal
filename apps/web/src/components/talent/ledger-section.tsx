@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, KPICard, statusLabel } from '@korapay/ui';
+import { EmptyState, esCero, KPICard, statusLabel } from '@korapay/ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Banknote, Eye, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
@@ -83,6 +83,20 @@ export function LedgerSection({
     );
   }, [entries, search, status, type, year, month, esDeuda]);
 
+  const hayFiltro = search.trim() !== '' || year !== FILTER_ALL || month !== FILTER_ALL;
+
+  const totales = useMemo(() => {
+    const paid = rows.reduce((s, e) => s + Number(e.paidAmount), 0);
+    const debt = rows.reduce((s, e) => s + Number(e.debtAmount), 0);
+    const pending = rows.reduce((s, e) => s + Number(e.pendingAmount), 0);
+    return {
+      totalPaid: paid.toFixed(2),
+      totalDebt: debt.toFixed(2),
+      totalPending: pending.toFixed(2),
+      totalReturned: Math.max(0, debt - pending).toFixed(2),
+    };
+  }, [rows]);
+
   const monthGroups = useMemo(() => {
     const map = new Map<string, TalentLedgerEntry[]>();
     for (const e of rows) {
@@ -153,7 +167,13 @@ export function LedgerSection({
           size: 140,
           accessorFn: (r) => Number(r.debtAmount),
           header: ({ column }) => <SortableHeader column={column} label="Deuda" className="ml-auto" />,
-          cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.debtAmount, cur)}</div>,
+          cell: ({ row }) => (
+            <div
+              className={cn('text-right tabular-nums', esCero(row.original.debtAmount) && 'text-muted-foreground/60')}
+            >
+              {formatMoney(row.original.debtAmount, cur)}
+            </div>
+          ),
         },
         {
           id: 'pending',
@@ -195,7 +215,14 @@ export function LedgerSection({
         accessorFn: (r) => Number(r.paidAmount),
         header: ({ column }) => <SortableHeader column={column} label="Desembolsado" />,
         cell: ({ row }) => (
-          <div className="font-medium text-coral tabular-nums">{formatMoney(row.original.paidAmount, cur)}</div>
+          <div
+            className={cn(
+              'font-medium tabular-nums',
+              esCero(row.original.paidAmount) ? 'text-muted-foreground/60' : 'text-coral',
+            )}
+          >
+            {formatMoney(row.original.paidAmount, cur)}
+          </div>
         ),
       });
     }
@@ -227,29 +254,41 @@ export function LedgerSection({
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
-            label="Total desembolsado"
-            value={formatMoney(summary.totalPaid, cur)}
+            label={hayFiltro ? 'Desembolsado (filtrado)' : 'Total desembolsado'}
+            value={formatMoney(totales.totalPaid, cur)}
             icon={Wallet}
             color="text-coral"
-            tooltip="Lo que MIMOTECH gastó en esta persona. Es salida de dinero, no ingreso."
+            tooltip={
+              hayFiltro
+                ? `Lo que MIMOTECH gastó en esta persona, solo en lo que estás viendo ahora. Sin filtros el total es ${formatMoney(summary.totalPaid, cur)}.`
+                : 'Lo que MIMOTECH gastó en esta persona. Es salida de dinero, no ingreso.'
+            }
           />
           <KPICard
-            label="Total deuda"
-            value={formatMoney(summary.totalDebt, cur)}
+            label={hayFiltro ? 'Deuda (filtrada)' : 'Total deuda'}
+            value={formatMoney(totales.totalDebt, cur)}
             icon={Banknote}
             color="text-info"
-            tooltip="Suma de todo lo que el talento se comprometió a devolver, ya lo haya pagado o no."
+            tooltip={
+              hayFiltro
+                ? `Lo que el talento se comprometió a devolver, solo en lo que estás viendo ahora. Sin filtros el total es ${formatMoney(summary.totalDebt, cur)}.`
+                : 'Suma de todo lo que el talento se comprometió a devolver, ya lo haya pagado o no.'
+            }
           />
           <KPICard
             label="Falta pagar"
-            value={formatMoney(summary.totalPending, cur)}
+            value={formatMoney(totales.totalPending, cur)}
             icon={TrendingDown}
             color="text-destructive"
-            tooltip="De esa deuda, cuánto sigue sin devolver a día de hoy."
+            tooltip={
+              hayFiltro
+                ? `Lo que sigue sin devolver, solo en lo que estás viendo ahora. Sin filtros el total es ${formatMoney(summary.totalPending, cur)}.`
+                : 'De esa deuda, cuánto sigue sin devolver a día de hoy.'
+            }
           />
           <KPICard
             label="Ya devuelto"
-            value={formatMoney(String(Math.max(0, Number(summary.totalDebt) - Number(summary.totalPending))), cur)}
+            value={formatMoney(totales.totalReturned, cur)}
             icon={PiggyBank}
             color="text-success"
             tooltip="Parte de la deuda que el talento ya te devolvió."

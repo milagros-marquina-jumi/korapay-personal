@@ -448,11 +448,11 @@ export class ReportsService {
     const comisionAnio = new Map<number, Decimal>();
     const comisionMes = new Map<string, Decimal>();
     for (const d of distributions) {
-      const retenido = new Decimal(d.amountRetained);
-      if (d.year) comisionAnio.set(d.year, (comisionAnio.get(d.year) ?? new Decimal(0)).add(retenido));
+      const comisionMimotech = new Decimal(d.amountReceived);
+      if (d.year) comisionAnio.set(d.year, (comisionAnio.get(d.year) ?? new Decimal(0)).add(comisionMimotech));
       if (d.year && d.month) {
         const key = `${d.year}-${d.month}`;
-        comisionMes.set(key, (comisionMes.get(key) ?? new Decimal(0)).add(retenido));
+        comisionMes.set(key, (comisionMes.get(key) ?? new Decimal(0)).add(comisionMimotech));
       }
     }
     const hayComision = comisionAnio.size > 0;
@@ -577,10 +577,10 @@ export class ReportsService {
     }
 
     // El ingreso de un talento se registra con el monto que factura el cliente,
-    // pero de ahi el talento cobra amountReceived y MIMOTECH se queda con
+    // pero de ahi MIMOTECH cobra amountReceived y el talento se queda con
     // amountRetained: esa comision es el ingreso real de la empresa.
-    const paraTalento = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
-    const comision = distributions.reduce((s, d) => s.plus(new Decimal(d.amountRetained)), new Decimal(0));
+    const paraTalento = distributions.reduce((s, d) => s.plus(new Decimal(d.amountRetained)), new Decimal(0));
+    const comision = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
     const facturado = distributions.reduce((s, d) => s.plus(new Decimal(d.amountWithDiscount)), new Decimal(0));
     const realIncome = comision.gt(0) ? comision : income;
 

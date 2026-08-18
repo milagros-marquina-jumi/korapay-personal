@@ -34,8 +34,11 @@ export class TalentPortalService {
     const talent = await this.resolve(token);
     const summary = await this.ledger.talentSummary(talent.id);
     const debtRows = await this.ledger.debtDetail(talent.id);
+    const ownerId = await this.ownerProfileId(talent.workspaceId);
+    const owner = await this.prisma.profile.findUnique({ where: { id: ownerId }, select: { name: true } });
     return {
       talent: { id: talent.id, name: talent.name, status: talent.status },
+      owner: { name: owner?.name ?? 'la empresa' },
       summary,
       debtRows,
     };

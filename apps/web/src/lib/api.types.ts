@@ -691,6 +691,7 @@ export interface TalentAuditEntry {
 }
 
 export interface TalentPortalProfile {
+  owner?: { name: string };
   talent: { id: string; name: string; status: string };
   summary: TalentSummaryTotals;
   debtRows: TalentDebtRow[];

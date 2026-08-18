@@ -29,6 +29,8 @@ interface LedgerSectionProps {
   isLoading?: boolean;
   currency?: string;
   canDelete?: boolean;
+  talentName?: string;
+  adminName?: string;
   onCreate: (values: LedgerFormValues) => Promise<void>;
   onUpdate: (id: string, values: LedgerFormValues) => Promise<void>;
   onDelete?: (id: string) => void;
@@ -41,6 +43,8 @@ export function LedgerSection({
   isLoading,
   currency = 'PEN',
   canDelete = true,
+  talentName,
+  adminName,
   onCreate,
   onUpdate,
   onDelete,
@@ -262,6 +266,8 @@ export function LedgerSection({
           </div>
           <LedgerFormDialog
             defaultType={type === 'EGRESO' ? 'EGRESO' : 'DEUDA'}
+            talentName={talentName}
+            adminName={adminName}
             onSubmit={onCreate}
             isPending={isMutating}
           />
@@ -320,6 +326,8 @@ export function LedgerSection({
       {editing && (
         <LedgerFormDialog
           entry={editing}
+          talentName={talentName}
+          adminName={adminName}
           isPending={isMutating}
           onSubmit={(v) => onUpdate(editing.id, v)}
           open

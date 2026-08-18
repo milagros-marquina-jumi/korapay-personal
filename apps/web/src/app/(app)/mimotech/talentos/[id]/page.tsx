@@ -56,6 +56,7 @@ import type {
 import { queryKeys } from '@/lib/query-keys';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
 import { computeWorkedTime } from '@/lib/talent-worked-time';
+import { useProfile } from '@/lib/use-profile';
 import { formatDate, formatDurationDaysCompact, formatDurationExact, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
@@ -106,6 +107,7 @@ function TalentDetailContent() {
   });
 
   const summary = summaryList?.find((s) => s.talentId === id);
+  const { data: perfil } = useProfile();
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.talentLedger(ws, id) });
@@ -681,6 +683,8 @@ function TalentDetailContent() {
           <LedgerSection
             entries={entries ?? []}
             summary={summary}
+            talentName={talent.name}
+            adminName={perfil?.name}
             onCreate={(v) => createMut.mutateAsync(v).then(() => undefined)}
             onUpdate={(entryId, v) => updateMut.mutateAsync({ entryId, values: v }).then(() => undefined)}
             onDelete={async (entryId) => {

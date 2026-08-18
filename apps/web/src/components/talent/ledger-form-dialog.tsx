@@ -31,6 +31,15 @@ const schema = z.object({
 
 export type LedgerFormValues = z.infer<typeof schema>;
 
+function etiquetasDeuda(viewer: 'ADMIN' | 'TALENT', talentName?: string, adminName?: string) {
+  const talento = talentName?.trim() || 'el talento';
+  const admin = adminName?.trim() || 'la empresa';
+  if (viewer === 'TALENT') {
+    return { talentDebe: `Yo le debo a ${admin}`, adminDebe: `${admin} me debe` };
+  }
+  return { talentDebe: `${talento} me debe`, adminDebe: `Yo le debo a ${talento}` };
+}
+
 const STATUS_DEUDA = [
   { value: 'PENDING', label: 'Pendiente' },
   { value: 'PARTIAL', label: 'Parcial' },
@@ -47,6 +56,10 @@ const STATUS_EGRESO = [
 interface Props {
   entry?: TalentLedgerEntry;
   defaultType?: 'EGRESO' | 'DEUDA';
+  /** Quien esta usando el formulario: cambia como se redactan las opciones. */
+  viewer?: 'ADMIN' | 'TALENT';
+  talentName?: string;
+  adminName?: string;
   trigger?: ReactNode;
   onSubmit: (values: LedgerFormValues) => Promise<void>;
   isPending?: boolean;
@@ -57,6 +70,9 @@ interface Props {
 export function LedgerFormDialog({
   entry,
   defaultType = 'DEUDA',
+  viewer = 'ADMIN',
+  talentName,
+  adminName,
   trigger,
   onSubmit,
   isPending,
@@ -106,6 +122,7 @@ export function LedgerFormDialog({
   }, [open, entry, reset]);
 
   const esDeuda = watch('type') === 'DEUDA';
+  const etiquetas = etiquetasDeuda(viewer, talentName, adminName);
 
   const submit = handleSubmit(async (values) => {
     const limpio = esDeuda ? { ...values, paidAmount: '0' } : { ...values, debtAmount: '0', pendingAmount: '0' };
@@ -162,8 +179,8 @@ export function LedgerFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="TALENT">El talento me debe</SelectItem>
-                  <SelectItem value="MINE">Yo le debo al talento</SelectItem>
+                  <SelectItem value="TALENT">{etiquetas.talentDebe}</SelectItem>
+                  <SelectItem value="MINE">{etiquetas.adminDebe}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

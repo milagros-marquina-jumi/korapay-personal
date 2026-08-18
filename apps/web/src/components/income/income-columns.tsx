@@ -39,6 +39,7 @@ export function buildIncomeColumns({
   if (showDate) {
     columns.push({
       accessorKey: 'date',
+      size: 120,
       header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
       cell: ({ row }) => <span className="text-sm capitalize">{formatMonthYear(row.original.date)}</span>,
     });
@@ -47,6 +48,7 @@ export function buildIncomeColumns({
   columns.push(
     {
       accessorKey: 'concept',
+      size: 200,
       header: ({ column }) => <SortableHeader column={column} label="Concepto" />,
       cell: ({ row }) => {
         const orden = ordinals?.get(row.original.id);
@@ -72,6 +74,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'company',
+      size: 160,
       header: 'Empresa',
       cell: ({ row }) => (
         <span className="font-medium">{companyName(row.original.companyId) ?? row.original.category?.name ?? '-'}</span>
@@ -79,6 +82,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'payment',
+      size: 170,
       header: 'Forma de pago',
       cell: ({ row }) => {
         const { paymentMethod, bank } = splitTags(row.original.tags, catalogs);
@@ -101,6 +105,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'amountGross',
+      size: 150,
       accessorFn: (r) => Number(r.amountGross ?? r.amountBase),
       sortingFn: 'basic',
       header: ({ column }) => <SortableHeader column={column} label="Bruto" className="ml-auto" />,
@@ -125,6 +130,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'amount',
+      size: 150,
       accessorFn: (r) => Number(r.amountBase),
       sortingFn: 'basic',
       header: ({ column }) => <SortableHeader column={column} label="Neto" className="ml-auto" />,
@@ -149,6 +155,7 @@ export function buildIncomeColumns({
     },
     {
       accessorKey: 'status',
+      size: 120,
       header: 'Estado',
       cell: ({ row }) =>
         workspaceId ? (
@@ -157,6 +164,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'actions',
+      size: 110,
       header: '',
       cell: ({ row }) => (
         <div className="flex justify-end gap-0.5">

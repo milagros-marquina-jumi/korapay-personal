@@ -112,6 +112,9 @@ export default function TalentPortalPage() {
           <CardTitle className="text-base">Mi deuda</CardTitle>
           <LedgerFormDialog
             defaultType="DEUDA"
+            viewer="TALENT"
+            talentName={profile.talent.name}
+            adminName={profile.owner?.name}
             isPending={createMut.isPending}
             onSubmit={(v) => createMut.mutateAsync(v).then(() => undefined)}
             trigger={
@@ -178,6 +181,9 @@ export default function TalentPortalPage() {
       {editando && (
         <LedgerFormDialog
           entry={editando}
+          viewer="TALENT"
+          talentName={profile.talent.name}
+          adminName={profile.owner?.name}
           isPending={updateMut.isPending}
           onSubmit={(v) => updateMut.mutateAsync({ entryId: editando.id, values: v }).then(() => undefined)}
           open

@@ -211,11 +211,13 @@ export default function MovimientosPage() {
       },
       {
         accessorKey: 'date',
+        size: 130,
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
         cell: ({ row }) => <span className="text-sm capitalize">{formatMonthYear(row.original.date)}</span>,
       },
       {
         accessorKey: 'concept',
+        size: 220,
         header: ({ column }) => <SortableHeader column={column} label="Concepto" />,
         cell: ({ row }) => (
           <span className="flex max-w-[22rem] items-center gap-1.5 font-medium">
@@ -238,6 +240,7 @@ export default function MovimientosPage() {
       },
       {
         id: 'category',
+        size: 160,
         header: 'Categoría',
         cell: ({ row }) => <span className="text-muted-foreground">{row.original.category?.name ?? '-'}</span>,
       },
@@ -276,6 +279,7 @@ export default function MovimientosPage() {
       },
       {
         accessorKey: 'status',
+        size: 120,
         header: 'Estado',
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
@@ -294,6 +298,7 @@ export default function MovimientosPage() {
       },
       {
         id: 'actions',
+        size: 110,
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-0.5">

@@ -142,11 +142,13 @@ function PagosEquipoContent() {
     () => [
       {
         accessorKey: 'date',
+        size: 130,
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
         cell: ({ row }) => <span className="text-sm">{formatDateMedium(row.original.date)}</span>,
       },
       {
         id: 'person',
+        size: 190,
         header: ({ column }) => <SortableHeader column={column} label="Colaborador" />,
         accessorFn: (r) => r.person?.name ?? r.concept,
         cell: ({ row }) => (
@@ -157,6 +159,7 @@ function PagosEquipoContent() {
       },
       {
         id: 'notes',
+        size: 260,
         header: 'Notas',
         cell: ({ row }) => (
           <p className="max-w-88 truncate text-muted-foreground" title={row.original.description ?? undefined}>
@@ -166,6 +169,7 @@ function PagosEquipoContent() {
       },
       {
         id: 'amount',
+        size: 150,
         accessorFn: (r) => Number(r.amountBase),
         sortingFn: 'basic',
         header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
@@ -177,6 +181,7 @@ function PagosEquipoContent() {
       },
       {
         accessorKey: 'status',
+        size: 120,
         header: 'Estado',
         cell: ({ row }) => (
           <StatusToggle transactionId={row.original.id} workspaceId={ws} status={row.original.status} />
@@ -184,6 +189,7 @@ function PagosEquipoContent() {
       },
       {
         id: 'actions',
+        size: 110,
         header: '',
         cell: ({ row }) => (
           <div className="flex justify-end gap-0.5">

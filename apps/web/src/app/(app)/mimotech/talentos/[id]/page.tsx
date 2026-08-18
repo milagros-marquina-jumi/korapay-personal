@@ -41,6 +41,7 @@ import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { DistributionFormDialog, type DistributionFormValues } from '@/components/talent/distribution-form-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
+import { ProjectedPaymentDialog } from '@/components/talent/projected-payment-dialog';
 import { TalentContractDetailDialog } from '@/components/talent/talent-contract-detail-dialog';
 import { TalentFormDialog } from '@/components/talent/talent-form-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -188,8 +189,6 @@ function TalentDetailContent() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Duplicar sirve para repetir el pago del mes siguiente: mismo contrato,
-  // mismos montos, avanzando un mes para no chocar con el original.
   const duplicarPago = (contractId: string, dist: TalentIncomeDistribution) => {
     const base = dist.date ? new Date(`${dist.date.slice(0, 10)}T00:00:00Z`) : new Date();
     base.setUTCMonth(base.getUTCMonth() + 1);
@@ -257,18 +256,6 @@ function TalentDetailContent() {
     onSuccess: () => {
       invalidateTalent();
       toast.success('Pago registrado');
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-  const createLooseDistMut = useMutation({
-    mutationFn: (values: DistributionFormValues) =>
-      apiFetch(`/talents/${id}/distributions?workspaceId=${ws}`, {
-        method: 'POST',
-        body: JSON.stringify(values),
-      }),
-    onSuccess: () => {
-      invalidateTalent();
-      toast.success('Ingreso suelto registrado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -873,16 +860,7 @@ function TalentDetailContent() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <DistributionFormDialog
-                loose
-                onSubmit={(v) => createLooseDistMut.mutateAsync(v).then(() => undefined)}
-                isPending={createLooseDistMut.isPending}
-                trigger={
-                  <Button size="sm" variant="outline">
-                    <Plus className="mr-1 size-4" /> Ingreso suelto
-                  </Button>
-                }
-              />
+              <ProjectedPaymentDialog contracts={contracts} />
               <TalentContractFormDialog
                 onSubmit={(v) => createContractMut.mutateAsync(v).then(() => undefined)}
                 isPending={createContractMut.isPending}

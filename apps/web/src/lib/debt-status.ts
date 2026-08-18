@@ -6,7 +6,6 @@ export const DEBT_STATUS_OPTIONS = [
   { value: 'NUNCA_PAGO', label: 'Nunca pagó (pérdida)' },
 ];
 
-/** Estados en los que la deuda ya no se espera cobrar. */
 export function esSaldada(status: string): boolean {
   return status === 'PAID' || status === 'NUNCA_PAGO';
 }
@@ -38,7 +37,6 @@ export function avisoDeuda({ status, debtAmount, pendingAmount }: Deuda): string
   return null;
 }
 
-/** Ajusta los montos para que concuerden con el estado elegido. */
 export function normalizarDeuda({ status, debtAmount, pendingAmount }: Deuda): string {
   if (esSaldada(status)) return '0';
   const falta = Number(pendingAmount ?? 0);

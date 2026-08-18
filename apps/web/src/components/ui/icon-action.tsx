@@ -40,7 +40,6 @@ export function IconAction({ icon: Icon, label, onClick, disabled, destructive, 
   );
 }
 
-/** Agrupa acciones de fila con separacion uniforme en todas las tablas. */
 export function IconActions({ children, className }: Readonly<{ children: React.ReactNode; className?: string }>) {
   return <div className={cn('flex items-center justify-end gap-2', className)}>{children}</div>;
 }

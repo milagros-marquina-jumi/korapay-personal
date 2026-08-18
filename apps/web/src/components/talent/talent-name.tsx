@@ -7,7 +7,6 @@ interface Props {
   className?: string;
 }
 
-/** Nombre del talento con su rol al costado: el rol distingue perfiles con el mismo nombre. */
 export function TalentName({ name, role, status, className }: Readonly<Props>) {
   return (
     <span className={cn('flex items-center gap-2', className)}>

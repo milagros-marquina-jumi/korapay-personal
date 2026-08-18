@@ -17,7 +17,6 @@ interface Props {
   metric?: 'received' | 'paid';
 }
 
-/** Intensidad relativa al mayor valor: el color comunica magnitud sin leer el numero. */
 function tono(valor: number, max: number): string {
   if (valor <= 0) return 'bg-muted/30 text-muted-foreground/60';
   const r = valor / max;

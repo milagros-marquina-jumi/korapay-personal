@@ -1,7 +1,3 @@
-/**
- * Evalua una expresion aritmetica simple sin usar eval: recorre la cadena con un
- * parser de precedencia para que la entrada del usuario nunca se ejecute como codigo.
- */
 export function evaluarExpresion(entrada: string): number | null {
   const texto = (entrada ?? '').replaceAll(',', '').replaceAll('×', '*').replaceAll('÷', '/').trim();
   if (!texto) return null;

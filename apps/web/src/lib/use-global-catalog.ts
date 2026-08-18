@@ -10,7 +10,6 @@ type ClaveOpcion = 'id' | 'name';
 
 interface Opciones {
   enabled?: boolean;
-  /** Que se guarda al elegir: el id del catalogo o su nombre. */
   valueBy?: ClaveOpcion;
 }
 

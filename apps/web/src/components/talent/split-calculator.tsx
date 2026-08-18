@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { evaluarExpresion } from '@/lib/calc-eval';
-import { calcularReparto } from '@/lib/payment-split';
+import { calcularReparto, cuadraReparto } from '@/lib/payment-split';
 import { cn } from '@/lib/utils';
 
 interface Valores {
@@ -31,23 +31,15 @@ const DESTINOS = [
   { campo: 'amountRetained', label: 'Se quedó' },
 ] as const;
 
-/**
- * Panel lateral fijo: se ancla fuera del dialogo para no tapar los campos.
- * Calcula con una expresion libre y permite mandar el resultado a cualquier monto.
- */
 export function SplitCalculator({ values, onApply, onClose }: Readonly<Props>) {
   const [expr, setExpr] = useState('');
   const resultado = evaluarExpresion(expr);
   const { base, repartido, porRepartir } = calcularReparto(values);
   const money = (v: number) => formatMoney(String(v), 'PEN');
-  const cuadra = Math.abs(porRepartir) < 0.01;
+  const cuadra = cuadraReparto(values);
 
   const pulsar = (t: string) => setExpr((v) => v + t);
 
-  // Vive dentro del contenido del dialogo para quedar dentro de su trampa de foco:
-  // si no, Radix le devuelve el foco y no se puede escribir. Se ancla al borde
-  // derecho del dialogo (left-full) para no taparlo. DialogContent tiene transform,
-  // asi que position fixed quedaria relativo a el y no al viewport.
   return (
     <aside
       data-calculadora

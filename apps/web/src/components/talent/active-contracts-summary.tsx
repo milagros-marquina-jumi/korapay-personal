@@ -11,7 +11,6 @@ interface Props {
   contracts: TalentContract[];
 }
 
-/** Resumen de los trabajos vigentes: cuanto lleva, cuanto falta y cuanto suma. */
 export function ActiveContractsSummary({ contracts }: Readonly<Props>) {
   const activos = contracts.filter((c) => c.status === 'ACTIVE');
   if (!activos.length) return null;

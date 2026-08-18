@@ -616,6 +616,23 @@ export interface TalentGlobalReport {
     status: string;
     role: string | null;
   }[];
+  projection: {
+    year: number;
+    month: number;
+    label: string;
+    rows: {
+      talentId: string;
+      talent: string;
+      company: string;
+      received: string;
+      retained: string;
+      withDiscount: string;
+      from: string;
+    }[];
+    totalReceived: string;
+    totalRetained: string;
+    totalWithDiscount: string;
+  };
   yearlyByTalent: {
     name: string;
     status: string;

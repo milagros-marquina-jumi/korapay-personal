@@ -36,11 +36,6 @@ const REGLAS: { patron: RegExp; mensaje: (campo: string, extra?: string) => stri
   },
 ];
 
-/**
- * Traduce los mensajes de class-validator a algo que el usuario entienda.
- * El corte se hace solo antes de un nombre de campo conocido: separar por comas
- * partiria la lista de valores permitidos que traen los mensajes de enum.
- */
 export function traducirErrorApi(raw: string): string {
   const campos = Object.keys(CAMPOS).join('|');
   const partes = raw

@@ -4,10 +4,6 @@ interface PagoOrdenable {
   date?: string | null;
 }
 
-/**
- * Pagos del mes mas reciente primero. Ordena por año y mes, que es lo que
- * representa la fila; la fecha solo desempata dentro del mismo mes.
- */
 export function ordenarPagosRecientePrimero(a: PagoOrdenable, b: PagoOrdenable): number {
   const anio = (b.year ?? 0) - (a.year ?? 0);
   if (anio !== 0) return anio;

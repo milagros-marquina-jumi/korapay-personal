@@ -6,10 +6,6 @@ export interface Vencimiento {
   porVencer: boolean;
 }
 
-/**
- * Dias que faltan para que termine el contrato. Negativo si ya paso la fecha.
- * Compara en UTC a medianoche para que no dependa de la hora del navegador.
- */
 export function diasParaVencer(endDate?: string | null, hoy: Date = new Date()): Vencimiento | null {
   if (!endDate) return null;
   const fin = new Date(`${endDate.slice(0, 10)}T00:00:00Z`);

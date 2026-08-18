@@ -24,6 +24,7 @@ import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select'
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { GlobalProjectionDialog } from '@/components/talent/global-projection-dialog';
 import { TalentName } from '@/components/talent/talent-name';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -205,6 +206,7 @@ function GlobalReportContent() {
       description="Ingresos y egresos por talento, calculados de sus pagos y estado de cuenta"
       action={
         <div className="flex flex-wrap items-center gap-2">
+          <GlobalProjectionDialog projection={data.projection} />
           <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
           <FilterSelect
             value={year}

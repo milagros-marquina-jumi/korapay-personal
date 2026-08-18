@@ -251,6 +251,81 @@ export class TalentService {
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
     };
   }
+  private proyeccionMesSiguiente(
+    talents: {
+      name: string;
+      status: string | null;
+      contracts: {
+        id: string;
+        companyName: string | null;
+        clientName: string | null;
+        status: string;
+        endDate: Date | null;
+        incomeDistributions: {
+          paymentType: string;
+          year: number | null;
+          month: number | null;
+          amountReceived: unknown;
+          amountRetained: unknown;
+          amountWithDiscount: unknown;
+        }[];
+      }[];
+    }[],
+  ) {
+    const hoy = new Date();
+    let year = hoy.getUTCFullYear();
+    let month = hoy.getUTCMonth() + 2;
+    if (month > 12) {
+      year += 1;
+      month -= 12;
+    }
+    const inicioDelMes = new Date(Date.UTC(year, month - 1, 1));
+
+    const filas: {
+      talentId: string;
+      talent: string;
+      company: string;
+      received: string;
+      retained: string;
+      withDiscount: string;
+      from: string;
+    }[] = [];
+    for (const t of talents) {
+      if ((t.status ?? 'ACTIVE') !== 'ACTIVE') continue;
+      for (const c of t.contracts) {
+        if (c.status !== 'ACTIVE') continue;
+        if (c.endDate && c.endDate < inicioDelMes) continue;
+        const mensuales = c.incomeDistributions.filter((d) => d.paymentType === 'Mensual' && d.year && d.month);
+        if (!mensuales.length) continue;
+        const ultimo = mensuales.reduce((a, b) =>
+          (b.year ?? 0) > (a.year ?? 0) || ((b.year ?? 0) === (a.year ?? 0) && (b.month ?? 0) > (a.month ?? 0)) ? b : a,
+        );
+        filas.push({
+          talentId: c.id,
+          talent: t.name,
+          company: [c.companyName, c.clientName].filter(Boolean).join(' / ') || 'Sin empresa',
+          received: new Decimal(String(ultimo.amountReceived)).toFixed(2),
+          retained: new Decimal(String(ultimo.amountRetained)).toFixed(2),
+          withDiscount: new Decimal(String(ultimo.amountWithDiscount)).toFixed(2),
+          from: `${MONTH_NAMES[(ultimo.month ?? 1) - 1]} ${ultimo.year}`,
+        });
+      }
+    }
+    filas.sort((a, b) => Number(b.received) - Number(a.received));
+    const suma = (campo: 'received' | 'retained' | 'withDiscount') =>
+      filas.reduce((acc, f) => acc.plus(new Decimal(f[campo])), new Decimal(0)).toFixed(2);
+
+    return {
+      year,
+      month,
+      label: `${MONTH_NAMES[month - 1]} ${year}`,
+      rows: filas,
+      totalReceived: suma('received'),
+      totalRetained: suma('retained'),
+      totalWithDiscount: suma('withDiscount'),
+    };
+  }
+
   async globalReport(workspaceId: string, year?: number) {
     const talents = await this.prisma.talentProfile.findMany({
       where: { workspaceId, deletedAt: null },
@@ -594,6 +669,7 @@ export class TalentService {
           role: rolPorNombre.get(p.name) ?? null,
         }))
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
+      projection: this.proyeccionMesSiguiente(talents),
       yearlyByTalent: [...yearlyByTalent.entries()]
         .map(([name, porAnio]) => ({
           name,
@@ -700,8 +776,6 @@ export class TalentService {
       conSecuencia.sequenceIndex = next;
       conSecuencia.sequenceTotal = totalPorEmpresa.get(key) ?? 1;
     }
-    // La numeracion se calcula del mas antiguo al mas nuevo, pero se listan al reves:
-    // el contrato vigente es el que interesa ver primero.
     const contracts = [...sortedContracts].reverse();
     return { ...talent, contracts, looseDistributions };
   }

@@ -17,10 +17,6 @@ interface Props {
   secondaryLabel?: string;
 }
 
-/**
- * Una sola barra por persona partida en dos tramos: el ancho total es lo facturado
- * y el corte muestra que parte queda en cada lado.
- */
 export function PersonBar({
   data,
   color = 'bg-brand',

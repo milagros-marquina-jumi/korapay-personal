@@ -1,16 +1,5 @@
 import type { PrismaService } from '@/common/prisma/prisma.service';
 
-/**
- * Deja empresa y cliente registrados en el catalogo global y los asocia entre si.
- * Los contratos de talento guardan nombres, no ids, asi que la busqueda es por nombre.
- *
- * El nombre es unico en base de datos incluso para filas borradas, por eso una
- * coincidencia con deletedAt se revive en vez de crear un duplicado.
- *
- * La relacion vive en globalCompanyClient: un cliente puede trabajar con varias
- * empresas. globalCompanyId se mantiene como la empresa principal, util para
- * ordenar y para el codigo que aun lee el campo escalar.
- */
 export async function sincronizarEmpresaCliente(
   prisma: PrismaService,
   companyName?: string | null,

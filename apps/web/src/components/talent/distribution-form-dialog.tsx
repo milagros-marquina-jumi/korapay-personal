@@ -102,7 +102,6 @@ export function DistributionFormDialog({
 
   useEffect(() => {
     if (open && !distribution) {
-      // Al registrar un pago nuevo el sueldo casi siempre es el del contrato.
       reset({
         date: `${new Date().toISOString().slice(0, 7)}-01`,
         paymentType: loose ? 'CTS' : 'Mensual',
@@ -132,12 +131,9 @@ export function DistributionFormDialog({
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent
         onInteractOutside={(e) => {
-          // La calculadora se dibuja fuera del contenido: interactuar con ella
-          // no debe contar como un click fuera que cierre el dialogo.
           if ((e.target as HTMLElement | null)?.closest('[data-calculadora]')) e.preventDefault();
         }}
         onFocusOutside={(e) => {
-          // Sin esto el foco vuelve al dialogo y no se puede escribir en la calculadora.
           if ((e.target as HTMLElement | null)?.closest('[data-calculadora]')) e.preventDefault();
         }}
       >

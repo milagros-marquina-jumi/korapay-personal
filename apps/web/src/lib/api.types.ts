@@ -603,6 +603,7 @@ export interface TalentGlobalReport {
     received: string;
     kept: string;
     status: string;
+    role: string | null;
   }[];
   expenseByPerson: {
     talentId: string;
@@ -612,10 +613,12 @@ export interface TalentGlobalReport {
     pending: string;
     count: number;
     status: string;
+    role: string | null;
   }[];
   yearlyByTalent: {
     name: string;
     status: string;
+    role: string | null;
     years: { year: number; received: string; paid: string; count: number }[];
   }[];
   incomePivot: TalentPivotPeriod[];
@@ -633,6 +636,7 @@ export interface TalentGlobalReport {
     net: string;
     margin: string;
     status: string;
+    role: string | null;
   }[];
 }
 

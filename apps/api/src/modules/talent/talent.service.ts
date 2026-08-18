@@ -3,6 +3,7 @@ import { isNeverPaid } from '@korapay/domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { sincronizarEmpresaCliente } from '@/common/catalog/sync-global-catalog';
 import { ordenarDeudas } from '@/common/constants/debt-order';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
@@ -289,7 +290,11 @@ export class TalentService {
     }[] = [];
 
     const estadoPorNombre = new Map<string, string>();
-    for (const t of talents) estadoPorNombre.set(t.name, t.status ?? 'ACTIVE');
+    const rolPorNombre = new Map<string, string | null>();
+    for (const t of talents) {
+      estadoPorNombre.set(t.name, t.status ?? 'ACTIVE');
+      rolPorNombre.set(t.name, t.role ?? null);
+    }
 
     const yearlyByTalent = new Map<string, Map<number, { received: Decimal; paid: Decimal; count: number }>>();
     const yearlyBucket = (talentName: string, anio: number) => {
@@ -547,6 +552,7 @@ export class TalentService {
           net: net.toFixed(2),
           margin: p.received.gt(0) ? net.div(p.received).mul(100).toFixed(1) : '0.0',
           status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
+          role: rolPorNombre.get(p.name) ?? null,
         };
       })
       .sort((a, b) => Number(b.net) - Number(a.net));
@@ -573,6 +579,7 @@ export class TalentService {
           received: p.received.toFixed(2),
           kept: p.kept.toFixed(2),
           status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
+          role: rolPorNombre.get(p.name) ?? null,
         }))
         .sort((a, b) => Number(b.received) - Number(a.received)),
       expenseByPerson: expenseByPerson
@@ -584,12 +591,14 @@ export class TalentService {
           pending: p.pending.toFixed(2),
           count: p.count,
           status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
+          role: rolPorNombre.get(p.name) ?? null,
         }))
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
       yearlyByTalent: [...yearlyByTalent.entries()]
         .map(([name, porAnio]) => ({
           name,
           status: estadoPorNombre.get(name) ?? 'ACTIVE',
+          role: rolPorNombre.get(name) ?? null,
           years: [...porAnio.entries()]
             .map(([anio, v]) => ({
               year: anio,
@@ -759,6 +768,7 @@ export class TalentService {
       where: { id: talentProfileId, workspaceId, deletedAt: null },
     });
     if (!talent) throw new NotFoundException('Talent not found');
+    await sincronizarEmpresaCliente(this.prisma, data.companyName, data.clientName);
     return this.prisma.talentContract.create({
       data: {
         talentProfileId,
@@ -797,6 +807,11 @@ export class TalentService {
     }
     if (data.startDate !== undefined) updateData.startDate = new Date(data.startDate);
     if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate) : null;
+    await sincronizarEmpresaCliente(
+      this.prisma,
+      data.companyName !== undefined ? data.companyName : contract.companyName,
+      data.clientName !== undefined ? data.clientName : contract.clientName,
+    );
     return this.prisma.talentContract.update({ where: { id: contractId }, data: updateData });
   }
   async removeContract(contractId: string, workspaceId: string) {
@@ -812,6 +827,7 @@ export class TalentService {
     });
     if (!contract) throw new NotFoundException('Talent contract not found');
     const d = data.date ? new Date(data.date) : null;
+    await sincronizarEmpresaCliente(this.prisma, data.companyName, data.clientName);
     return this.prisma.talentIncomeDistribution.create({
       data: {
         contractId,
@@ -839,6 +855,7 @@ export class TalentService {
     });
     if (!talent) throw new NotFoundException('Talent not found');
     const d = data.date ? new Date(data.date) : null;
+    await sincronizarEmpresaCliente(this.prisma, data.companyName, data.clientName);
     return this.prisma.talentIncomeDistribution.create({
       data: {
         contractId: null,
@@ -888,6 +905,11 @@ export class TalentService {
       if (data[key] !== undefined) updateData[key] = data[key] === '' ? null : data[key];
     }
     if (data.date !== undefined) updateData.date = data.date ? new Date(data.date) : null;
+    await sincronizarEmpresaCliente(
+      this.prisma,
+      data.companyName !== undefined ? data.companyName : dist.companyName,
+      data.clientName !== undefined ? data.clientName : dist.clientName,
+    );
     return this.prisma.talentIncomeDistribution.update({ where: { id: distId }, data: updateData });
   }
   async removeDistribution(distId: string, workspaceId: string) {

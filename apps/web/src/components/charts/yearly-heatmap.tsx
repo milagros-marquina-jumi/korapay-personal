@@ -1,12 +1,14 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
+import { TalentName } from '@/components/talent/talent-name';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 interface FilaTalento {
   name: string;
   status: string;
+  role?: string | null;
   years: { year: number; received: string; paid: string; count: number }[];
 }
 
@@ -71,14 +73,7 @@ export function YearlyHeatmap({ data, metric = 'received' }: Readonly<Props>) {
               return (
                 <TableRow key={fila.name}>
                   <TableCell className="sticky left-0 z-10 bg-card font-medium">
-                    <span className="flex items-center gap-2">
-                      <span className="truncate">{fila.name}</span>
-                      {fila.status !== 'ACTIVE' && (
-                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                          inactivo
-                        </span>
-                      )}
-                    </span>
+                    <TalentName name={fila.name} role={fila.role} status={fila.status} />
                   </TableCell>
                   {years.map((y, i) => {
                     const v = valorDe(fila, y);

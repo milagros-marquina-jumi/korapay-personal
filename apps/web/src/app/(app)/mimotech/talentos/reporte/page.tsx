@@ -24,6 +24,7 @@ import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select'
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { TalentName } from '@/components/talent/talent-name';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Money } from '@/components/ui/money';
@@ -320,7 +321,9 @@ function GlobalReportContent() {
                   <tbody>
                     {incomePersons.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
-                        <td className="p-3 font-medium">{p.name}</td>
+                        <td className="p-3">
+                          <TalentName name={p.name} role={p.role} status={p.status} />
+                        </td>
                         <td className="p-3 text-right tabular-nums">
                           <Money value={formatMoney(p.salary, 'PEN')} />
                         </td>
@@ -374,7 +377,9 @@ function GlobalReportContent() {
                   <tbody>
                     {expensePersons.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
-                        <td className="p-3 font-medium">{p.name}</td>
+                        <td className="p-3">
+                          <TalentName name={p.name} role={p.role} status={p.status} />
+                        </td>
                         <td className="p-3 text-right tabular-nums text-muted-foreground">{p.count}</td>
                         <td className="p-3 text-right font-medium text-coral tabular-nums">
                           <Money value={formatMoney(p.paid, 'PEN')} />
@@ -464,7 +469,9 @@ function GlobalReportContent() {
                 <tbody>
                   {profitabilityPersons.map((p) => (
                     <tr key={p.talentId} className="border-b last:border-0">
-                      <td className="p-3 font-medium">{p.name}</td>
+                      <td className="p-3">
+                        <TalentName name={p.name} role={p.role} status={p.status} />
+                      </td>
                       <td className="p-3 text-right tabular-nums text-info">
                         <Money value={formatMoney(p.received, 'PEN')} />
                       </td>

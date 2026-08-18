@@ -370,7 +370,7 @@ function CostosContent() {
                             {statusLabel(tx.status)}
                           </Badge>
                         </button>
-                        <div className="flex shrink-0 gap-0.5">
+                        <div className="flex shrink-0 gap-1.5">
                           <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetailOpen(tx)} />
                           <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(tx)} />
                           <IconAction

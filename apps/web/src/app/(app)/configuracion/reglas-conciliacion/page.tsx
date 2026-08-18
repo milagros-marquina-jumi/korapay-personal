@@ -266,7 +266,7 @@ export default function ReglasConciliacionPage() {
                     />
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-0.5">
+                    <IconActions>
                       <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(rule)} />
                       <IconAction
                         icon={Trash2}

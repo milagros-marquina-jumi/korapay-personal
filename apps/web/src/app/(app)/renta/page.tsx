@@ -169,7 +169,7 @@ function RentaContent() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-0.5">
+          <IconActions>
             <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction

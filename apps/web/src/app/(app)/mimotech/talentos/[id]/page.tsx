@@ -26,11 +26,13 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { StatusPicker } from '@/components/data-table/status-toggle';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { type ContractFormValues, TalentContractFormDialog } from '@/components/talent/contract-form-dialog';
+import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { DistributionFormDialog, type DistributionFormValues } from '@/components/talent/distribution-form-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerSection } from '@/components/talent/ledger-section';
@@ -53,11 +55,12 @@ import type {
   TalentLedgerSummary,
   TalentReport,
 } from '@/lib/api.types';
+import { DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
 import { queryKeys } from '@/lib/query-keys';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
 import { computeWorkedTime } from '@/lib/talent-worked-time';
 import { useProfile } from '@/lib/use-profile';
-import { formatDate, formatDurationDaysCompact, formatDurationExact, formatMonthYear } from '@/lib/utils';
+import { cn, formatDate, formatDurationDaysCompact, formatDurationExact, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
   return value ? formatDate(value) : 'Actual';
@@ -108,6 +111,28 @@ function TalentDetailContent() {
 
   const summary = summaryList?.find((s) => s.talentId === id);
   const { data: perfil } = useProfile();
+
+  const cambiarEstadoDeuda = (entryId: string, status: string) => {
+    const entrada = (entries ?? []).find((e) => e.id === entryId);
+    if (!entrada) return;
+    updateMut.mutate({
+      entryId,
+      values: {
+        date: entrada.date.slice(0, 10),
+        type: entrada.type as 'EGRESO' | 'DEUDA',
+        debtOwner: (entrada.debtOwner as 'TALENT' | 'MINE') ?? 'TALENT',
+        paidAmount: entrada.paidAmount,
+        debtAmount: entrada.debtAmount,
+        pendingAmount: normalizarDeuda({
+          status,
+          debtAmount: entrada.debtAmount,
+          pendingAmount: entrada.pendingAmount,
+        }),
+        status,
+        description: entrada.description ?? '',
+      },
+    });
+  };
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.talentLedger(ws, id) });
@@ -629,6 +654,7 @@ function TalentDetailContent() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Fecha</TableHead>
+                            <TableHead>De quién</TableHead>
                             <TableHead>Descripción</TableHead>
                             <TableHead className="text-right">Deuda</TableHead>
                             <TableHead className="text-right">Falta pagar</TableHead>
@@ -639,17 +665,30 @@ function TalentDetailContent() {
                           {report.debtRows.map((d) => (
                             <TableRow key={d.id}>
                               <TableCell className="whitespace-nowrap text-sm">{formatDate(d.date)}</TableCell>
+                              <TableCell>
+                                <DebtOwnerBadge owner={d.debtOwner} talentName={talent.name} adminName={perfil?.name} />
+                              </TableCell>
                               <TableCell className="max-w-xs truncate text-sm" title={d.description}>
                                 {d.description || '—'}
                               </TableCell>
                               <TableCell className="text-right tabular-nums text-warning">
                                 {formatMoney(d.debt, 'PEN')}
                               </TableCell>
-                              <TableCell className="text-right tabular-nums text-destructive">
+                              <TableCell
+                                className={cn(
+                                  'text-right tabular-nums',
+                                  Number(d.pending) > 0 ? 'text-destructive' : 'text-muted-foreground/60',
+                                )}
+                              >
                                 {formatMoney(d.pending, 'PEN')}
                               </TableCell>
                               <TableCell>
-                                <StatusBadge status={d.status} />
+                                <StatusPicker
+                                  status={d.status}
+                                  options={DEBT_STATUS_OPTIONS}
+                                  isPending={updateMut.isPending}
+                                  onSelect={(next) => cambiarEstadoDeuda(d.id, next)}
+                                />
                               </TableCell>
                             </TableRow>
                           ))}
@@ -687,6 +726,21 @@ function TalentDetailContent() {
             adminName={perfil?.name}
             onCreate={(v) => createMut.mutateAsync(v).then(() => undefined)}
             onUpdate={(entryId, v) => updateMut.mutateAsync({ entryId, values: v }).then(() => undefined)}
+            onQuickStatus={(entry, status) =>
+              updateMut.mutate({
+                entryId: entry.id,
+                values: {
+                  date: entry.date.slice(0, 10),
+                  type: entry.type as 'EGRESO' | 'DEUDA',
+                  debtOwner: (entry.debtOwner as 'TALENT' | 'MINE') ?? 'TALENT',
+                  paidAmount: entry.paidAmount,
+                  debtAmount: entry.debtAmount,
+                  pendingAmount: status === 'PAID' ? '0' : entry.pendingAmount,
+                  status,
+                  description: entry.description ?? '',
+                },
+              })
+            }
             onDelete={async (entryId) => {
               const ok = await confirm({
                 title: 'Eliminar registro',
@@ -782,7 +836,7 @@ function TalentDetailContent() {
                               <StatusBadge status={dist.status} />
                             </TableCell>
                             <TableCell>
-                              <div className="flex justify-end gap-0.5">
+                              <IconActions>
                                 <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
                                 <IconAction
                                   icon={Trash2}
@@ -949,7 +1003,7 @@ function TalentDetailContent() {
                                       <StatusBadge status={dist.status} />
                                     </TableCell>
                                     <TableCell>
-                                      <div className="flex justify-end gap-0.5">
+                                      <IconActions>
                                         <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
                                         <IconAction
                                           icon={Trash2}

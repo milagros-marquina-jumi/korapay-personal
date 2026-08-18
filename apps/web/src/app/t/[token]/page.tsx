@@ -1,12 +1,14 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState, StatusBadge } from '@korapay/ui';
+import { EmptyState } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, Pencil, Plus } from 'lucide-react';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { StatusPicker } from '@/components/data-table/status-toggle';
+import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { TalentLedgerDetailDialog } from '@/components/talent/ledger-detail-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
 import { LedgerFormDialog } from '@/components/talent/ledger-form-dialog';
@@ -17,8 +19,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
 import type { TalentLedgerEntry, TalentPortalProfile } from '@/lib/api.types';
+import { DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
 import { queryKeys } from '@/lib/query-keys';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 function normalize(values: LedgerFormValues) {
   return {
@@ -56,6 +59,28 @@ export default function TalentPortalPage() {
   const [detalle, setDetalle] = useState<TalentLedgerEntry | null>(null);
   const [editando, setEditando] = useState<TalentLedgerEntry | null>(null);
   const entradaDe = (id: string) => (entries ?? []).find((e) => e.id === id) ?? null;
+
+  const cambiarEstado = (entryId: string, status: string) => {
+    const entrada = entradaDe(entryId);
+    if (!entrada) return;
+    updateMut.mutate({
+      entryId,
+      values: {
+        date: entrada.date.slice(0, 10),
+        type: 'DEUDA',
+        debtOwner: (entrada.debtOwner as 'TALENT' | 'MINE') ?? 'TALENT',
+        paidAmount: '0',
+        debtAmount: entrada.debtAmount,
+        pendingAmount: normalizarDeuda({
+          status,
+          debtAmount: entrada.debtAmount,
+          pendingAmount: entrada.pendingAmount,
+        }),
+        status,
+        description: entrada.description ?? '',
+      },
+    });
+  };
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.portal(token) });
@@ -130,10 +155,11 @@ export default function TalentPortalPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
+                    <TableHead className="w-28">Fecha</TableHead>
+                    <TableHead className="w-24">De quién</TableHead>
                     <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">Falta pagar</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableHead className="w-40 whitespace-nowrap text-right">Falta pagar</TableHead>
+                    <TableHead className="w-28">Estado</TableHead>
                     <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
@@ -141,17 +167,35 @@ export default function TalentPortalPage() {
                   {profile.debtRows.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="whitespace-nowrap text-sm">{formatDate(d.date)}</TableCell>
+                      <TableCell>
+                        <DebtOwnerBadge
+                          owner={d.debtOwner}
+                          viewer="TALENT"
+                          talentName={profile.talent.name}
+                          adminName={profile.owner?.name}
+                        />
+                      </TableCell>
                       <TableCell className="max-w-xs truncate text-sm" title={d.description}>
                         {d.description || '—'}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-destructive">
+                      <TableCell
+                        className={cn(
+                          'whitespace-nowrap text-right tabular-nums',
+                          Number(d.pending) > 0 ? 'text-destructive' : 'text-muted-foreground/60',
+                        )}
+                      >
                         {formatMoney(d.pending, 'PEN')}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={d.status} />
+                        <StatusPicker
+                          status={d.status}
+                          options={DEBT_STATUS_OPTIONS}
+                          isPending={updateMut.isPending}
+                          onSelect={(next) => cambiarEstado(d.id, next)}
+                        />
                       </TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-0.5">
+                        <IconActions>
                           <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(entradaDe(d.id))} />
                           <IconAction icon={Pencil} label="Editar" onClick={() => setEditando(entradaDe(d.id))} />
                         </div>
@@ -159,10 +203,10 @@ export default function TalentPortalPage() {
                     </TableRow>
                   ))}
                   <TableRow className="border-t-2 bg-muted/40">
-                    <TableCell colSpan={2} className="text-sm font-semibold">
+                    <TableCell colSpan={3} className="font-semibold text-sm">
                       Total
                     </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums text-destructive">
+                    <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">
                       {formatMoney(profile.summary.totalPending, 'PEN')}
                     </TableCell>
                     <TableCell colSpan={2} />

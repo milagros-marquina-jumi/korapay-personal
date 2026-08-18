@@ -207,7 +207,7 @@ export default function AhorrosPage() {
                     <p className="text-xs text-muted-foreground">Total ahorrado</p>
                     <p className="font-semibold tabular-nums text-brand">{formatMoney(period.total, 'PEN')}</p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 pl-1">
+                  <div className="flex shrink-0 items-center gap-1.5 pl-1">
                     <IconAction icon={Plus} label="Agregar cuenta al periodo" onClick={() => setEditing({ period })} />
                     <IconAction
                       icon={Trash2}
@@ -243,7 +243,7 @@ export default function AhorrosPage() {
                           <span className="w-28 text-right text-sm font-semibold tabular-nums">
                             {formatMoney(account.amountBase, 'PEN')}
                           </span>
-                          <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                          <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                             <IconAction
                               icon={Pencil}
                               label="Editar saldo"

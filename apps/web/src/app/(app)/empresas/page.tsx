@@ -259,7 +259,7 @@ function EmpresasContent() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-0.5">
+          <IconActions>
             <IconAction icon={Users} label="Clientes" onClick={() => setClientsFor(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction

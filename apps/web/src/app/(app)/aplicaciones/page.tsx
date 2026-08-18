@@ -83,7 +83,7 @@ function AplicacionesContent() {
         id: 'actions',
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-0.5">
+          <IconActions>
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction
               icon={Trash2}

@@ -192,7 +192,7 @@ function PagosEquipoContent() {
         size: 110,
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-0.5">
+          <IconActions>
             <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetailTx(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditingTx(row.original)} />
             <IconAction

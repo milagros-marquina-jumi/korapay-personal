@@ -279,7 +279,7 @@ export default function DetectadosPage() {
           const isIgnored = t.status === 'IGNORED';
           const confirmDisabledLabel = confirmBlockedReason(t);
           return (
-            <div className="flex justify-end gap-0.5">
+            <IconActions>
               <IconAction
                 icon={CheckCircle2}
                 label={confirmDisabledLabel ?? 'Revisar y confirmar'}

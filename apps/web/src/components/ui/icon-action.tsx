@@ -20,16 +20,27 @@ export function IconAction({ icon: Icon, label, onClick, disabled, destructive, 
       <TooltipTrigger asChild>
         <Button
           size="icon"
-          variant="ghost"
-          className={cn('size-8', className)}
+          variant="outline"
+          className={cn(
+            'size-8 shrink-0 rounded-md border-border bg-background',
+            destructive
+              ? 'text-destructive hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive'
+              : 'hover:bg-muted',
+            className,
+          )}
           aria-label={label}
           disabled={disabled}
           onClick={onClick}
         >
-          <Icon className={cn('size-4', destructive && 'text-destructive')} />
+          <Icon className="size-4" />
         </Button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
+}
+
+/** Agrupa acciones de fila con separacion uniforme en todas las tablas. */
+export function IconActions({ children, className }: Readonly<{ children: React.ReactNode; className?: string }>) {
+  return <div className={cn('flex items-center justify-end gap-2', className)}>{children}</div>;
 }

@@ -11,10 +11,13 @@ import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select'
 import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { StatusPicker } from '@/components/data-table/status-toggle';
 import { IconAction } from '@/components/ui/icon-action';
 import type { TalentLedgerEntry, TalentSummaryTotals } from '@/lib/api.types';
+import { DEBT_STATUS_OPTIONS } from '@/lib/debt-status';
 import { useOpenMonth } from '@/lib/use-open-month';
 import { cn, formatDate, formatMonthYear } from '@/lib/utils';
+import { DebtOwnerBadge } from './debt-owner-badge';
 import { TalentLedgerDetailDialog } from './ledger-detail-dialog';
 import { LedgerFormDialog, type LedgerFormValues } from './ledger-form-dialog';
 
@@ -34,6 +37,7 @@ interface LedgerSectionProps {
   onCreate: (values: LedgerFormValues) => Promise<void>;
   onUpdate: (id: string, values: LedgerFormValues) => Promise<void>;
   onDelete?: (id: string) => void;
+  onQuickStatus?: (entry: TalentLedgerEntry, status: string) => void;
   isMutating?: boolean;
 }
 
@@ -48,6 +52,7 @@ export function LedgerSection({
   onCreate,
   onUpdate,
   onDelete,
+  onQuickStatus,
   isMutating,
 }: LedgerSectionProps) {
   const [search, setSearch] = useState('');
@@ -136,6 +141,14 @@ export function LedgerSection({
     if (type === 'DEUDA') {
       base.push(
         {
+          id: 'owner',
+          size: 150,
+          header: 'De quién',
+          cell: ({ row }) => (
+            <DebtOwnerBadge owner={row.original.debtOwner} talentName={talentName} adminName={adminName} />
+          ),
+        },
+        {
           id: 'debt',
           size: 140,
           accessorFn: (r) => Number(r.debtAmount),
@@ -147,21 +160,32 @@ export function LedgerSection({
           size: 140,
           accessorFn: (r) => Number(r.pendingAmount),
           header: ({ column }) => <SortableHeader column={column} label="Falta pagar" className="ml-auto" />,
-          cell: ({ row }) => (
-            <div
-              className={`text-right font-semibold tabular-nums ${
-                Number(row.original.pendingAmount) > 0 ? 'text-destructive' : ''
-              }`}
-            >
-              {formatMoney(row.original.pendingAmount, cur)}
-            </div>
-          ),
+          cell: ({ row }) => {
+            const falta = Number(row.original.pendingAmount) > 0;
+            return (
+              <div
+                className={cn(
+                  'text-right tabular-nums',
+                  falta ? 'font-semibold text-destructive' : 'text-muted-foreground/60',
+                )}
+              >
+                {formatMoney(row.original.pendingAmount, cur)}
+              </div>
+            );
+          },
         },
         {
           accessorKey: 'status',
-          size: 120,
+          size: 140,
           header: 'Estado',
-          cell: ({ row }) => <StatusBadge status={row.original.status} />,
+          cell: ({ row }) => (
+            <StatusPicker
+              status={row.original.status}
+              options={DEBT_STATUS_OPTIONS}
+              isPending={isMutating}
+              onSelect={(next) => onQuickStatus?.(row.original, next)}
+            />
+          ),
         },
       );
     } else {
@@ -186,7 +210,7 @@ export function LedgerSection({
       size: 90,
       header: '',
       cell: ({ row }) => (
-        <div className="flex justify-end gap-0.5">
+        <IconActions>
           <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(row.original)} />
           <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
           {canDelete && onDelete && (
@@ -196,7 +220,7 @@ export function LedgerSection({
       ),
     });
     return base;
-  }, [cur, canDelete, onDelete, type]);
+  }, [cur, canDelete, onDelete, type, talentName, adminName, isMutating, onQuickStatus]);
 
   return (
     <div className="space-y-6">
@@ -321,7 +345,13 @@ export function LedgerSection({
         </MonthAccordion>
       )}
 
-      <TalentLedgerDetailDialog entry={detalle} currency={cur} onOpenChange={(next) => !next && setDetalle(null)} />
+      <TalentLedgerDetailDialog
+        entry={detalle}
+        currency={cur}
+        talentName={talentName}
+        adminName={adminName}
+        onOpenChange={(next) => !next && setDetalle(null)}
+      />
 
       {editing && (
         <LedgerFormDialog

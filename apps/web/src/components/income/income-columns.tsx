@@ -167,7 +167,7 @@ export function buildIncomeColumns({
       size: 110,
       header: '',
       cell: ({ row }) => (
-        <div className="flex justify-end gap-0.5">
+        <IconActions>
           <IconAction icon={Eye} label="Ver detalle" onClick={() => onShowDetail(row.original)} />
           <IconAction icon={Pencil} label="Editar" onClick={() => onEdit(row.original)} />
           <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onRemove(row.original)} />

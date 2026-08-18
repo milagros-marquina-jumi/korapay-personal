@@ -312,7 +312,7 @@ export function CatalogManager({
           items.map((item) => (
             <div key={item.id} className={cn('flex items-center justify-between px-3 py-2', highlightClass(item.id))}>
               <span className="text-sm">{display(item)}</span>
-              <div className="flex gap-0.5">
+              <div className="flex gap-1.5">
                 {renderDetail && <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(item)} />}
                 {editable && <IconAction icon={Pencil} label="Editar" onClick={() => openEdit(item)} />}
                 {deletable && (

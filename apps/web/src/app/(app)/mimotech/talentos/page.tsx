@@ -233,7 +233,7 @@ function TalentosContent() {
                         </a>
                       )}
                     </div>
-                    <div className="flex gap-0.5">
+                    <div className="flex gap-1.5">
                       <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(talent)} />
                       <IconAction
                         icon={Trash2}

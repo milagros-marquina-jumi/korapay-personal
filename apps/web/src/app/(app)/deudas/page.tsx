@@ -523,7 +523,7 @@ export default function DeudasPage() {
                   </div>
                   <div className="flex shrink-0 items-start gap-1">
                     <p className="text-xl font-bold tabular-nums">{formatMoney(debt.originalAmount, currency)}</p>
-                    <div className="flex items-center gap-0.5">
+                    <div className="flex items-center gap-1.5">
                       <IconAction
                         icon={Pencil}
                         label="Editar deuda"

@@ -5,16 +5,27 @@ import { StatusBadge } from '@korapay/ui';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { TalentLedgerEntry } from '@/lib/api.types';
 import { cn, formatDateLong } from '@/lib/utils';
+import { debtOwnerLabel } from './debt-owner-badge';
 
 const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
 
 interface Props {
   entry: TalentLedgerEntry | null;
   currency: 'PEN' | 'USD';
+  viewer?: 'ADMIN' | 'TALENT';
+  talentName?: string;
+  adminName?: string;
   onOpenChange: (open: boolean) => void;
 }
 
-export function TalentLedgerDetailDialog({ entry, currency, onOpenChange }: Readonly<Props>) {
+export function TalentLedgerDetailDialog({
+  entry,
+  currency,
+  viewer = 'ADMIN',
+  talentName,
+  adminName,
+  onOpenChange,
+}: Readonly<Props>) {
   const esDeuda = entry?.type === 'DEUDA';
 
   return (
@@ -46,6 +57,9 @@ export function TalentLedgerDetailDialog({ entry, currency, onOpenChange }: Read
             </div>
 
             <dl className="divide-y rounded-xl border text-sm">
+              {esDeuda && (
+                <Line label="De quién es" value={debtOwnerLabel(entry.debtOwner, viewer, talentName, adminName)} />
+              )}
               {esDeuda && (
                 <Line
                   label="Falta pagar"

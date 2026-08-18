@@ -301,7 +301,7 @@ export default function MovimientosPage() {
         size: 110,
         header: '',
         cell: ({ row }) => (
-          <div className="flex justify-end gap-0.5">
+          <IconActions>
             <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetail(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction icon={Copy} label="Copiar a otro mes" onClick={() => setDuplicating(row.original)} />

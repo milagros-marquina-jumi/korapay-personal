@@ -129,6 +129,7 @@ export class TalentLedgerService {
           debt: new Decimal(String(e.debtAmount)).toFixed(2),
           pending: new Decimal(String(e.pendingAmount)).toFixed(2),
           status: e.status,
+          debtOwner: e.debtOwner,
         })),
     );
   }

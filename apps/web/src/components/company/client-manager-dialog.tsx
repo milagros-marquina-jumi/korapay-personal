@@ -123,7 +123,7 @@ export function ClientManagerDialog({ workspaceId, company, open, onOpenChange }
                 className={cn('flex items-center justify-between px-3 py-2', highlightClass(client.id))}
               >
                 <span className="text-sm">{client.name}</span>
-                <div className="flex gap-0.5">
+                <div className="flex gap-1.5">
                   <IconAction
                     icon={Pencil}
                     label="Editar"

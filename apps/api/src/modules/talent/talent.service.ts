@@ -141,6 +141,7 @@ export class TalentService {
           debt: new Decimal(e.debtAmount).toFixed(2),
           pending: new Decimal(e.pendingAmount).toFixed(2),
           status: e.status,
+          debtOwner: e.debtOwner,
         })),
     );
 

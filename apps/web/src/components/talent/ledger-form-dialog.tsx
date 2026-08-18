@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { AlertTriangle } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,6 +13,7 @@ import { MoneyField } from '@/components/ui/money-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { TalentLedgerEntry } from '@/lib/api.types';
+import { avisoDeuda, DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
 
 const money = z
   .string()
@@ -39,14 +41,6 @@ function etiquetasDeuda(viewer: 'ADMIN' | 'TALENT', talentName?: string, adminNa
   }
   return { talentDebe: `${talento} me debe`, adminDebe: `Yo le debo a ${talento}` };
 }
-
-const STATUS_DEUDA = [
-  { value: 'PENDING', label: 'Pendiente' },
-  { value: 'PARTIAL', label: 'Parcial' },
-  { value: 'PAID', label: 'Devuelta' },
-  { value: 'OVERDUE', label: 'Vencida' },
-  { value: 'NUNCA_PAGO', label: 'Nunca pagó (pérdida)' },
-];
 
 const STATUS_EGRESO = [
   { value: 'PAID', label: 'Gasto normal' },
@@ -123,9 +117,18 @@ export function LedgerFormDialog({
 
   const esDeuda = watch('type') === 'DEUDA';
   const etiquetas = etiquetasDeuda(viewer, talentName, adminName);
+  const aviso = esDeuda
+    ? avisoDeuda({
+        status: watch('status'),
+        debtAmount: watch('debtAmount'),
+        pendingAmount: watch('pendingAmount'),
+      })
+    : null;
 
   const submit = handleSubmit(async (values) => {
-    const limpio = esDeuda ? { ...values, paidAmount: '0' } : { ...values, debtAmount: '0', pendingAmount: '0' };
+    const limpio = esDeuda
+      ? { ...values, paidAmount: '0', pendingAmount: normalizarDeuda(values) }
+      : { ...values, debtAmount: '0', pendingAmount: '0' };
     await onSubmit(limpio);
     if (!isEdit) reset();
     setOpen(false);
@@ -154,7 +157,7 @@ export function LedgerFormDialog({
                 onValueChange={(v) => {
                   const tipo = v as 'EGRESO' | 'DEUDA';
                   setValue('type', tipo);
-                  const permitidos = (tipo === 'DEUDA' ? STATUS_DEUDA : STATUS_EGRESO).map((s) => s.value);
+                  const permitidos = (tipo === 'DEUDA' ? DEBT_STATUS_OPTIONS : STATUS_EGRESO).map((s) => s.value);
                   if (!permitidos.includes(watch('status'))) {
                     setValue('status', tipo === 'DEUDA' ? 'PENDING' : 'PAID');
                   }
@@ -216,7 +219,7 @@ export function LedgerFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(esDeuda ? STATUS_DEUDA : STATUS_EGRESO).map((s) => (
+                {(esDeuda ? DEBT_STATUS_OPTIONS : STATUS_EGRESO).map((s) => (
                   <SelectItem key={s.value} value={s.value}>
                     {s.label}
                   </SelectItem>
@@ -226,6 +229,12 @@ export function LedgerFormDialog({
             {!esDeuda && (
               <p className="text-[11px] text-muted-foreground">
                 El dinero ya salió. Marca "Se dio por perdido" solo si el talento se fue sin devolver nada.
+              </p>
+            )}
+            {aviso && (
+              <p className="flex items-start gap-1.5 text-[11px] text-warning">
+                <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>{aviso}</span>
               </p>
             )}
           </div>

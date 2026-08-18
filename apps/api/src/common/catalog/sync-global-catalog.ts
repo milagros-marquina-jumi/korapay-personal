@@ -11,10 +11,17 @@ export async function sincronizarEmpresaCliente(
 
   let globalCompanyId: string | null = null;
   if (empresa) {
-    const existente = await prisma.globalCompany.findFirst({
-      where: { name: { equals: empresa, mode: 'insensitive' } },
-      select: { id: true, deletedAt: true },
-    });
+    // Preferir siempre la fila activa: si existe una activa y otra soft-deleted con el
+    // mismo nombre, revivir la borrada recrea empresas duplicadas en el catalogo.
+    const existente =
+      (await prisma.globalCompany.findFirst({
+        where: { name: { equals: empresa, mode: 'insensitive' }, deletedAt: null },
+        select: { id: true, deletedAt: true },
+      })) ??
+      (await prisma.globalCompany.findFirst({
+        where: { name: { equals: empresa, mode: 'insensitive' } },
+        select: { id: true, deletedAt: true },
+      }));
     if (existente) {
       globalCompanyId = existente.id;
       if (existente.deletedAt) {
@@ -27,10 +34,15 @@ export async function sincronizarEmpresaCliente(
 
   if (!cliente) return;
 
-  const clienteExistente = await prisma.globalClient.findFirst({
-    where: { name: { equals: cliente, mode: 'insensitive' } },
-    select: { id: true, globalCompanyId: true, deletedAt: true },
-  });
+  const clienteExistente =
+    (await prisma.globalClient.findFirst({
+      where: { name: { equals: cliente, mode: 'insensitive' }, deletedAt: null },
+      select: { id: true, globalCompanyId: true, deletedAt: true },
+    })) ??
+    (await prisma.globalClient.findFirst({
+      where: { name: { equals: cliente, mode: 'insensitive' } },
+      select: { id: true, globalCompanyId: true, deletedAt: true },
+    }));
 
   let globalClientId: string;
   if (clienteExistente) {

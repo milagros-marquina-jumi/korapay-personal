@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsNumberString, IsOptional, IsString, Max, Min } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 const TYPES = ['EGRESO', 'DEUDA'];
 
@@ -36,6 +37,7 @@ export class PortalCreateDto {
   type!: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   paidAmount?: string;
 
@@ -44,10 +46,12 @@ export class PortalCreateDto {
   debtOwner?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   debtAmount?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   pendingAmount?: string;
 
@@ -74,14 +78,17 @@ export class PortalUpdateDto {
   type?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   paidAmount?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   debtAmount?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   pendingAmount?: string;
 

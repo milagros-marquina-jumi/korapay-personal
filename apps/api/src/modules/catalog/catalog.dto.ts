@@ -165,6 +165,7 @@ export class CreateEmploymentContractDto {
 
   @ApiPropertyOptional({ example: '3500.00' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   salary?: string;
 

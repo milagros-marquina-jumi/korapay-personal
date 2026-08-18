@@ -32,7 +32,7 @@ const schema = z.object({
   companyName: z.string().optional(),
   clientName: z.string().optional(),
   paymentType: z.enum(['Planilla', 'RxH', 'Transferencia']).optional(),
-  rate: z.string().optional(),
+  rate: z.string().min(1, 'Indica el sueldo del contrato'),
   currency: z.enum(['PEN', 'USD']),
   startDate: z.string().min(1, 'Requerido'),
   endDate: z.string().optional(),
@@ -179,6 +179,7 @@ export function TalentContractFormDialog({
                   onChange={(v) => setValue('currency', v)}
                 />
               </div>
+              {errors.rate && <p className="text-xs text-destructive">{errors.rate.message}</p>}
             </div>
             <div className="space-y-2">
               <Label>Tipo de pago</Label>

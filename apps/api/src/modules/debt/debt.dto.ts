@@ -28,6 +28,7 @@ export class CreateDebtDto {
 
   @ApiPropertyOptional({ example: '0.05' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   interestRate?: string;
 

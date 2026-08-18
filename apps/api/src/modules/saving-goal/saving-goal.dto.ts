@@ -30,6 +30,7 @@ export class CreateSavingGoalDto {
 
   @ApiPropertyOptional({ example: '833.33' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   monthlyRecommend?: string;
 }

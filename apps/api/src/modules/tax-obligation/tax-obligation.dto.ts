@@ -40,6 +40,7 @@ export class ScheduleRowDto {
 
   @ApiPropertyOptional({ example: '144.00', description: 'Interés de la cuota' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   interestAmount?: string;
 }
@@ -68,6 +69,7 @@ export class CreateTaxObligationDto {
 
   @ApiPropertyOptional({ example: '18726.00' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   amount?: string;
 

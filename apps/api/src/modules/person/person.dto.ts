@@ -36,6 +36,7 @@ export class CreatePersonDto {
 
   @ApiPropertyOptional({ example: '1200.00', description: 'Salario o tarifa de referencia' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   salary?: string;
 

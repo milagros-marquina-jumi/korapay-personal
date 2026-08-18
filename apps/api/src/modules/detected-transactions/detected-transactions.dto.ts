@@ -90,6 +90,7 @@ export class ConfirmDetectedDto {
   occurredAt?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   amount?: string;
 
@@ -98,6 +99,7 @@ export class ConfirmDetectedDto {
   currency?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   exchangeRate?: string;
 

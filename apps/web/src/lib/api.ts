@@ -1,3 +1,5 @@
+import { traducirErrorApi } from '@/lib/api-errors';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 if (!API_URL && typeof window !== 'undefined') {
@@ -21,7 +23,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: `HTTP ${res.status}` }));
     const message = Array.isArray(error.message) ? error.message.join(', ') : (error.message ?? `HTTP ${res.status}`);
-    throw new Error(message);
+    throw new Error(traducirErrorApi(message));
   }
   if (res.status === 204) return undefined as T;
   return res.json();

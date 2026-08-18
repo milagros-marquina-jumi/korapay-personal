@@ -13,6 +13,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class SavingBalanceAccountDto {
   @ApiProperty({ example: 'Ahorro (Agora)' })
@@ -122,6 +123,7 @@ export class CreateSavingBucketDto {
 
   @ApiPropertyOptional({ example: '0.00' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   amount?: string;
 }

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsNumberString, IsOptional, IsString, Max, Min } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 const TYPES = ['EGRESO', 'DEUDA'];
 const DEBT_OWNERS = ['TALENT', 'MINE'];
@@ -85,6 +86,7 @@ export class CreateTalentLedgerDto {
   category?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   paidAmount?: string;
 
@@ -93,10 +95,12 @@ export class CreateTalentLedgerDto {
   debtOwner?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   debtAmount?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   pendingAmount?: string;
 
@@ -131,6 +135,7 @@ export class UpdateTalentLedgerDto {
   category?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   paidAmount?: string;
 
@@ -139,10 +144,12 @@ export class UpdateTalentLedgerDto {
   debtOwner?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   debtAmount?: string;
 
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   pendingAmount?: string;
 

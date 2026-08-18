@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 const ACCOUNT_KINDS = ['SAVINGS', 'CHECKING', 'CREDIT_CARD', 'DEBIT_CARD', 'DIGITAL_WALLET', 'CASH', 'PAYPAL', 'OTHER'];
 
@@ -31,6 +32,7 @@ export class CreateAccountDto {
 
   @ApiPropertyOptional({ example: '1500.00' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   initialBalance?: string;
 

@@ -23,6 +23,7 @@ import {
   ShieldOff,
   Trash2,
   Wallet,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -34,6 +35,7 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
+import { ActiveContractsSummary } from '@/components/talent/active-contracts-summary';
 import { type ContractFormValues, TalentContractFormDialog } from '@/components/talent/contract-form-dialog';
 import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { DistributionFormDialog, type DistributionFormValues } from '@/components/talent/distribution-form-dialog';
@@ -551,6 +553,9 @@ function TalentDetailContent() {
                   />
                 )}
               </div>
+
+              <ActiveContractsSummary contracts={contracts} />
+
               {report.byCompany.length > 0 && (
                 <div className="grid gap-4 lg:grid-cols-2">
                   <Card>
@@ -853,6 +858,19 @@ function TalentDetailContent() {
                 placeholder="Tipo de pago"
                 allLabel="Todos los tipos"
               />
+              {(contractFilter !== 'ACTIVE' || contractCompany !== FILTER_ALL || contractPayment !== FILTER_ALL) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setContractFilter('ACTIVE');
+                    setContractCompany(FILTER_ALL);
+                    setContractPayment(FILTER_ALL);
+                  }}
+                >
+                  <X className="mr-1 h-4 w-4" /> Limpiar
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <DistributionFormDialog

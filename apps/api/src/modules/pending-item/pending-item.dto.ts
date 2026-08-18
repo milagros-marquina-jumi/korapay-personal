@@ -58,6 +58,7 @@ export class ListPendingItemsDto {
 export class PayPendingItemDto {
   @ApiPropertyOptional({ example: '100.00', description: 'Monto del pago (parcial si es menor al total)' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   amount?: string;
 

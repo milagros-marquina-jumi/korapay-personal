@@ -59,6 +59,7 @@ export class CreateTransactionDto {
 
   @ApiPropertyOptional({ example: '1500.00', description: 'Monto antes de descuentos. Solo si difiere del neto.' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   amountGross?: string;
 
@@ -69,6 +70,7 @@ export class CreateTransactionDto {
 
   @ApiPropertyOptional({ example: '3.42' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   exchangeRate?: string;
 
@@ -274,6 +276,7 @@ export class TransferDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   fee?: string;
 }

@@ -138,6 +138,7 @@ export class CreateTalentContractDto {
 
   @ApiPropertyOptional({ example: '3500.00' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   rate?: string;
 
@@ -219,6 +220,7 @@ export class CreateTalentDistributionDto {
 
   @ApiPropertyOptional({ example: '4000.00' })
   @IsOptional()
+  @VacioComoNulo()
   @IsNumberString()
   salary?: string;
 

@@ -63,6 +63,14 @@ function text(value: unknown) {
 function detalleEmpresa(item: { [key: string]: unknown }) {
   const clients = (item.clients ?? []) as { id: string; name: string }[];
   const contratos = (item.contracts ?? []) as CompanyContract[];
+  const porTitular = new Map<string, { holder: string; kind: string; total: number }>();
+  for (const c of contratos) {
+    const clave = `${c.kind}-${c.holder}`;
+    const fila = porTitular.get(clave) ?? { holder: c.holder, kind: c.kind, total: 0 };
+    fila.total += 1;
+    porTitular.set(clave, fila);
+  }
+  const titulares = [...porTitular.values()].sort((a, b) => b.total - a.total || a.holder.localeCompare(b.holder));
   const web = text(item.website);
   return (
     <div className="space-y-3">
@@ -82,15 +90,18 @@ function detalleEmpresa(item: { [key: string]: unknown }) {
           }
         />
         <LineaDetalle label="Contratos" value={String(item.contractCount ?? 0)} />
-        {contratos.length > 0 && (
+        {titulares.length > 0 && (
           <div className="px-4 py-2.5">
             <p className="text-muted-foreground text-xs">Quién los tiene</p>
             <ul className="mt-1 space-y-0.5 text-sm">
-              {contratos.map((c) => (
-                <li key={c.id} className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 truncate">{c.holder}</span>
+              {titulares.map((t) => (
+                <li key={`${t.kind}-${t.holder}`} className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate">
+                    {t.holder}
+                    {t.total > 1 && <span className="ml-1.5 text-muted-foreground text-xs">×{t.total}</span>}
+                  </span>
                   <span className="shrink-0 text-muted-foreground text-xs">
-                    {c.kind === 'OWN' ? 'propio' : 'talento'}
+                    {t.kind === 'OWN' ? 'propio' : 'talento'}
                   </span>
                 </li>
               ))}
@@ -178,11 +189,13 @@ function searchGlobalClient(item: { [key: string]: unknown }) {
 }
 
 function displayGlobalClient(item: { [key: string]: unknown }) {
-  const company = item.globalCompany as { name: string } | null;
+  const companies = (item.companies ?? []) as { id: string; name: string }[];
   return (
     <span className="flex flex-col">
       <span>{String(item.name)}</span>
-      {company && <span className="text-xs text-muted-foreground">{company.name}</span>}
+      {companies.length > 0 && (
+        <span className="text-muted-foreground text-xs">{companies.map((c) => c.name).join(', ')}</span>
+      )}
     </span>
   );
 }
@@ -350,7 +363,14 @@ export default function ConfiguracionPage() {
                 queryKey={queryKeys.globalClients()}
                 fields={[
                   { name: 'name', label: 'Nombre', required: true },
-                  { name: 'globalCompanyId', label: 'Empresa', options: companyOptions },
+                  {
+                    name: 'companyIds',
+                    label: 'Empresas',
+                    multi: true,
+                    itemsKey: 'companies',
+                    options: companyOptions,
+                    placeholder: 'Sin empresas',
+                  },
                 ]}
                 display={displayGlobalClient}
                 deleteWarning={avisoBorrarCliente}

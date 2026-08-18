@@ -114,6 +114,12 @@ export class CreateGlobalClientDto {
   @IsOptional()
   @IsString()
   globalCompanyId?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  companyIds?: string[];
 }
 
 export class UpdateGlobalClientDto extends PartialType(CreateGlobalClientDto) {}

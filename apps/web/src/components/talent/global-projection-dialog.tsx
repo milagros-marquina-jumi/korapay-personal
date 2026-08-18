@@ -70,13 +70,13 @@ export function GlobalProjectionDialog({ projection }: Readonly<Props>) {
             </div>
 
             <div className="max-h-[45vh] overflow-y-auto rounded-lg border">
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-sm">
                 <thead className="sticky top-0 bg-card">
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Talento</th>
-                    <th className="p-3">Contrato</th>
-                    <th className="p-3">Según</th>
-                    <th className="p-3 text-right">Recibiré</th>
+                    <th className="w-[6%] p-3" />
+                    <th className="w-[42%] p-3">Contrato</th>
+                    <th className="w-[18%] p-3">Según</th>
+                    <th className="w-[34%] p-3 text-right">Recibiré</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -96,9 +96,18 @@ export function GlobalProjectionDialog({ projection }: Readonly<Props>) {
                         .map((r) => (
                           <tr key={r.talentId} className="border-b last:border-0">
                             <td className="p-3" />
-                            <td className="p-3">{r.company}</td>
+                            <td className="p-3">
+                              <span className="block truncate font-medium" title={r.company}>
+                                {r.company}
+                              </span>
+                              {r.client && (
+                                <span className="block truncate text-muted-foreground text-xs" title={r.client}>
+                                  {r.client}
+                                </span>
+                              )}
+                            </td>
                             <td className="whitespace-nowrap p-3 text-muted-foreground text-xs">{r.from}</td>
-                            <td className="p-3 text-right tabular-nums">{money(r.received)}</td>
+                            <td className="whitespace-nowrap p-3 text-right tabular-nums">{money(r.received)}</td>
                           </tr>
                         ))}
                     </Fragment>

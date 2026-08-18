@@ -65,22 +65,33 @@ export function ProjectedPaymentDialog({ contracts, trigger }: Readonly<Props>) 
             </div>
 
             <div className="overflow-x-auto rounded-lg border">
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Contrato</th>
-                    <th className="p-3">Según</th>
-                    <th className="p-3 text-right">Recibiré</th>
-                    <th className="p-3 text-right">Se quedará</th>
+                    <th className="w-[38%] p-3">Contrato</th>
+                    <th className="w-[16%] p-3">Según</th>
+                    <th className="w-[23%] p-3 text-right">Recibiré</th>
+                    <th className="w-[23%] p-3 text-right">Se quedará</th>
                   </tr>
                 </thead>
                 <tbody>
                   {proyeccion.filas.map((f) => (
                     <tr key={f.contractId} className="border-b last:border-0">
-                      <td className="p-3 font-medium">{f.empresa}</td>
+                      <td className="p-3">
+                        <span className="block truncate font-medium" title={f.empresa}>
+                          {f.empresa}
+                        </span>
+                        {f.cliente && (
+                          <span className="block truncate text-muted-foreground text-xs" title={f.cliente}>
+                            {f.cliente}
+                          </span>
+                        )}
+                      </td>
                       <td className="whitespace-nowrap p-3 text-muted-foreground text-xs">{f.desdePeriodo}</td>
-                      <td className="p-3 text-right font-medium text-info tabular-nums">{money(f.recibi)}</td>
-                      <td className="p-3 text-right tabular-nums">{money(f.quedo)}</td>
+                      <td className="whitespace-nowrap p-3 text-right font-medium text-info tabular-nums">
+                        {money(f.recibi)}
+                      </td>
+                      <td className="whitespace-nowrap p-3 text-right tabular-nums">{money(f.quedo)}</td>
                     </tr>
                   ))}
                 </tbody>

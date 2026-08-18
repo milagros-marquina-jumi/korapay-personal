@@ -21,6 +21,7 @@ interface Contrato {
 export interface FilaProyectada {
   contractId: string;
   empresa: string;
+  cliente: string;
   base: number;
   recibi: number;
   quedo: number;
@@ -63,7 +64,8 @@ export function proyectarMesSiguiente(contracts: Contrato[], hoy: Date = new Dat
     if (!ultimo) continue;
     filas.push({
       contractId: c.id,
-      empresa: [c.companyName, c.clientName].filter(Boolean).join(' / ') || 'Sin empresa',
+      empresa: c.companyName || 'Sin empresa',
+      cliente: c.clientName ?? '',
       base: Number(ultimo.amountWithDiscount),
       recibi: Number(ultimo.amountReceived),
       quedo: Number(ultimo.amountRetained),

@@ -285,6 +285,7 @@ export class TalentService {
       talentId: string;
       talent: string;
       company: string;
+      client: string;
       received: string;
       retained: string;
       withDiscount: string;
@@ -303,7 +304,8 @@ export class TalentService {
         filas.push({
           talentId: c.id,
           talent: t.name,
-          company: [c.companyName, c.clientName].filter(Boolean).join(' / ') || 'Sin empresa',
+          company: c.companyName || 'Sin empresa',
+          client: c.clientName ?? '',
           received: new Decimal(String(ultimo.amountReceived)).toFixed(2),
           retained: new Decimal(String(ultimo.amountRetained)).toFixed(2),
           withDiscount: new Decimal(String(ultimo.amountWithDiscount)).toFixed(2),
@@ -364,19 +366,21 @@ export class TalentService {
       count: number;
     }[] = [];
 
-    const estadoPorNombre = new Map<string, string>();
-    const rolPorNombre = new Map<string, string | null>();
+    const estadoPorId = new Map<string, string>();
+    const rolPorId = new Map<string, string | null>();
+    const nombrePorId = new Map<string, string>();
     for (const t of talents) {
-      estadoPorNombre.set(t.name, t.status ?? 'ACTIVE');
-      rolPorNombre.set(t.name, t.role ?? null);
+      estadoPorId.set(t.id, t.status ?? 'ACTIVE');
+      rolPorId.set(t.id, t.role ?? null);
+      nombrePorId.set(t.id, t.name);
     }
 
     const yearlyByTalent = new Map<string, Map<number, { received: Decimal; paid: Decimal; count: number }>>();
-    const yearlyBucket = (talentName: string, anio: number) => {
-      let porAnio = yearlyByTalent.get(talentName);
+    const yearlyBucket = (talentId: string, anio: number) => {
+      let porAnio = yearlyByTalent.get(talentId);
       if (!porAnio) {
         porAnio = new Map();
-        yearlyByTalent.set(talentName, porAnio);
+        yearlyByTalent.set(talentId, porAnio);
       }
       let fila = porAnio.get(anio);
       if (!fila) {
@@ -474,7 +478,7 @@ export class TalentService {
         ts.income = ts.income.add(new Decimal(String(d.amountReceived)));
       }
       if (d.year) {
-        const anual = yearlyBucket(talentName, d.year);
+        const anual = yearlyBucket(talentId, d.year);
         anual.received = anual.received.add(new Decimal(String(d.amountReceived)));
       }
     };
@@ -548,7 +552,7 @@ export class TalentService {
           ts.expense = ts.expense.add(new Decimal(String(e.paidAmount)));
         }
         if (e.year) {
-          const anual = yearlyBucket(name, e.year);
+          const anual = yearlyBucket(talentId, e.year);
           anual.paid = anual.paid.add(new Decimal(String(e.paidAmount)));
           if (e.type === 'EGRESO') anual.count += 1;
         }
@@ -626,8 +630,8 @@ export class TalentService {
           paid: paidDec.toFixed(2),
           net: net.toFixed(2),
           margin: p.received.gt(0) ? net.div(p.received).mul(100).toFixed(1) : '0.0',
-          status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
-          role: rolPorNombre.get(p.name) ?? null,
+          status: estadoPorId.get(p.talentId) ?? 'ACTIVE',
+          role: rolPorId.get(p.talentId) ?? null,
         };
       })
       .sort((a, b) => Number(b.net) - Number(a.net));
@@ -653,8 +657,8 @@ export class TalentService {
           withDiscount: p.withDiscount.toFixed(2),
           received: p.received.toFixed(2),
           kept: p.kept.toFixed(2),
-          status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
-          role: rolPorNombre.get(p.name) ?? null,
+          status: estadoPorId.get(p.talentId) ?? 'ACTIVE',
+          role: rolPorId.get(p.talentId) ?? null,
         }))
         .sort((a, b) => Number(b.received) - Number(a.received)),
       expenseByPerson: expenseByPerson
@@ -665,16 +669,16 @@ export class TalentService {
           debt: p.debt.toFixed(2),
           pending: p.pending.toFixed(2),
           count: p.count,
-          status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
-          role: rolPorNombre.get(p.name) ?? null,
+          status: estadoPorId.get(p.talentId) ?? 'ACTIVE',
+          role: rolPorId.get(p.talentId) ?? null,
         }))
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
       projection: this.proyeccionMesSiguiente(talents),
       yearlyByTalent: [...yearlyByTalent.entries()]
-        .map(([name, porAnio]) => ({
-          name,
-          status: estadoPorNombre.get(name) ?? 'ACTIVE',
-          role: rolPorNombre.get(name) ?? null,
+        .map(([talentId, porAnio]) => ({
+          name: nombrePorId.get(talentId) ?? 'Sin nombre',
+          status: estadoPorId.get(talentId) ?? 'ACTIVE',
+          role: rolPorId.get(talentId) ?? null,
           years: [...porAnio.entries()]
             .map(([anio, v]) => ({
               year: anio,

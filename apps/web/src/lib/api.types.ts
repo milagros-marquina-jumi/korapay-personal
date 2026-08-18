@@ -624,6 +624,7 @@ export interface TalentGlobalReport {
       talentId: string;
       talent: string;
       company: string;
+      client: string;
       received: string;
       retained: string;
       withDiscount: string;

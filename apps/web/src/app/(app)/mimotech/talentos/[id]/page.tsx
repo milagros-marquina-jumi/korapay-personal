@@ -29,6 +29,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { SalaryConversionDialog } from '@/components/contracts/salary-conversion-dialog';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { StatusPicker } from '@/components/data-table/status-toggle';
 import { PageShell } from '@/components/layout/page-shell';
@@ -90,6 +91,12 @@ function TalentDetailContent() {
   const [contractCompany, setContractCompany] = useState(FILTER_ALL);
   const [contractPayment, setContractPayment] = useState(FILTER_ALL);
   const [editingDist, setEditingDist] = useState<TalentIncomeDistribution | null>(null);
+  const [usdContract, setUsdContract] = useState<TalentContract | null>(null);
+
+  const { data: exchangeRate } = useQuery({
+    queryKey: queryKeys.exchangeRate(),
+    queryFn: () => apiFetch<{ rate: string; date: string }>('/exchange-rate'),
+  });
 
   const { data: talent, isLoading } = useQuery({
     queryKey: queryKeys.talent(ws, id),
@@ -959,6 +966,13 @@ function TalentDetailContent() {
             onOpenChange={(next) => !next && setDetalleContrato(null)}
           />
 
+          <SalaryConversionDialog
+            contract={usdContract ? { companyName: usdContract.companyName, salary: usdContract.rate } : null}
+            rate={exchangeRate?.rate ?? null}
+            rateDate={exchangeRate?.date}
+            onOpenChange={(next) => !next && setUsdContract(null)}
+          />
+
           {editingContract && (
             <TalentContractFormDialog
               contract={editingContract}
@@ -1065,11 +1079,22 @@ function TalentDetailContent() {
                             </span>
                           );
                         })()}
-                        {contract.rate && (
-                          <span className="font-medium tabular-nums text-foreground">
-                            Sueldo: {formatMoney(contract.rate, contract.currency as 'PEN' | 'USD')}
-                          </span>
-                        )}
+                        {contract.rate &&
+                          (contract.currency === 'USD' ? (
+                            <button
+                              type="button"
+                              onClick={() => setUsdContract(contract)}
+                              className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium tabular-nums text-foreground hover:bg-muted"
+                              title="Ver conversión a soles"
+                            >
+                              Sueldo: {formatMoney(contract.rate, 'USD')}
+                              <span className="rounded bg-brand/10 px-1 font-medium text-[10px] text-brand">USD</span>
+                            </button>
+                          ) : (
+                            <span className="font-medium tabular-nums text-foreground">
+                              Sueldo: {formatMoney(contract.rate, contract.currency as 'PEN' | 'USD')}
+                            </span>
+                          ))}
                       </div>
                       {contract.contractTerm && (
                         <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">

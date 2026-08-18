@@ -1,5 +1,5 @@
 FROM node:24-alpine AS base
-RUN corepack enable && corepack prepare pnpm@11 --activate
+RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 WORKDIR /app
 
 FROM base AS builder
@@ -13,6 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY apps/api ./apps/api
 COPY packages/domain ./packages/domain
 COPY packages/typescript-config ./packages/typescript-config
+RUN pnpm --filter @korapay/domain build
 RUN pnpm --filter @korapay/api build
 
 FROM base AS runner

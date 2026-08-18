@@ -2,11 +2,16 @@
 
 import { formatMoney } from '@korapay/domain';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import type { EmploymentContract } from '@/lib/api.types';
 import { formatDate } from '@/lib/utils';
 
+interface SalaryConversionContract {
+  companyName?: string | null;
+  salary?: string | null;
+  grossSalary?: string | null;
+}
+
 interface Props {
-  contract: EmploymentContract | null;
+  contract: SalaryConversionContract | null;
   rate: string | null;
   rateDate?: string | null;
   onOpenChange: (open: boolean) => void;

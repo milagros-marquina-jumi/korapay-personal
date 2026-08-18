@@ -985,7 +985,12 @@ export class TalentService {
     ] as const) {
       if (data[key] !== undefined) updateData[key] = data[key] === '' ? null : data[key];
     }
-    if (data.date !== undefined) updateData.date = data.date ? new Date(data.date) : null;
+    if (data.date !== undefined) {
+      const d = data.date ? new Date(data.date) : null;
+      updateData.date = d;
+      if (data.year === undefined) updateData.year = d?.getUTCFullYear() ?? null;
+      if (data.month === undefined) updateData.month = d ? d.getUTCMonth() + 1 : null;
+    }
     await sincronizarEmpresaCliente(
       this.prisma,
       data.companyName !== undefined ? data.companyName : dist.companyName,

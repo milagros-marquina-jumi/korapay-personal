@@ -55,7 +55,8 @@ import type {
 } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { primerTrabajoDe, validarFechasTalento } from '@/lib/talent-dates';
-import { formatDate, formatDurationExact, formatMonthYear } from '@/lib/utils';
+import { computeWorkedTime } from '@/lib/talent-worked-time';
+import { formatDate, formatDurationDaysCompact, formatDurationExact, formatMonthYear } from '@/lib/utils';
 
 function formatDateOrActive(value?: string | null) {
   return value ? formatDate(value) : 'Actual';
@@ -250,6 +251,7 @@ function TalentDetailContent() {
 
   const contracts = talent.contracts ?? [];
   const primerTrabajo = primerTrabajoDe(talent);
+  const tiempo = computeWorkedTime(talent.startedWithMeAt, talent.endedWithMeAt, talent.contracts);
   const hayIngresos = (report?.byMonth ?? []).some((m) => Number(m.income) > 0 || Number(m.salary) > 0);
   const hayDeuda = (report?.byMonth ?? []).some((m) => Number(m.pending) > 0);
   const avisos = validarFechasTalento({
@@ -291,19 +293,22 @@ function TalentDetailContent() {
               label="Inicio conmigo"
               value={talent.startedWithMeAt ? formatDate(talent.startedWithMeAt) : '—'}
             />
-            <DetailItem
-              label="Tiempo conmigo"
-              value={formatDurationExact(talent.startedWithMeAt, talent.endedWithMeAt)}
-            />
+            <DetailItem label="Tiempo conmigo" value={formatDurationDaysCompact(tiempo.totalDays)} />
             <DetailItem
               label="Fin conmigo"
               value={talent.endedWithMeAt ? formatDate(talent.endedWithMeAt) : 'Actual'}
             />
             <DetailItem label="Inicio primer trabajo" value={primerTrabajo ? formatDate(primerTrabajo) : '—'} />
             <DetailItem
-              label="Tiempo trabajando"
-              value={primerTrabajo ? formatDurationExact(primerTrabajo, talent.endedWithMeAt) : '—'}
+              label="Tiempo colocado"
+              value={tiempo.neverPlaced ? 'Nunca colocado' : formatDurationDaysCompact(tiempo.workedDays)}
             />
+            {tiempo.idleDays > 0 && (
+              <DetailItem label="Sin trabajo" value={formatDurationDaysCompact(tiempo.idleDays)} />
+            )}
+            {tiempo.remainingDays > 0 && (
+              <DetailItem label="Le queda conmigo" value={formatDurationDaysCompact(tiempo.remainingDays)} />
+            )}
             <DetailItem label="Lugar de estudio" value={talent.studyPlace ?? '—'} />
             <DetailItem label="Inicio estudios" value={talent.studyStartAt ? formatDate(talent.studyStartAt) : '—'} />
             <DetailItem label="Correo" value={talent.email ?? '—'} />

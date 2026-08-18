@@ -9,7 +9,7 @@ interface TalentWorkedTimeProps {
 export function TalentWorkedTime({ talent }: TalentWorkedTimeProps) {
   if (!talent.startedWithMeAt) return null;
 
-  const { workedDays, idleDays, neverPlaced, remainingDays } = computeWorkedTime(
+  const { workedDays, totalDays, idleDays, neverPlaced, remainingDays } = computeWorkedTime(
     talent.startedWithMeAt,
     talent.endedWithMeAt,
     talent.contracts,
@@ -17,6 +17,10 @@ export function TalentWorkedTime({ talent }: TalentWorkedTimeProps) {
 
   return (
     <>
+      <div className="pointer-events-none flex items-center justify-between">
+        <span className="text-muted-foreground">Tiempo conmigo</span>
+        <span className="font-medium">{formatDurationDaysCompact(totalDays)}</span>
+      </div>
       <div className="pointer-events-none flex items-center justify-between">
         <span className="text-muted-foreground">Tiempo colocado</span>
         <span className="font-medium">

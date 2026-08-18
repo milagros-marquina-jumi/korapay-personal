@@ -120,21 +120,24 @@ export function formatDurationRange(from: string | Date, to?: string | Date | nu
   return formatYmd(years, months, days);
 }
 
-export function formatDurationDays(days: number): string {
-  if (days <= 0) return formatYmd(0, 0, 0);
+function repartirDias(days: number): [number, number, number] {
   const years = Math.floor(days / 365);
   const afterYears = days - years * 365;
-  const months = Math.min(11, Math.floor(afterYears / 30));
+  const months = Math.floor(afterYears / 30);
   const rest = afterYears - months * 30;
+  if (months > 11) return [years + 1, 0, rest];
+  return [years, months, rest];
+}
+
+export function formatDurationDays(days: number): string {
+  if (days <= 0) return formatYmd(0, 0, 0);
+  const [years, months, rest] = repartirDias(days);
   return formatYmd(years, months, rest);
 }
 
 export function formatDurationDaysCompact(days: number): string {
   if (days <= 0) return '0 días';
-  const years = Math.floor(days / 365);
-  const afterYears = days - years * 365;
-  const months = Math.min(11, Math.floor(afterYears / 30));
-  const rest = afterYears - months * 30;
+  const [years, months, rest] = repartirDias(days);
   return formatYmdCompact(years, months, rest);
 }
 

@@ -6,11 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import type { TalentLedgerEntry } from '@/lib/api.types';
 import { cn, formatDateLong } from '@/lib/utils';
 
-const TYPE_LABELS: Record<string, string> = {
-  EGRESO: 'Egreso',
-  DEUDA: 'Deuda',
-  AJUSTE: 'Ajuste',
-};
+const TYPE_LABELS: Record<string, string> = { EGRESO: 'Egreso', DEUDA: 'Deuda' };
 
 interface Props {
   entry: TalentLedgerEntry | null;
@@ -19,6 +15,8 @@ interface Props {
 }
 
 export function TalentLedgerDetailDialog({ entry, currency, onOpenChange }: Readonly<Props>) {
+  const esDeuda = entry?.type === 'DEUDA';
+
   return (
     <Dialog open={entry !== null} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
@@ -37,19 +35,24 @@ export function TalentLedgerDetailDialog({ entry, currency, onOpenChange }: Read
 
             <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Pagado</p>
-                <p className="font-semibold text-2xl tabular-nums">{formatMoney(entry.paidAmount, currency)}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">
+                  {esDeuda ? 'Deuda' : 'Desembolsado'}
+                </p>
+                <p className={cn('font-semibold text-2xl tabular-nums', !esDeuda && 'text-coral')}>
+                  {formatMoney(esDeuda ? entry.debtAmount : entry.paidAmount, currency)}
+                </p>
               </div>
               <StatusBadge status={entry.status} />
             </div>
 
             <dl className="divide-y rounded-xl border text-sm">
-              <Line label="Deuda" value={formatMoney(entry.debtAmount, currency)} />
-              <Line
-                label="Falta pagar"
-                value={formatMoney(entry.pendingAmount, currency)}
-                destacar={Number(entry.pendingAmount) > 0}
-              />
+              {esDeuda && (
+                <Line
+                  label="Falta pagar"
+                  value={formatMoney(entry.pendingAmount, currency)}
+                  destacar={Number(entry.pendingAmount) > 0}
+                />
+              )}
               <Line label="Periodo" value={`${String(entry.month).padStart(2, '0')}/${entry.year}`} />
             </dl>
 

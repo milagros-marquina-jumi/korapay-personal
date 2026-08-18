@@ -25,7 +25,7 @@ import { apiFetch } from '@/lib/api';
 import type { Talent, TalentLedgerSummary } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
-import { cn, formatDurationExact } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 function initials(name: string) {
   return name
@@ -205,12 +205,6 @@ function TalentosContent() {
                   </span>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-2 px-5 pb-5 text-sm">
-                  <div className="pointer-events-none flex items-center justify-between">
-                    <span className="text-muted-foreground">Tiempo conmigo</span>
-                    <span className="font-medium">
-                      {formatDurationExact(talent.startedWithMeAt, talent.endedWithMeAt)}
-                    </span>
-                  </div>
                   <TalentWorkedTime talent={talent} />
                   {talent.studyPlace && (
                     <div className="pointer-events-none flex items-center gap-1.5 text-muted-foreground">

@@ -677,6 +677,7 @@ export interface Talent {
   notes?: string | null;
   accessToken?: string | null;
   tokenEnabledAt?: string | null;
+  portalScope?: 'DEBTS' | 'DEBTS_EXPENSES';
   contracts?: TalentContract[];
   looseDistributions?: TalentIncomeDistribution[];
 }
@@ -732,6 +733,7 @@ export interface TalentAuditEntry {
 export interface TalentPortalProfile {
   owner?: { name: string };
   talent: { id: string; name: string; status: string };
+  scope?: 'DEBTS' | 'DEBTS_EXPENSES';
   summary: TalentSummaryTotals;
   debtRows: TalentDebtRow[];
 }

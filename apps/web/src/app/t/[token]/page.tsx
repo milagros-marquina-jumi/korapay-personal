@@ -1,7 +1,7 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { EmptyState } from '@korapay/ui';
+import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Eye, Pencil, Plus } from 'lucide-react';
 import { useParams } from 'next/navigation';
@@ -92,7 +92,7 @@ export default function TalentPortalPage() {
       apiFetch(`/portal/${token}/ledger`, { method: 'POST', body: JSON.stringify(normalize(values)) }),
     onSuccess: () => {
       invalidate();
-      toast.success('Deuda registrada');
+      toast.success('Registro guardado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -125,6 +125,10 @@ export default function TalentPortalPage() {
     );
   }
 
+  const verEgresos = profile.scope === 'DEBTS_EXPENSES';
+  const egresos = (entries ?? []).filter((e) => e.type === 'EGRESO');
+  const totalEgresos = egresos.reduce((sum, e) => sum + Number(e.paidAmount), 0).toFixed(2);
+
   return (
     <div className="space-y-8">
       <div>
@@ -137,6 +141,7 @@ export default function TalentPortalPage() {
           <CardTitle className="text-base">Mi deuda</CardTitle>
           <LedgerFormDialog
             defaultType="DEUDA"
+            lockType
             viewer="TALENT"
             talentName={profile.talent.name}
             adminName={profile.owner?.name}
@@ -220,11 +225,82 @@ export default function TalentPortalPage() {
         </CardContent>
       </Card>
 
+      {verEgresos && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="text-base">Mis egresos</CardTitle>
+            <LedgerFormDialog
+              defaultType="EGRESO"
+              lockType
+              viewer="TALENT"
+              talentName={profile.talent.name}
+              adminName={profile.owner?.name}
+              isPending={createMut.isPending}
+              onSubmit={(v) => createMut.mutateAsync(v).then(() => undefined)}
+              trigger={
+                <Button size="sm">
+                  <Plus className="mr-1 size-4" /> Nuevo egreso
+                </Button>
+              }
+            />
+          </CardHeader>
+          <CardContent>
+            {egresos.length ? (
+              <div className="overflow-x-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-28">Fecha</TableHead>
+                      <TableHead className="w-40 whitespace-nowrap text-right">Desembolsado</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead className="w-28">Estado</TableHead>
+                      <TableHead className="w-20" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {egresos.map((e) => (
+                      <TableRow key={e.id}>
+                        <TableCell className="whitespace-nowrap text-sm">{formatDate(e.date)}</TableCell>
+                        <TableCell className="whitespace-nowrap text-right tabular-nums">
+                          {formatMoney(e.paidAmount, 'PEN')}
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate text-sm" title={e.description ?? undefined}>
+                          {e.description || '—'}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={e.status} />
+                        </TableCell>
+                        <TableCell>
+                          <IconActions>
+                            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(e)} />
+                            <IconAction icon={Pencil} label="Editar" onClick={() => setEditando(e)} />
+                          </IconActions>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2 bg-muted/40">
+                      <TableCell className="font-semibold text-sm">Total</TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums">
+                        {formatMoney(totalEgresos, 'PEN')}
+                      </TableCell>
+                      <TableCell colSpan={3} />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-muted-foreground">Aún no hay egresos registrados.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <TalentLedgerDetailDialog entry={detalle} currency="PEN" onOpenChange={(next) => !next && setDetalle(null)} />
 
       {editando && (
         <LedgerFormDialog
           entry={editando}
+          lockType
           viewer="TALENT"
           talentName={profile.talent.name}
           adminName={profile.owner?.name}

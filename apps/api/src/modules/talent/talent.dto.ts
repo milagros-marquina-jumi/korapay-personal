@@ -111,6 +111,11 @@ export class CreateTalentDto {
   @IsOptional()
   @IsString()
   slideUrl?: string;
+
+  @ApiPropertyOptional({ enum: ['DEBTS', 'DEBTS_EXPENSES'], default: 'DEBTS' })
+  @IsOptional()
+  @IsIn(['DEBTS', 'DEBTS_EXPENSES'])
+  portalScope?: string;
 }
 
 export class UpdateTalentDto extends PartialType(CreateTalentDto) {}

@@ -686,6 +686,7 @@ model TalentProfile {
   notes          String?
   accessToken    String?   @unique @map("access_token")
   tokenEnabledAt DateTime? @map("token_enabled_at")
+  portalScope    String    @default("DEBTS") @map("portal_scope")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")

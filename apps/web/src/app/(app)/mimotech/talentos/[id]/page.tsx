@@ -52,6 +52,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Money } from '@/components/ui/money';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -298,6 +299,16 @@ function TalentDetailContent() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const scopeMut = useMutation({
+    mutationFn: (portalScope: 'DEBTS' | 'DEBTS_EXPENSES') =>
+      apiFetch(`/talents/${id}?workspaceId=${ws}`, { method: 'PATCH', body: JSON.stringify({ portalScope }) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.talent(ws, id) });
+      toast.success('Permisos del enlace actualizados');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   if (isLoading || !talent) {
     return (
       <div className="space-y-6">
@@ -447,8 +458,26 @@ function TalentDetailContent() {
                   <ShieldOff className="mr-1 size-4" /> Revocar
                 </Button>
               </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-muted-foreground text-xs">Con este enlace el talento puede ver:</span>
+                <Select
+                  value={talent.portalScope ?? 'DEBTS'}
+                  onValueChange={(v) => scopeMut.mutate(v as 'DEBTS' | 'DEBTS_EXPENSES')}
+                  disabled={scopeMut.isPending}
+                >
+                  <SelectTrigger className="h-8 w-56">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DEBTS">Solo sus deudas</SelectItem>
+                    <SelectItem value="DEBTS_EXPENSES">Deudas y egresos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Cualquiera con este enlace puede ver y registrar los movimientos de este talento. Revócalo si se filtra.
+                {(talent.portalScope ?? 'DEBTS') === 'DEBTS_EXPENSES'
+                  ? 'Cualquiera con este enlace puede ver, registrar y editar las deudas y egresos de este talento. Revócalo si se filtra.'
+                  : 'Cualquiera con este enlace puede ver y registrar las deudas de este talento. Revócalo si se filtra.'}
               </p>
             </>
           ) : (
@@ -1163,6 +1192,7 @@ function TalentDetailContent() {
                                       value={dist.amountWithDiscount}
                                       currency={contract.currency}
                                       onConvert={() => setUsdDist(dist)}
+                                      chip
                                     />
                                   </TableCell>
                                   <TableCell className="text-right tabular-nums">
@@ -1274,18 +1304,34 @@ function MontoConvertible({
   value,
   currency,
   onConvert,
-}: Readonly<{ value: string; currency: string; onConvert: () => void }>) {
+  chip = false,
+}: Readonly<{ value: string; currency: string; onConvert: () => void; chip?: boolean }>) {
   const monto = <Money value={formatMoney(value, currency as 'PEN' | 'USD')} />;
   if (currency !== 'USD') return monto;
+  if (!chip) {
+    return (
+      <button
+        type="button"
+        onClick={onConvert}
+        className="rounded-md px-1.5 py-0.5 hover:bg-muted"
+        title="Ver conversión a soles"
+      >
+        {monto}
+      </button>
+    );
+  }
   return (
-    <button
-      type="button"
-      onClick={onConvert}
-      className="rounded-md px-1.5 py-0.5 hover:bg-muted"
-      title="Ver conversión a soles"
-    >
+    <span className="inline-flex items-center gap-1.5">
       {monto}
-    </button>
+      <button
+        type="button"
+        onClick={onConvert}
+        title="Ver conversión a soles"
+        className="rounded bg-info/15 px-1.5 py-0.5 font-semibold text-[10px] text-info hover:bg-info/25"
+      >
+        USD
+      </button>
+    </span>
   );
 }
 

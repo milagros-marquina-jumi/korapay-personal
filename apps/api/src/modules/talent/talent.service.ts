@@ -788,6 +788,7 @@ export class TalentService {
     // name y status no son anulables en el esquema: solo se escriben si traen valor.
     if (data.name) out.name = data.name;
     if (data.status) out.status = data.status;
+    if (data.portalScope) out.portalScope = data.portalScope;
     for (const key of ['email', 'phone', 'notes', 'terminationReason', 'role', 'studyPlace', 'slideUrl'] as const) {
       if (data[key] !== undefined) out[key] = data[key] === '' ? null : data[key];
     }

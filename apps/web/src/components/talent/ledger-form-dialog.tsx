@@ -50,7 +50,6 @@ const STATUS_EGRESO = [
 interface Props {
   entry?: TalentLedgerEntry;
   defaultType?: 'EGRESO' | 'DEUDA';
-  /** Quien esta usando el formulario: cambia como se redactan las opciones. */
   viewer?: 'ADMIN' | 'TALENT';
   talentName?: string;
   adminName?: string;
@@ -59,6 +58,7 @@ interface Props {
   isPending?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  lockType?: boolean;
 }
 
 export function LedgerFormDialog({
@@ -72,7 +72,8 @@ export function LedgerFormDialog({
   isPending,
   open: controlledOpen,
   onOpenChange,
-}: Props) {
+  lockType = false,
+}: Readonly<Props>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
@@ -154,6 +155,7 @@ export function LedgerFormDialog({
               <Label>Tipo</Label>
               <Select
                 value={watch('type')}
+                disabled={lockType}
                 onValueChange={(v) => {
                   const tipo = v as 'EGRESO' | 'DEUDA';
                   setValue('type', tipo);

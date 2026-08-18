@@ -39,27 +39,50 @@ export class TalentPortalService {
     return {
       talent: { id: talent.id, name: talent.name, status: talent.status },
       owner: { name: owner?.name ?? 'la empresa' },
+      scope: talent.portalScope,
       summary,
       debtRows,
     };
   }
 
+  private puedeEgresos(talent: { portalScope: string }) {
+    return talent.portalScope === 'DEBTS_EXPENSES';
+  }
+
+  private sanear<T extends { type?: string; paidAmount?: string }>(talent: { portalScope: string }, data: T) {
+    if (this.puedeEgresos(talent) && data.type === 'EGRESO') {
+      return { ...data, type: 'EGRESO', debtAmount: '0', pendingAmount: '0' };
+    }
+    return { ...data, type: 'DEUDA', paidAmount: '0' };
+  }
+
   async ledgerList(token: string, filters: Omit<LedgerFilters, 'talentId'>) {
     const talent = await this.resolve(token);
-    return this.ledger.listByTalent(talent.id, filters);
+    const efectivos = this.puedeEgresos(talent) ? filters : { ...filters, type: 'DEUDA' };
+    return this.ledger.listByTalent(talent.id, efectivos);
   }
 
   async create(token: string, data: Parameters<TalentLedgerService['create']>[2]) {
     const talent = await this.resolve(token);
     const ownerId = await this.ownerProfileId(talent.workspaceId);
-    const soloDeuda = { ...data, type: 'DEUDA', paidAmount: '0' };
-    return this.ledger.create(talent.workspaceId, talent.id, soloDeuda, 'TALENT', this.actor(talent.id, ownerId));
+    return this.ledger.create(
+      talent.workspaceId,
+      talent.id,
+      this.sanear(talent, data),
+      'TALENT',
+      this.actor(talent.id, ownerId),
+    );
   }
 
   async update(token: string, id: string, data: Parameters<TalentLedgerService['update']>[2]) {
     const talent = await this.resolve(token);
     const ownerId = await this.ownerProfileId(talent.workspaceId);
-    const soloDeuda = { ...data, type: 'DEUDA', paidAmount: '0' };
-    return this.ledger.update(id, talent.workspaceId, soloDeuda, this.actor(talent.id, ownerId), talent.id);
+    return this.ledger.update(
+      id,
+      talent.workspaceId,
+      this.sanear(talent, data),
+      this.actor(talent.id, ownerId),
+      talent.id,
+    );
   }
 }

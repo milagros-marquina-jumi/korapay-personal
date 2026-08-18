@@ -1,8 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -24,9 +23,8 @@ import { MoneyField } from '@/components/ui/money-input';
 import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { apiFetch } from '@/lib/api';
-import type { GlobalClient, GlobalCompany, TalentContract } from '@/lib/api.types';
-import { queryKeys } from '@/lib/query-keys';
+import type { TalentContract } from '@/lib/api.types';
+import { useGlobalCatalog } from '@/lib/use-global-catalog';
 
 const schema = z.object({
   position: z.string().optional(),
@@ -66,18 +64,9 @@ export function TalentContractFormDialog({
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const editing = !!contract;
 
-  const { data: companies } = useQuery({
-    queryKey: queryKeys.globalCompanies(),
-    queryFn: () => apiFetch<GlobalCompany[]>('/global-companies'),
+  const { companyOptions, clientOptionsFor, createCompany, createClient, companyByName } = useGlobalCatalog({
     enabled: open,
   });
-  const { data: clients } = useQuery({
-    queryKey: queryKeys.globalClients(),
-    queryFn: () => apiFetch<GlobalClient[]>('/global-clients'),
-    enabled: open,
-  });
-
-  const queryClient = useQueryClient();
 
   const {
     register,
@@ -92,17 +81,8 @@ export function TalentContractFormDialog({
     defaultValues: { currency: 'PEN', status: 'ACTIVE', startDate: new Date().toISOString().slice(0, 10) },
   });
 
-  const empresaSel = (companies ?? []).find((c) => c.name === watch('companyName'));
-  const opcionesCliente = useMemo(() => {
-    const todos = clients ?? [];
-    if (!empresaSel) return todos.map((c) => ({ value: c.name, label: c.name }));
-    const suyos = todos.filter((c) => c.globalCompanyId === empresaSel.id);
-    const resto = todos.filter((c) => c.globalCompanyId !== empresaSel.id);
-    return [
-      ...suyos.map((c) => ({ value: c.name, label: c.name, group: 'De esta empresa' })),
-      ...resto.map((c) => ({ value: c.name, label: c.name, group: 'Otros clientes' })),
-    ];
-  }, [clients, empresaSel]);
+  const empresaSel = companyByName(watch('companyName'));
+  const opcionesCliente = clientOptionsFor(empresaSel?.id);
 
   useEffect(() => {
     if (open && contract) {
@@ -151,13 +131,9 @@ export function TalentContractFormDialog({
                 searchPlaceholder="Buscar o escribir para crear..."
                 value={watch('companyName') ?? ''}
                 onValueChange={(v) => setValue('companyName', v)}
-                options={(companies ?? []).map((c) => ({ value: c.name, label: c.name }))}
+                options={companyOptions}
                 onCreate={async (nombre) => {
-                  await apiFetch<GlobalCompany>('/global-companies', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: nombre }),
-                  });
-                  await queryClient.invalidateQueries({ queryKey: queryKeys.globalCompanies() });
+                  await createCompany(nombre);
                   setValue('companyName', nombre);
                   toast.success(`Empresa "${nombre}" creada`);
                 }}
@@ -174,11 +150,7 @@ export function TalentContractFormDialog({
                 onValueChange={(v) => setValue('clientName', v)}
                 options={opcionesCliente}
                 onCreate={async (nombre) => {
-                  await apiFetch<GlobalClient>('/global-clients', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: nombre, globalCompanyId: empresaSel?.id }),
-                  });
-                  await queryClient.invalidateQueries({ queryKey: queryKeys.globalClients() });
+                  await createClient(nombre, empresaSel?.id);
                   setValue('clientName', nombre);
                   toast.success(`Cliente "${nombre}" creado`);
                 }}

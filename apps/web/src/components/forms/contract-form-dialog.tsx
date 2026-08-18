@@ -26,8 +26,9 @@ import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
-import type { Company, EmploymentContract, GlobalCompany } from '@/lib/api.types';
+import type { Company, EmploymentContract } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useGlobalCatalog } from '@/lib/use-global-catalog';
 import { formatDate } from '@/lib/utils';
 
 const schema = z
@@ -77,17 +78,7 @@ export function ContractFormDialog({
     enabled: open,
   });
 
-  const { data: globalCompanies } = useQuery({
-    queryKey: queryKeys.globalCompanies(),
-    queryFn: () => apiFetch<GlobalCompany[]>('/global-companies'),
-    enabled: open,
-  });
-
-  const { data: globalClients } = useQuery({
-    queryKey: queryKeys.globalClients(),
-    queryFn: () => apiFetch<{ id: string; name: string; globalCompanyId?: string | null }[]>('/global-clients'),
-    enabled: open,
-  });
+  const { companies: globalCompanies, clientOptionsFor } = useGlobalCatalog({ enabled: open, valueBy: 'id' });
 
   const { data: contratos } = useQuery({
     queryKey: queryKeys.employmentContracts(workspaceId),
@@ -126,15 +117,7 @@ export function ContractFormDialog({
     (globalCompanies ?? []).find((g) => g.name.toLowerCase() === (empresaSel?.name ?? '').toLowerCase())?.id ??
     null;
 
-  const opcionesCliente = useMemo(() => {
-    const todos = globalClients ?? [];
-    const suyos = globalCompanyId ? todos.filter((c) => c.globalCompanyId === globalCompanyId) : [];
-    const resto = todos.filter((c) => !suyos.some((s) => s.id === c.id));
-    return [
-      ...suyos.map((c) => ({ value: c.id, label: c.name, group: 'De esta empresa' })),
-      ...resto.map((c) => ({ value: c.id, label: c.name, group: 'Otros clientes' })),
-    ];
-  }, [globalClients, globalCompanyId]);
+  const opcionesCliente = clientOptionsFor(globalCompanyId);
 
   const inicioElegido = watch('startDate');
   const posicionNueva = previos.filter((c) => c.startDate.slice(0, 10) < (inicioElegido ?? '')).length + 1;

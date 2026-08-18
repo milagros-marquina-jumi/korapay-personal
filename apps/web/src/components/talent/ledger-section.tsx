@@ -47,7 +47,7 @@ export function LedgerSection({
   isMutating,
 }: LedgerSectionProps) {
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState(FILTER_ALL);
+  const [status, setStatus] = useState('PENDING');
   const [type, setType] = useState('DEUDA');
   const [year, setYear] = useState(FILTER_ALL);
   const [month, setMonth] = useState(FILTER_ALL);
@@ -55,6 +55,7 @@ export function LedgerSection({
   const [detalle, setDetalle] = useState<TalentLedgerEntry | null>(null);
 
   const cur = currency as 'PEN' | 'USD';
+  const esDeuda = type === 'DEUDA';
   const statusOptions = useMemo(
     () => [...new Set(entries.map((e) => e.status))].map((v) => ({ value: v, label: statusLabel(v) })),
     [entries],
@@ -66,12 +67,12 @@ export function LedgerSection({
     return entries.filter(
       (e) =>
         (!q || (e.description ?? '').toLowerCase().includes(q)) &&
-        (status === FILTER_ALL || e.status === status) &&
+        (!esDeuda || status === FILTER_ALL || e.status === status) &&
         (type === FILTER_ALL || e.type === type) &&
         (year === FILTER_ALL || String(e.year) === year) &&
         (month === FILTER_ALL || String(e.month) === month),
     );
-  }, [entries, search, status, type, year, month]);
+  }, [entries, search, status, type, year, month, esDeuda]);
 
   const monthGroups = useMemo(() => {
     const map = new Map<string, TalentLedgerEntry[]>();
@@ -113,7 +114,7 @@ export function LedgerSection({
   const hasFilters = search !== '' || status !== FILTER_ALL || year !== FILTER_ALL || month !== FILTER_ALL;
   const clear = () => {
     setSearch('');
-    setStatus(FILTER_ALL);
+    setStatus('PENDING');
     setYear(FILTER_ALL);
     setMonth(FILTER_ALL);
   };
@@ -257,13 +258,15 @@ export function LedgerSection({
         onClear={clear}
         filters={
           <>
-            <FilterSelect
-              value={status}
-              onValueChange={setStatus}
-              options={statusOptions}
-              placeholder="Estado"
-              allLabel="Todo estado"
-            />
+            {esDeuda && (
+              <FilterSelect
+                value={status}
+                onValueChange={setStatus}
+                options={statusOptions}
+                placeholder="Estado"
+                allLabel="Todo estado"
+              />
+            )}
             <MonthYearFilter
               year={year}
               month={month}

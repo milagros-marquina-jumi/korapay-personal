@@ -619,12 +619,20 @@ export class TalentService {
       orderBy: [{ date: 'desc' }],
     });
     const sortedContracts = [...talent.contracts].sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+    const claveEmpresa = (nombre: string | null) => (nombre ?? '').trim().toLowerCase() || '__none__';
+    const totalPorEmpresa = new Map<string, number>();
+    for (const c of sortedContracts) {
+      const key = claveEmpresa(c.companyName);
+      totalPorEmpresa.set(key, (totalPorEmpresa.get(key) ?? 0) + 1);
+    }
     const companyCounter = new Map<string, number>();
     for (const c of sortedContracts) {
-      const key = (c.companyName ?? '').trim().toLowerCase() || '__none__';
+      const key = claveEmpresa(c.companyName);
       const next = (companyCounter.get(key) ?? 0) + 1;
       companyCounter.set(key, next);
-      (c as unknown as { sequenceIndex: number }).sequenceIndex = next;
+      const conSecuencia = c as unknown as { sequenceIndex: number; sequenceTotal: number };
+      conSecuencia.sequenceIndex = next;
+      conSecuencia.sequenceTotal = totalPorEmpresa.get(key) ?? 1;
     }
     return { ...talent, contracts: sortedContracts, looseDistributions };
   }

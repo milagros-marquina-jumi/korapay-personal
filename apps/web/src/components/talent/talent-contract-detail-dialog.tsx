@@ -14,6 +14,8 @@ interface Props {
 export function TalentContractDetailDialog({ contract, onOpenChange }: Readonly<Props>) {
   const moneda = (contract?.currency ?? 'PEN') as 'PEN' | 'USD';
   const distribuciones = contract?.incomeDistributions ?? [];
+  const totalRecibido = distribuciones.reduce((sum, d) => sum + Number(d.amountReceived ?? 0), 0);
+  const totalTalento = distribuciones.reduce((sum, d) => sum + Number(d.amountRetained ?? 0), 0);
 
   return (
     <Dialog open={contract !== null} onOpenChange={onOpenChange}>
@@ -29,7 +31,7 @@ export function TalentContractDetailDialog({ contract, onOpenChange }: Readonly<
 
             <div className="flex flex-wrap items-end justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
               <div className="min-w-0">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Tarifa</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Sueldo</p>
                 <p className="font-semibold text-2xl tabular-nums">
                   {contract.rate ? formatMoney(contract.rate, moneda) : '—'}
                 </p>
@@ -39,12 +41,27 @@ export function TalentContractDetailDialog({ contract, onOpenChange }: Readonly<
             </div>
 
             <dl className="divide-y rounded-xl border text-sm">
+              <Linea label="Cargo" value={contract.position || '—'} />
+              <Linea label="Empresa" value={contract.companyName || '—'} />
+              <Linea label="Cliente" value={contract.clientName || '—'} />
+              <Linea label="Tipo de pago" value={contract.paymentType || '—'} />
               <Linea label="Inicio" value={formatDateLong(contract.startDate)} />
               <Linea label="Fin" value={contract.endDate ? formatDateLong(contract.endDate) : 'Sigue activo'} />
               <Linea label="Duración" value={formatDurationExact(contract.startDate, contract.endDate)} />
-              <Linea label="Modalidad" value={contract.contractTerm || '—'} />
-              {contract.sequenceIndex ? <Linea label="Contrato N.º" value={String(contract.sequenceIndex)} /> : null}
+              <Linea label="Plazo del contrato" value={contract.contractTerm || '—'} />
+              {contract.sequenceIndex && (contract.sequenceTotal ?? 1) > 1 ? (
+                <Linea
+                  label="Contrato con esta empresa"
+                  value={`${contract.sequenceIndex} de ${contract.sequenceTotal}`}
+                />
+              ) : null}
               <Linea label="Pagos registrados" value={String(distribuciones.length)} />
+              {distribuciones.length > 0 && (
+                <>
+                  <Linea label="Total recibido (MIMOTECH)" value={formatMoney(String(totalRecibido), moneda)} />
+                  <Linea label="Total del talento" value={formatMoney(String(totalTalento), moneda)} />
+                </>
+              )}
             </dl>
 
             {contract.notes && (

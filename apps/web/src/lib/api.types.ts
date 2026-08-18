@@ -502,6 +502,7 @@ export interface TalentContract {
   contractTerm?: string | null;
   notes?: string | null;
   sequenceIndex?: number;
+  sequenceTotal?: number;
   incomeDistributions?: TalentIncomeDistribution[];
 }
 

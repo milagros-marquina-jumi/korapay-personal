@@ -1,9 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { CollapsibleSection } from '@/components/ui/collapsible-section';
@@ -76,6 +77,8 @@ export function TalentContractFormDialog({
     enabled: open,
   });
 
+  const queryClient = useQueryClient();
+
   const {
     register,
     control,
@@ -88,6 +91,18 @@ export function TalentContractFormDialog({
     resolver: zodResolver(schema),
     defaultValues: { currency: 'PEN', status: 'ACTIVE', startDate: new Date().toISOString().slice(0, 10) },
   });
+
+  const empresaSel = (companies ?? []).find((c) => c.name === watch('companyName'));
+  const opcionesCliente = useMemo(() => {
+    const todos = clients ?? [];
+    if (!empresaSel) return todos.map((c) => ({ value: c.name, label: c.name }));
+    const suyos = todos.filter((c) => c.globalCompanyId === empresaSel.id);
+    const resto = todos.filter((c) => c.globalCompanyId !== empresaSel.id);
+    return [
+      ...suyos.map((c) => ({ value: c.name, label: c.name, group: 'De esta empresa' })),
+      ...resto.map((c) => ({ value: c.name, label: c.name, group: 'Otros clientes' })),
+    ];
+  }, [clients, empresaSel]);
 
   useEffect(() => {
     if (open && contract) {
@@ -133,20 +148,42 @@ export function TalentContractFormDialog({
               <Label>Empresa</Label>
               <SearchSelect
                 placeholder="Selecciona empresa"
-                searchPlaceholder="Buscar empresa..."
+                searchPlaceholder="Buscar o escribir para crear..."
                 value={watch('companyName') ?? ''}
                 onValueChange={(v) => setValue('companyName', v)}
                 options={(companies ?? []).map((c) => ({ value: c.name, label: c.name }))}
+                onCreate={async (nombre) => {
+                  await apiFetch<GlobalCompany>('/global-companies', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: nombre }),
+                  });
+                  await queryClient.invalidateQueries({ queryKey: queryKeys.globalCompanies() });
+                  setValue('companyName', nombre);
+                  toast.success(`Empresa "${nombre}" creada`);
+                }}
+                createLabel="Crear empresa"
+                clearable
               />
             </div>
             <div className="space-y-2">
               <Label>Cliente</Label>
               <SearchSelect
                 placeholder="Selecciona cliente"
-                searchPlaceholder="Buscar cliente..."
+                searchPlaceholder="Buscar o escribir para crear..."
                 value={watch('clientName') ?? ''}
                 onValueChange={(v) => setValue('clientName', v)}
-                options={(clients ?? []).map((c) => ({ value: c.name, label: c.name }))}
+                options={opcionesCliente}
+                onCreate={async (nombre) => {
+                  await apiFetch<GlobalClient>('/global-clients', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: nombre, globalCompanyId: empresaSel?.id }),
+                  });
+                  await queryClient.invalidateQueries({ queryKey: queryKeys.globalClients() });
+                  setValue('clientName', nombre);
+                  toast.success(`Cliente "${nombre}" creado`);
+                }}
+                createLabel="Crear cliente"
+                clearable
               />
             </div>
           </div>

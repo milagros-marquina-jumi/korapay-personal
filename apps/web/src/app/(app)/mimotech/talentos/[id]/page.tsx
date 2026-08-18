@@ -708,16 +708,132 @@ function TalentDetailContent() {
               placeholder="Estado"
               allLabel="Todos"
             />
-            <TalentContractFormDialog
-              onSubmit={(v) => createContractMut.mutateAsync(v).then(() => undefined)}
-              isPending={createContractMut.isPending}
-              trigger={
-                <Button size="sm">
-                  <Plus className="mr-1 size-4" /> Nuevo contrato
-                </Button>
-              }
-            />
+            <div className="flex items-center gap-2">
+              <DistributionFormDialog
+                loose
+                onSubmit={(v) => createLooseDistMut.mutateAsync(v).then(() => undefined)}
+                isPending={createLooseDistMut.isPending}
+                trigger={
+                  <Button size="sm" variant="outline">
+                    <Plus className="mr-1 size-4" /> Ingreso suelto
+                  </Button>
+                }
+              />
+              <TalentContractFormDialog
+                onSubmit={(v) => createContractMut.mutateAsync(v).then(() => undefined)}
+                isPending={createContractMut.isPending}
+                trigger={
+                  <Button size="sm">
+                    <Plus className="mr-1 size-4" /> Nuevo contrato
+                  </Button>
+                }
+              />
+            </div>
           </div>
+
+          {(talent.looseDistributions?.length ?? 0) > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Ingresos sueltos (CTS, Gratificación, Liquidación)</CardTitle>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Ingresos que no dependen de un contrato de mes específico.
+                </p>
+              </CardHeader>
+              <CardContent>
+                {(talent.looseDistributions ?? []).length ? (
+                  <div className="overflow-x-auto rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Empresa</TableHead>
+                          <TableHead className="text-right">Con descuento</TableHead>
+                          <TableHead className="text-right">Recibí</TableHead>
+                          <TableHead className="text-right">Se quedó</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(talent.looseDistributions ?? []).map((dist) => (
+                          <TableRow key={dist.id}>
+                            <TableCell className="whitespace-nowrap text-sm">
+                              {dist.date ? formatDate(dist.date) : '—'}
+                            </TableCell>
+                            <TableCell className="text-sm">{dist.paymentType}</TableCell>
+                            <TableCell className="text-sm">
+                              {[dist.companyName, dist.clientName].filter(Boolean).join(' / ') || '—'}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatMoney(dist.amountWithDiscount, 'PEN')}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-info">
+                              {formatMoney(dist.amountReceived, 'PEN')}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums">
+                              {formatMoney(dist.amountRetained, 'PEN')}
+                            </TableCell>
+                            <TableCell>
+                              <StatusBadge status={dist.status} />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-end gap-0.5">
+                                <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
+                                <IconAction
+                                  icon={Trash2}
+                                  label="Eliminar"
+                                  destructive
+                                  onClick={async () => {
+                                    const ok = await confirm({
+                                      title: 'Eliminar ingreso',
+                                      description: 'Esta acción no se puede deshacer.',
+                                      confirmLabel: 'Eliminar',
+                                      destructive: true,
+                                    });
+                                    if (ok) deleteDistMut.mutate(dist.id);
+                                  }}
+                                />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="py-4 text-center text-sm text-muted-foreground">Sin ingresos sueltos registrados.</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          <TalentContractDetailDialog
+            contract={detalleContrato}
+            onOpenChange={(next) => !next && setDetalleContrato(null)}
+          />
+
+          {editingContract && (
+            <TalentContractFormDialog
+              contract={editingContract}
+              open={!!editingContract}
+              onOpenChange={(next) => !next && setEditingContract(null)}
+              onSubmit={(v) =>
+                updateContractMut.mutateAsync({ contractId: editingContract.id, values: v }).then(() => undefined)
+              }
+              isPending={updateContractMut.isPending}
+            />
+          )}
+          {editingDist && (
+            <DistributionFormDialog
+              distribution={editingDist}
+              loose={!editingDist.contractId}
+              open={!!editingDist}
+              onOpenChange={(next) => !next && setEditingDist(null)}
+              onSubmit={(v) => updateDistMut.mutateAsync({ distId: editingDist.id, values: v }).then(() => undefined)}
+              isPending={updateDistMut.isPending}
+            />
+          )}
 
           {(() => {
             const filtered = contracts.filter((c) => contractFilter === FILTER_ALL || c.status === contractFilter);
@@ -863,122 +979,6 @@ function TalentDetailContent() {
               <EmptyState title="Sin contratos" description="No hay contratos para este filtro." />
             );
           })()}
-
-          {talent.looseDistributions && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="text-base">Ingresos sueltos (CTS, Gratificación, Liquidación)</CardTitle>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Ingresos que no dependen de un contrato de mes específico.
-                  </p>
-                </div>
-                <DistributionFormDialog
-                  loose
-                  onSubmit={(v) => createLooseDistMut.mutateAsync(v).then(() => undefined)}
-                  isPending={createLooseDistMut.isPending}
-                  trigger={
-                    <Button size="sm" variant="outline">
-                      <Plus className="mr-1 size-4" /> Nuevo ingreso suelto
-                    </Button>
-                  }
-                />
-              </CardHeader>
-              <CardContent>
-                {talent.looseDistributions.length ? (
-                  <div className="overflow-x-auto rounded-lg border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Tipo</TableHead>
-                          <TableHead>Empresa</TableHead>
-                          <TableHead className="text-right">Con descuento</TableHead>
-                          <TableHead className="text-right">Recibí</TableHead>
-                          <TableHead className="text-right">Se quedó</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {talent.looseDistributions.map((dist) => (
-                          <TableRow key={dist.id}>
-                            <TableCell className="whitespace-nowrap text-sm">
-                              {dist.date ? formatDate(dist.date) : '—'}
-                            </TableCell>
-                            <TableCell className="text-sm">{dist.paymentType}</TableCell>
-                            <TableCell className="text-sm">
-                              {[dist.companyName, dist.clientName].filter(Boolean).join(' / ') || '—'}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {formatMoney(dist.amountWithDiscount, 'PEN')}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums text-info">
-                              {formatMoney(dist.amountReceived, 'PEN')}
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">
-                              {formatMoney(dist.amountRetained, 'PEN')}
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={dist.status} />
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex justify-end gap-0.5">
-                                <IconAction icon={Pencil} label="Editar" onClick={() => setEditingDist(dist)} />
-                                <IconAction
-                                  icon={Trash2}
-                                  label="Eliminar"
-                                  destructive
-                                  onClick={async () => {
-                                    const ok = await confirm({
-                                      title: 'Eliminar ingreso',
-                                      description: 'Esta acción no se puede deshacer.',
-                                      confirmLabel: 'Eliminar',
-                                      destructive: true,
-                                    });
-                                    if (ok) deleteDistMut.mutate(dist.id);
-                                  }}
-                                />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <p className="py-4 text-center text-sm text-muted-foreground">Sin ingresos sueltos registrados.</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          <TalentContractDetailDialog
-            contract={detalleContrato}
-            onOpenChange={(next) => !next && setDetalleContrato(null)}
-          />
-
-          {editingContract && (
-            <TalentContractFormDialog
-              contract={editingContract}
-              open={!!editingContract}
-              onOpenChange={(next) => !next && setEditingContract(null)}
-              onSubmit={(v) =>
-                updateContractMut.mutateAsync({ contractId: editingContract.id, values: v }).then(() => undefined)
-              }
-              isPending={updateContractMut.isPending}
-            />
-          )}
-          {editingDist && (
-            <DistributionFormDialog
-              distribution={editingDist}
-              loose={!editingDist.contractId}
-              open={!!editingDist}
-              onOpenChange={(next) => !next && setEditingDist(null)}
-              onSubmit={(v) => updateDistMut.mutateAsync({ distId: editingDist.id, values: v }).then(() => undefined)}
-              isPending={updateDistMut.isPending}
-            />
-          )}
         </TabsContent>
 
         <TabsContent value="audit">

@@ -7,6 +7,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
@@ -15,6 +17,7 @@ import { cn } from '@/lib/utils';
 export interface SearchSelectOption {
   value: string;
   label: string;
+  group?: string;
 }
 
 interface SearchSelectProps {
@@ -48,6 +51,15 @@ export function SearchSelect({
     const q = query.trim().toLowerCase();
     return q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
   }, [options, query]);
+
+  const grupos = useMemo(() => {
+    const mapa = new Map<string, SearchSelectOption[]>();
+    for (const o of filtered) {
+      const clave = o.group ?? '';
+      mapa.set(clave, [...(mapa.get(clave) ?? []), o]);
+    }
+    return [...mapa.entries()];
+  }, [filtered]);
 
   const selectedLabel = options.find((o) => o.value === value)?.label;
 
@@ -144,18 +156,28 @@ export function SearchSelect({
               {clearLabel}
             </DropdownMenuItem>
           )}
-          {filtered.map((option) => (
-            <DropdownMenuItem
-              key={option.value}
-              onSelect={(e) => {
-                e.preventDefault();
-                commit(option.value);
-              }}
-              className="flex items-center justify-between"
-            >
-              <span className="truncate">{option.label}</span>
-              {value === option.value && <Check className="ml-2 size-4 shrink-0 text-brand" />}
-            </DropdownMenuItem>
+          {grupos.map(([nombre, lista], gi) => (
+            <div key={nombre || `g${gi}`}>
+              {nombre && (
+                <>
+                  {gi > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuLabel className="text-muted-foreground text-xs">{nombre}</DropdownMenuLabel>
+                </>
+              )}
+              {lista.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    commit(option.value);
+                  }}
+                  className="flex items-center justify-between"
+                >
+                  <span className="truncate">{option.label}</span>
+                  {value === option.value && <Check className="ml-2 size-4 shrink-0 text-brand" />}
+                </DropdownMenuItem>
+              ))}
+            </div>
           ))}
         </div>
       </DropdownMenuContent>

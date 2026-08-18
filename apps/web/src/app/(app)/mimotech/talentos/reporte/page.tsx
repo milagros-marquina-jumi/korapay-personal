@@ -19,6 +19,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { PersonBar, type PersonBarDatum } from '@/components/charts/person-bar';
 import { PivotTable } from '@/components/charts/pivot-table';
+import { YearlyHeatmap } from '@/components/charts/yearly-heatmap';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -172,15 +173,22 @@ function GlobalReportContent() {
     );
   }
 
-  const incomeBars: PersonBarDatum[] = data.incomeByPerson.map((p) => ({
+  const visible = <T extends { status?: string }>(lista: T[]) =>
+    showInactive ? lista : lista.filter((p) => (p.status ?? 'ACTIVE') === 'ACTIVE');
+
+  const incomePersons = visible(data.incomeByPerson);
+  const expensePersons = visible(data.expenseByPerson);
+  const profitabilityPersons = visible(data.profitabilityByPerson);
+  const yearlyPersons = visible(data.yearlyByTalent);
+
+  const incomeBars: PersonBarDatum[] = incomePersons.map((p) => ({
     name: p.name,
     value: Number(p.received),
     secondary: Number(p.kept),
   }));
-  const expenseBars: PersonBarDatum[] = data.expenseByPerson.map((p) => ({
+  const expenseBars: PersonBarDatum[] = expensePersons.map((p) => ({
     name: p.name,
     value: Number(p.paid),
-    secondary: Number(p.pending),
   }));
 
   return (
@@ -195,13 +203,16 @@ function GlobalReportContent() {
       title="Reporte general de Mimotalents"
       description="Ingresos y egresos por talento, calculados de sus pagos y estado de cuenta"
       action={
-        <FilterSelect
-          value={year}
-          onValueChange={setYear}
-          options={data.years.map((y) => ({ value: String(y), label: String(y) }))}
-          placeholder="Año"
-          allLabel="Todos los años"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
+          <FilterSelect
+            value={year}
+            onValueChange={setYear}
+            options={data.years.map((y) => ({ value: String(y), label: String(y) }))}
+            placeholder="Año"
+            allLabel="Todos los años"
+          />
+        </div>
       }
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -261,9 +272,9 @@ function GlobalReportContent() {
       <Tabs defaultValue="ingresos">
         <TabsList className="flex-wrap">
           <TabsTrigger value="ingresos">Por persona</TabsTrigger>
+          <TabsTrigger value="anual">Año a año</TabsTrigger>
           <TabsTrigger value="rentabilidad">Rentabilidad</TabsTrigger>
           <TabsTrigger value="empresa">Por empresa</TabsTrigger>
-          <TabsTrigger value="cliente">Por cliente</TabsTrigger>
           <TabsTrigger value="pago">Planilla vs RxH</TabsTrigger>
           <TabsTrigger value="serie">Serie temporal</TabsTrigger>
           <TabsTrigger value="egresos">Egresos por persona</TabsTrigger>
@@ -278,7 +289,13 @@ function GlobalReportContent() {
             </CardHeader>
             <CardContent>
               {incomeBars.length ? (
-                <PersonBar data={incomeBars} color="bg-info" secondaryColor="bg-teal/70" secondaryLabel="Se quedó" />
+                <PersonBar
+                  data={incomeBars}
+                  color="bg-info"
+                  secondaryColor="bg-teal/70"
+                  label="Recibí (MIMOTECH)"
+                  secondaryLabel="Se quedó (talento)"
+                />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin ingresos registrados</p>
               )}
@@ -301,7 +318,7 @@ function GlobalReportContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.incomeByPerson.map((p) => (
+                    {incomePersons.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3 font-medium">{p.name}</td>
                         <td className="p-3 text-right tabular-nums">
@@ -332,12 +349,7 @@ function GlobalReportContent() {
             </CardHeader>
             <CardContent>
               {expenseBars.length ? (
-                <PersonBar
-                  data={expenseBars}
-                  color="bg-coral"
-                  secondaryColor="bg-destructive/60"
-                  secondaryLabel="Falta pagar"
-                />
+                <PersonBar data={expenseBars} color="bg-coral" label="Desembolsado" />
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin egresos registrados</p>
               )}
@@ -353,15 +365,17 @@ function GlobalReportContent() {
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
                       <th className="p-3">Talento</th>
+                      <th className="p-3 text-right">N.º de egresos</th>
                       <th className="p-3 text-right">Pagado</th>
                       <th className="p-3 text-right">Deuda</th>
                       <th className="p-3 text-right">Falta pagar</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data.expenseByPerson.map((p) => (
+                    {expensePersons.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3 font-medium">{p.name}</td>
+                        <td className="p-3 text-right tabular-nums text-muted-foreground">{p.count}</td>
                         <td className="p-3 text-right font-medium text-coral tabular-nums">
                           <Money value={formatMoney(p.paid, 'PEN')} />
                         </td>
@@ -382,9 +396,8 @@ function GlobalReportContent() {
 
         <TabsContent value="pivot-ingresos" className="mt-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardHeader>
               <CardTitle>Ingresos (recibí) por mes y talento</CardTitle>
-              <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
             </CardHeader>
             <CardContent>
               <PivotTable periods={data.incomePivot} columns={incomeColumns} />
@@ -394,12 +407,37 @@ function GlobalReportContent() {
 
         <TabsContent value="pivot-egresos" className="mt-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardHeader>
               <CardTitle>Egresos (pagado) por mes y talento</CardTitle>
-              <InactiveToggle show={showInactive} count={inactiveCount} onToggle={() => setShowInactive((v) => !v)} />
             </CardHeader>
             <CardContent>
               <PivotTable periods={data.expensePivot} columns={expenseColumns} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="anual" className="mt-4 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ingresos por talento, año a año</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Comisión que quedó en MIMOTECH por cada talento en cada año. Sirve para ver quién creció, quién se
+                estancó y quién dejó de generar.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <YearlyHeatmap data={yearlyPersons} metric="received" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Egresos por talento, año a año</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Lo que MIMOTECH desembolsó en cada talento por año, y cuántos egresos fueron.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <YearlyHeatmap data={yearlyPersons} metric="paid" />
             </CardContent>
           </Card>
         </TabsContent>
@@ -424,7 +462,7 @@ function GlobalReportContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.profitabilityByPerson.map((p) => (
+                  {profitabilityPersons.map((p) => (
                     <tr key={p.talentId} className="border-b last:border-0">
                       <td className="p-3 font-medium">{p.name}</td>
                       <td className="p-3 text-right tabular-nums text-info">
@@ -478,40 +516,6 @@ function GlobalReportContent() {
                         <Money value={formatMoney(c.kept, 'PEN')} />
                       </td>
                       <td className="p-3 text-right text-xs text-muted-foreground">{c.payments}</td>
-                      <td className="p-3 text-xs text-muted-foreground">{c.talents.join(', ')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="cliente" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Ingresos por cliente final</CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Cliente</th>
-                    <th className="p-3 text-right">Recibí (MIMOTECH)</th>
-                    <th className="p-3 text-right">Se quedó</th>
-                    <th className="p-3">Talentos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byClient.map((c) => (
-                    <tr key={c.name} className="border-b last:border-0">
-                      <td className="p-3 font-medium">{c.name}</td>
-                      <td className="p-3 text-right font-medium tabular-nums text-info">
-                        <Money value={formatMoney(c.received, 'PEN')} />
-                      </td>
-                      <td className="p-3 text-right tabular-nums">
-                        <Money value={formatMoney(c.kept, 'PEN')} />
-                      </td>
                       <td className="p-3 text-xs text-muted-foreground">{c.talents.join(', ')}</td>
                     </tr>
                   ))}

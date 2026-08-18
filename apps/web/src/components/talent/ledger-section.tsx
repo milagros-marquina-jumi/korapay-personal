@@ -156,7 +156,7 @@ export function LedgerSection({
       base.push(
         {
           id: 'owner',
-          size: 150,
+          size: 105,
           header: 'De quién',
           cell: ({ row }) => (
             <DebtOwnerBadge owner={row.original.debtOwner} talentName={talentName} adminName={adminName} />
@@ -229,6 +229,7 @@ export function LedgerSection({
 
     base.push({
       id: 'description',
+      size: 460,
       header: 'Descripción',
       cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.description ?? '-'}</span>,
     });

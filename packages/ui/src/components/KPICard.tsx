@@ -15,7 +15,7 @@ export function KPICard({ label, value, icon: Icon, color, trend, className, too
   return (
     <div
       className={cn(
-        'group relative flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-6 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lift',
+        'group relative @container flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lift',
         className,
       )}
     >
@@ -56,7 +56,7 @@ export function KPICard({ label, value, icon: Icon, color, trend, className, too
       </div>
       <p
         className={cn(
-          'font-display text-3xl font-bold leading-none tracking-tight tabular-nums',
+          'font-display text-2xl font-bold leading-tight tracking-tight tabular-nums [overflow-wrap:anywhere] @[13rem]:text-3xl',
           esCero(value) && 'text-muted-foreground/60',
         )}
       >

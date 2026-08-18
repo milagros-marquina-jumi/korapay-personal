@@ -602,8 +602,22 @@ export interface TalentGlobalReport {
     withDiscount: string;
     received: string;
     kept: string;
+    status: string;
   }[];
-  expenseByPerson: { talentId: string; name: string; paid: string; debt: string; pending: string }[];
+  expenseByPerson: {
+    talentId: string;
+    name: string;
+    paid: string;
+    debt: string;
+    pending: string;
+    count: number;
+    status: string;
+  }[];
+  yearlyByTalent: {
+    name: string;
+    status: string;
+    years: { year: number; received: string; paid: string; count: number }[];
+  }[];
   incomePivot: TalentPivotPeriod[];
   expensePivot: TalentPivotPeriod[];
   byCompany: { name: string; received: string; kept: string; salary: string; talents: string[]; payments: number }[];
@@ -618,6 +632,7 @@ export interface TalentGlobalReport {
     paid: string;
     net: string;
     margin: string;
+    status: string;
   }[];
 }
 

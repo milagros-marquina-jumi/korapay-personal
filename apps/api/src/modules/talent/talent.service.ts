@@ -285,7 +285,26 @@ export class TalentService {
       paid: Decimal;
       debt: Decimal;
       pending: Decimal;
+      count: number;
     }[] = [];
+
+    const estadoPorNombre = new Map<string, string>();
+    for (const t of talents) estadoPorNombre.set(t.name, t.status ?? 'ACTIVE');
+
+    const yearlyByTalent = new Map<string, Map<number, { received: Decimal; paid: Decimal; count: number }>>();
+    const yearlyBucket = (talentName: string, anio: number) => {
+      let porAnio = yearlyByTalent.get(talentName);
+      if (!porAnio) {
+        porAnio = new Map();
+        yearlyByTalent.set(talentName, porAnio);
+      }
+      let fila = porAnio.get(anio);
+      if (!fila) {
+        fila = { received: new Decimal(0), paid: new Decimal(0), count: 0 };
+        porAnio.set(anio, fila);
+      }
+      return fila;
+    };
 
     const incomePivot = new Map<string, Map<string, Decimal>>();
     const expensePivot = new Map<string, Map<string, Decimal>>();
@@ -374,6 +393,10 @@ export class TalentService {
         const ts = timeSeriesBucket(d.year, d.month);
         ts.income = ts.income.add(new Decimal(String(d.amountReceived)));
       }
+      if (d.year) {
+        const anual = yearlyBucket(talentName, d.year);
+        anual.received = anual.received.add(new Decimal(String(d.amountReceived)));
+      }
     };
 
     for (const t of talents) {
@@ -444,6 +467,11 @@ export class TalentService {
           const ts = timeSeriesBucket(e.year, e.month);
           ts.expense = ts.expense.add(new Decimal(String(e.paidAmount)));
         }
+        if (e.year) {
+          const anual = yearlyBucket(name, e.year);
+          anual.paid = anual.paid.add(new Decimal(String(e.paidAmount)));
+          if (e.type === 'EGRESO') anual.count += 1;
+        }
         const catKey = e.category ?? 'SIN_CATEGORIA';
         let catRow = expenseCategoryAgg.get(catKey);
         if (!catRow) {
@@ -459,7 +487,14 @@ export class TalentService {
             .plus(new Decimal(String(e.pendingAmount)));
         }
       }
-      expenseByPerson.push({ talentId, name, paid, debt, pending });
+      expenseByPerson.push({
+        talentId,
+        name,
+        paid,
+        debt,
+        pending,
+        count: entries.filter((e) => e.type === 'EGRESO').length,
+      });
     }
 
     const periodLabel = (key: string) => {
@@ -511,6 +546,7 @@ export class TalentService {
           paid: paidDec.toFixed(2),
           net: net.toFixed(2),
           margin: p.received.gt(0) ? net.div(p.received).mul(100).toFixed(1) : '0.0',
+          status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
         };
       })
       .sort((a, b) => Number(b.net) - Number(a.net));
@@ -536,6 +572,7 @@ export class TalentService {
           withDiscount: p.withDiscount.toFixed(2),
           received: p.received.toFixed(2),
           kept: p.kept.toFixed(2),
+          status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
         }))
         .sort((a, b) => Number(b.received) - Number(a.received)),
       expenseByPerson: expenseByPerson
@@ -545,8 +582,24 @@ export class TalentService {
           paid: p.paid.toFixed(2),
           debt: p.debt.toFixed(2),
           pending: p.pending.toFixed(2),
+          count: p.count,
+          status: estadoPorNombre.get(p.name) ?? 'ACTIVE',
         }))
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
+      yearlyByTalent: [...yearlyByTalent.entries()]
+        .map(([name, porAnio]) => ({
+          name,
+          status: estadoPorNombre.get(name) ?? 'ACTIVE',
+          years: [...porAnio.entries()]
+            .map(([anio, v]) => ({
+              year: anio,
+              received: v.received.toFixed(2),
+              paid: v.paid.toFixed(2),
+              count: v.count,
+            }))
+            .sort((a, b) => a.year - b.year),
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
       incomePivot: buildPivot(incomePivot, incomePeriodTotals),
       expensePivot: buildPivot(expensePivot, expensePeriodTotals),
       byCompany: [...companyAgg.entries()]

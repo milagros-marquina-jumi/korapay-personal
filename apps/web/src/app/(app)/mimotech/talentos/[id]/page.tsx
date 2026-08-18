@@ -461,7 +461,7 @@ function TalentDetailContent() {
                   tooltip="Comisión recibida menos lo invertido en el talento."
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
                 <KPICard
                   label="Sueldo total"
                   value={formatMoney(report.income.salary, 'PEN')}
@@ -685,12 +685,12 @@ function TalentDetailContent() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Fecha</TableHead>
-                            <TableHead>De quién</TableHead>
+                            <TableHead className="w-28">Fecha</TableHead>
+                            <TableHead className="w-24">De quién</TableHead>
                             <TableHead>Descripción</TableHead>
-                            <TableHead className="text-right">Deuda</TableHead>
-                            <TableHead className="text-right">Falta pagar</TableHead>
-                            <TableHead>Estado</TableHead>
+                            <TableHead className="w-32 text-right">Deuda</TableHead>
+                            <TableHead className="w-32 text-right">Falta pagar</TableHead>
+                            <TableHead className="w-32">Estado</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -700,7 +700,7 @@ function TalentDetailContent() {
                               <TableCell>
                                 <DebtOwnerBadge owner={d.debtOwner} talentName={talent.name} adminName={perfil?.name} />
                               </TableCell>
-                              <TableCell className="max-w-xs truncate text-sm" title={d.description}>
+                              <TableCell className="text-sm" title={d.description}>
                                 {d.description || '—'}
                               </TableCell>
                               <TableCell className="text-right tabular-nums text-warning">
@@ -725,7 +725,7 @@ function TalentDetailContent() {
                             </TableRow>
                           ))}
                           <TableRow className="border-t-2 bg-muted/40">
-                            <TableCell colSpan={2} className="text-sm font-semibold">
+                            <TableCell colSpan={3} className="text-sm font-semibold">
                               Total
                             </TableCell>
                             <TableCell className="text-right font-semibold tabular-nums text-warning">

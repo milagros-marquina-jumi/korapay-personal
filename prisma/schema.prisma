@@ -698,6 +698,7 @@ model TalentLedgerEntry {
   currency      String    @default("PEN")
   status        String    @default("PENDING")
   description   String?
+  debtOwner     String    @default("TALENT") @map("debt_owner")
   source        String    @default("ADMIN")
   createdBy     String    @map("created_by")
   createdAt     DateTime  @default(now()) @map("created_at")

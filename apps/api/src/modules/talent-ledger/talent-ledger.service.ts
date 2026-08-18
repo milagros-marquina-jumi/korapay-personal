@@ -1,5 +1,6 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
+import { ordenarDeudas } from '@/common/constants/debt-order';
 import { PrismaService } from '@/common/prisma/prisma.service';
 
 export interface LedgerFilters {
@@ -19,6 +20,7 @@ export interface LedgerActor {
 interface LedgerCreateInput {
   date: string;
   type: string;
+  debtOwner?: string;
   category?: string;
   paidAmount?: string;
   debtAmount?: string;
@@ -29,6 +31,7 @@ interface LedgerCreateInput {
 }
 
 interface LedgerUpdateInput {
+  debtOwner?: string;
   date?: string;
   type?: string;
   category?: string;
@@ -116,16 +119,18 @@ export class TalentLedgerService {
       where: { talentId, deletedAt: null },
       orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     });
-    return entries
-      .filter((e) => new Decimal(String(e.debtAmount)).gt(0) || new Decimal(String(e.pendingAmount)).gt(0))
-      .map((e) => ({
-        id: e.id,
-        date: e.date.toISOString().slice(0, 10),
-        description: e.description ?? '',
-        debt: new Decimal(String(e.debtAmount)).toFixed(2),
-        pending: new Decimal(String(e.pendingAmount)).toFixed(2),
-        status: e.status,
-      }));
+    return ordenarDeudas(
+      entries
+        .filter((e) => new Decimal(String(e.debtAmount)).gt(0) || new Decimal(String(e.pendingAmount)).gt(0))
+        .map((e) => ({
+          id: e.id,
+          date: e.date.toISOString().slice(0, 10),
+          description: e.description ?? '',
+          debt: new Decimal(String(e.debtAmount)).toFixed(2),
+          pending: new Decimal(String(e.pendingAmount)).toFixed(2),
+          status: e.status,
+        })),
+    );
   }
 
   async create(workspaceId: string, talentId: string, data: LedgerCreateInput, source: string, actor: LedgerActor) {
@@ -147,6 +152,7 @@ export class TalentLedgerService {
         currency: data.currency ?? 'PEN',
         status: data.status ?? 'PENDING',
         description: data.description ?? null,
+        debtOwner: data.debtOwner ?? 'TALENT',
         source,
         createdBy: actor.profileId,
       },
@@ -181,6 +187,7 @@ export class TalentLedgerService {
     if (data.pendingAmount !== undefined) patch.pendingAmount = data.pendingAmount;
     if (data.status !== undefined) patch.status = data.status;
     if (data.description !== undefined) patch.description = data.description;
+    if (data.debtOwner !== undefined) patch.debtOwner = data.debtOwner;
     if (data.currency !== undefined) patch.currency = data.currency;
     const entry = await this.prisma.talentLedgerEntry.update({ where: { id }, data: patch });
     await this.audit(workspaceId, actor, 'UPDATE', id, { before, after: entry });

@@ -649,6 +649,7 @@ export interface TalentLedgerEntry {
   year: number;
   month: number;
   type: string;
+  debtOwner?: string;
   category?: string | null;
   paidAmount: string;
   debtAmount: string;

@@ -3,6 +3,7 @@ import { isNeverPaid } from '@korapay/domain';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { ordenarDeudas } from '@/common/constants/debt-order';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import type {
@@ -130,16 +131,18 @@ export class TalentService {
       })
       .sort((a, b) => a.year - b.year || a.month - b.month);
 
-    const debtRows = ledger
-      .filter((e) => new Decimal(e.debtAmount).gt(0) || new Decimal(e.pendingAmount).gt(0))
-      .map((e) => ({
-        id: e.id,
-        date: e.date.toISOString().slice(0, 10),
-        description: e.description ?? '',
-        debt: new Decimal(e.debtAmount).toFixed(2),
-        pending: new Decimal(e.pendingAmount).toFixed(2),
-        status: e.status,
-      }));
+    const debtRows = ordenarDeudas(
+      ledger
+        .filter((e) => new Decimal(e.debtAmount).gt(0) || new Decimal(e.pendingAmount).gt(0))
+        .map((e) => ({
+          id: e.id,
+          date: e.date.toISOString().slice(0, 10),
+          description: e.description ?? '',
+          debt: new Decimal(e.debtAmount).toFixed(2),
+          pending: new Decimal(e.pendingAmount).toFixed(2),
+          status: e.status,
+        })),
+    );
 
     const companyMap = new Map<string, { received: Decimal; kept: Decimal; salary: Decimal; count: number }>();
     for (const d of allDistributions) {

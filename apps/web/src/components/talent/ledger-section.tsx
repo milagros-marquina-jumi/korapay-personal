@@ -123,6 +123,7 @@ export function LedgerSection({
     const base: ColumnDef<TalentLedgerEntry, unknown>[] = [
       {
         accessorKey: 'date',
+        size: 120,
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
         cell: ({ row }) => <span className="text-sm">{formatDate(row.original.date)}</span>,
       },
@@ -132,12 +133,14 @@ export function LedgerSection({
       base.push(
         {
           id: 'debt',
+          size: 140,
           accessorFn: (r) => Number(r.debtAmount),
           header: ({ column }) => <SortableHeader column={column} label="Deuda" className="ml-auto" />,
           cell: ({ row }) => <div className="text-right tabular-nums">{formatMoney(row.original.debtAmount, cur)}</div>,
         },
         {
           id: 'pending',
+          size: 140,
           accessorFn: (r) => Number(r.pendingAmount),
           header: ({ column }) => <SortableHeader column={column} label="Falta pagar" className="ml-auto" />,
           cell: ({ row }) => (
@@ -152,6 +155,7 @@ export function LedgerSection({
         },
         {
           accessorKey: 'status',
+          size: 120,
           header: 'Estado',
           cell: ({ row }) => <StatusBadge status={row.original.status} />,
         },
@@ -159,6 +163,7 @@ export function LedgerSection({
     } else {
       base.push({
         id: 'paid',
+        size: 160,
         accessorFn: (r) => Number(r.paidAmount),
         header: ({ column }) => <SortableHeader column={column} label="Desembolsado" />,
         cell: ({ row }) => (
@@ -174,6 +179,7 @@ export function LedgerSection({
     });
     base.push({
       id: 'actions',
+      size: 90,
       header: '',
       cell: ({ row }) => (
         <div className="flex justify-end gap-0.5">
@@ -199,14 +205,27 @@ export function LedgerSection({
             color="text-coral"
             tooltip="Lo que MIMOTECH gastó en esta persona. Es salida de dinero, no ingreso."
           />
-          <KPICard label="Total deuda" value={formatMoney(summary.totalDebt, cur)} icon={Banknote} color="text-info" />
+          <KPICard
+            label="Total deuda"
+            value={formatMoney(summary.totalDebt, cur)}
+            icon={Banknote}
+            color="text-info"
+            tooltip="Suma de todo lo que el talento se comprometió a devolver, ya lo haya pagado o no."
+          />
           <KPICard
             label="Falta pagar"
             value={formatMoney(summary.totalPending, cur)}
             icon={TrendingDown}
             color="text-destructive"
+            tooltip="De esa deuda, cuánto sigue sin devolver a día de hoy."
           />
-          <KPICard label="Saldo" value={formatMoney(summary.balance, cur)} icon={PiggyBank} color="text-brand" />
+          <KPICard
+            label="Ya devuelto"
+            value={formatMoney(String(Math.max(0, Number(summary.totalDebt) - Number(summary.totalPending))), cur)}
+            icon={PiggyBank}
+            color="text-success"
+            tooltip="Parte de la deuda que el talento ya te devolvió."
+          />
         </div>
       )}
 

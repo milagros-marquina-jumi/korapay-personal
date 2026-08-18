@@ -40,6 +40,10 @@ export class PortalCreateDto {
   paidAmount?: string;
 
   @IsOptional()
+  @IsIn(['TALENT', 'MINE'])
+  debtOwner?: string;
+
+  @IsOptional()
   @IsNumberString()
   debtAmount?: string;
 

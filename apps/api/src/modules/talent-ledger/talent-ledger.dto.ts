@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsNotEmpty, IsNumberString, IsOptional, IsString, Max, Min } from 'class-validator';
 
 const TYPES = ['EGRESO', 'DEUDA'];
+const DEBT_OWNERS = ['TALENT', 'MINE'];
 const CATEGORIES = [
   'EDUCACION',
   'SUSCRIPCION',
@@ -88,6 +89,10 @@ export class CreateTalentLedgerDto {
   paidAmount?: string;
 
   @IsOptional()
+  @IsIn(DEBT_OWNERS)
+  debtOwner?: string;
+
+  @IsOptional()
   @IsNumberString()
   debtAmount?: string;
 
@@ -128,6 +133,10 @@ export class UpdateTalentLedgerDto {
   @IsOptional()
   @IsNumberString()
   paidAmount?: string;
+
+  @IsOptional()
+  @IsIn(DEBT_OWNERS)
+  debtOwner?: string;
 
   @IsOptional()
   @IsNumberString()

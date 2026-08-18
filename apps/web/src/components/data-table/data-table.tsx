@@ -83,6 +83,7 @@ export function DataTable<T>({
   });
 
   const rows = table.getRowModel().rows;
+  const anchosFijos = columns.some((c) => typeof c.size === 'number');
   const totalFiltrado = table.getFilteredRowModel().rows.length;
 
   useEffect(() => {
@@ -114,7 +115,7 @@ export function DataTable<T>({
   return (
     <div className={embedded ? '' : 'space-y-3'}>
       <div className={cn(!embedded && 'overflow-hidden rounded-2xl border bg-card shadow-soft')}>
-        <Table>
+        <Table className={anchosFijos ? 'table-fixed' : undefined}>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>

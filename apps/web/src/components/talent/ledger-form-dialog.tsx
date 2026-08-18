@@ -21,6 +21,7 @@ const money = z
 const schema = z.object({
   date: z.string().min(1, 'Requerido'),
   type: z.enum(['EGRESO', 'DEUDA']),
+  debtOwner: z.enum(['TALENT', 'MINE']),
   paidAmount: money,
   debtAmount: money,
   pendingAmount: money,
@@ -80,6 +81,7 @@ export function LedgerFormDialog({
     defaultValues: {
       date: entry?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
       type: (entry?.type as 'EGRESO' | 'DEUDA') ?? defaultType,
+      debtOwner: (entry?.debtOwner as 'TALENT' | 'MINE') ?? 'TALENT',
       paidAmount: entry?.paidAmount ?? '',
       debtAmount: entry?.debtAmount ?? '',
       pendingAmount: entry?.pendingAmount ?? '',
@@ -93,6 +95,7 @@ export function LedgerFormDialog({
       reset({
         date: entry.date.slice(0, 10),
         type: entry.type as 'EGRESO' | 'DEUDA',
+        debtOwner: (entry.debtOwner as 'TALENT' | 'MINE') ?? 'TALENT',
         paidAmount: entry.paidAmount,
         debtAmount: entry.debtAmount,
         pendingAmount: entry.pendingAmount,
@@ -150,6 +153,21 @@ export function LedgerFormDialog({
               </Select>
             </div>
           </div>
+
+          {esDeuda && (
+            <div className="space-y-2">
+              <Label>¿De quién es la deuda?</Label>
+              <Select value={watch('debtOwner')} onValueChange={(v) => setValue('debtOwner', v as 'TALENT' | 'MINE')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TALENT">El talento me debe</SelectItem>
+                  <SelectItem value="MINE">Yo le debo al talento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {esDeuda ? (
             <div className="grid grid-cols-2 gap-3">

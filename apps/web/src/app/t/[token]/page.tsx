@@ -3,11 +3,16 @@
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Eye, Pencil, Plus } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { useState } from 'react';
 import { toast } from 'sonner';
+import { TalentLedgerDetailDialog } from '@/components/talent/ledger-detail-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
-import { LedgerSection } from '@/components/talent/ledger-section';
+import { LedgerFormDialog } from '@/components/talent/ledger-form-dialog';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { IconAction } from '@/components/ui/icon-action';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
@@ -48,6 +53,10 @@ export default function TalentPortalPage() {
     enabled: !!token && !!profile,
   });
 
+  const [detalle, setDetalle] = useState<TalentLedgerEntry | null>(null);
+  const [editando, setEditando] = useState<TalentLedgerEntry | null>(null);
+  const entradaDe = (id: string) => (entries ?? []).find((e) => e.id === id) ?? null;
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.portal(token) });
     queryClient.invalidateQueries({ queryKey: queryKeys.portalLedger(token) });
@@ -58,7 +67,7 @@ export default function TalentPortalPage() {
       apiFetch(`/portal/${token}/ledger`, { method: 'POST', body: JSON.stringify(normalize(values)) }),
     onSuccess: () => {
       invalidate();
-      toast.success('Registro creado');
+      toast.success('Deuda registrada');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -99,8 +108,18 @@ export default function TalentPortalPage() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="text-base">Mi deuda</CardTitle>
+          <LedgerFormDialog
+            defaultType="DEUDA"
+            isPending={createMut.isPending}
+            onSubmit={(v) => createMut.mutateAsync(v).then(() => undefined)}
+            trigger={
+              <Button size="sm">
+                <Plus className="mr-1 size-4" /> Nueva deuda
+              </Button>
+            }
+          />
         </CardHeader>
         <CardContent>
           {profile.debtRows.length ? (
@@ -110,9 +129,9 @@ export default function TalentPortalPage() {
                   <TableRow>
                     <TableHead>Fecha</TableHead>
                     <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">Deuda</TableHead>
                     <TableHead className="text-right">Falta pagar</TableHead>
                     <TableHead>Estado</TableHead>
+                    <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -122,14 +141,17 @@ export default function TalentPortalPage() {
                       <TableCell className="max-w-xs truncate text-sm" title={d.description}>
                         {d.description || '—'}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-warning">
-                        {formatMoney(d.debt, 'PEN')}
-                      </TableCell>
                       <TableCell className="text-right tabular-nums text-destructive">
                         {formatMoney(d.pending, 'PEN')}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={d.status} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-0.5">
+                          <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(entradaDe(d.id))} />
+                          <IconAction icon={Pencil} label="Editar" onClick={() => setEditando(entradaDe(d.id))} />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -137,13 +159,10 @@ export default function TalentPortalPage() {
                     <TableCell colSpan={2} className="text-sm font-semibold">
                       Total
                     </TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums text-warning">
-                      {formatMoney(profile.summary.totalDebt, 'PEN')}
-                    </TableCell>
                     <TableCell className="text-right font-semibold tabular-nums text-destructive">
                       {formatMoney(profile.summary.totalPending, 'PEN')}
                     </TableCell>
-                    <TableCell />
+                    <TableCell colSpan={2} />
                   </TableRow>
                 </TableBody>
               </Table>
@@ -154,14 +173,19 @@ export default function TalentPortalPage() {
         </CardContent>
       </Card>
 
-      <LedgerSection
-        entries={entries ?? []}
-        summary={profile.summary}
-        canDelete={false}
-        onCreate={(v) => createMut.mutateAsync(v).then(() => undefined)}
-        onUpdate={(entryId, v) => updateMut.mutateAsync({ entryId, values: v }).then(() => undefined)}
-        isMutating={createMut.isPending || updateMut.isPending}
-      />
+      <TalentLedgerDetailDialog entry={detalle} currency="PEN" onOpenChange={(next) => !next && setDetalle(null)} />
+
+      {editando && (
+        <LedgerFormDialog
+          entry={editando}
+          isPending={updateMut.isPending}
+          onSubmit={(v) => updateMut.mutateAsync({ entryId: editando.id, values: v }).then(() => undefined)}
+          open
+          onOpenChange={(next) => {
+            if (!next) setEditando(null);
+          }}
+        />
+      )}
     </div>
   );
 }

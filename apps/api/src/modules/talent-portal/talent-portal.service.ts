@@ -49,12 +49,14 @@ export class TalentPortalService {
   async create(token: string, data: Parameters<TalentLedgerService['create']>[2]) {
     const talent = await this.resolve(token);
     const ownerId = await this.ownerProfileId(talent.workspaceId);
-    return this.ledger.create(talent.workspaceId, talent.id, data, 'TALENT', this.actor(talent.id, ownerId));
+    const soloDeuda = { ...data, type: 'DEUDA', paidAmount: '0' };
+    return this.ledger.create(talent.workspaceId, talent.id, soloDeuda, 'TALENT', this.actor(talent.id, ownerId));
   }
 
   async update(token: string, id: string, data: Parameters<TalentLedgerService['update']>[2]) {
     const talent = await this.resolve(token);
     const ownerId = await this.ownerProfileId(talent.workspaceId);
-    return this.ledger.update(id, talent.workspaceId, data, this.actor(talent.id, ownerId), talent.id);
+    const soloDeuda = { ...data, type: 'DEUDA', paidAmount: '0' };
+    return this.ledger.update(id, talent.workspaceId, soloDeuda, this.actor(talent.id, ownerId), talent.id);
   }
 }

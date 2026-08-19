@@ -324,10 +324,19 @@ export class ReportsService {
       .sort((a, b) => a.year - b.year || a.month - b.month);
 
     const total = transactions.reduce((s, t) => s.add(new Decimal(t.amountBase)), new Decimal(0));
+    const sumaPorEstado = (estado: string) =>
+      transactions
+        .filter((t) => t.status === estado)
+        .reduce((s, t) => s.add(new Decimal(t.amountBase)), new Decimal(0));
+    const receivable = {
+      overdue: sumaPorEstado('OVERDUE').toFixed(2),
+      pending: sumaPorEstado('PENDING').toFixed(2),
+    };
 
     return {
       years,
       total: total.toFixed(2),
+      receivable,
       yearlyTotals,
       companiesPerMonth,
       companyDurations: await this.companyDurations(workspaceId),
@@ -584,9 +593,14 @@ export class ReportsService {
     const facturado = distributions.reduce((s, d) => s.plus(new Decimal(d.amountWithDiscount)), new Decimal(0));
     const realIncome = comision.gt(0) ? comision : income;
 
+    const incomeUnderReview = transactions
+      .filter((t) => t.type === 'INCOME' && t.status !== 'PAID')
+      .reduce((s, t) => s.add(new Decimal(t.amountBase)), new Decimal(0));
+
     return {
       years,
       income: income.toFixed(2),
+      incomeUnderReview: incomeUnderReview.toFixed(2),
       receivedIncome: realIncome.toFixed(2),
       talentBilled: facturado.toFixed(2),
       talentPayout: paraTalento.toFixed(2),

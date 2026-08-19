@@ -402,6 +402,7 @@ export interface EmploymentReports {
   companyProfitability: CompanyProfitability[];
   years: number[];
   total: string;
+  receivable?: { overdue: string; pending: string };
   yearlyTotals: { year: number; total: string; average: string; months: number; companies: number }[];
   companiesPerMonth: {
     year: number;
@@ -418,6 +419,7 @@ export interface EmploymentReports {
 
 export interface BusinessReports {
   receivedIncome: string;
+  incomeUnderReview?: string;
   years: number[];
   income: string;
   cost: string;

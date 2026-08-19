@@ -3,7 +3,7 @@
 import { formatMoney } from '@korapay/domain';
 import { KPICard, StatusBadge } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowUpRight, Landmark, TrendingUp, Users } from 'lucide-react';
+import { ArrowUpRight, Hourglass, Landmark, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
 import { CategoryDonut } from '@/components/charts/category-donut';
 import { DonutList } from '@/components/charts/donut-list';
@@ -130,6 +130,10 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const rentaRows = renta ?? [];
   const rentaPending = rentaRows.filter((r) => r.status !== 'PAID').reduce((s, r) => s + Number(r.amount), 0);
 
+  const porCobrarVencido = Number(data.receivable?.overdue ?? 0);
+  const porCobrarPendiente = Number(data.receivable?.pending ?? 0);
+  const porCobrar = porCobrarVencido + porCobrarPendiente;
+
   // Gratificacion y CTS solo aplican a planilla, asi que se proyectan sobre el sueldo
   // del contrato en planilla mas reciente, no sobre el promedio de todos los ingresos.
   const payrollSalary = (contratos ?? [])
@@ -168,14 +172,25 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        className={`grid gap-5 sm:grid-cols-2 ${porCobrar > 0 ? 'lg:grid-cols-3 xl:grid-cols-5' : 'lg:grid-cols-4'}`}
+      >
         <KPICard
           label={allYearsView ? 'Ingresos totales' : `Ingresos ${selectedYear}`}
           value={formatMoney(allYearsView ? String(totalGeneral) : data.total, 'PEN')}
           icon={ArrowUpRight}
           color="text-success"
-          tooltip="Suma de los montos netos recibidos, ya descontada la planilla"
+          tooltip="Suma de los montos netos registrados, ya descontada la planilla. Incluye lo pendiente y vencido: mira 'Por cobrar' para lo que aún no entra."
         />
+        {porCobrar > 0 && (
+          <KPICard
+            label="Por cobrar"
+            value={formatMoney(String(porCobrar), 'PEN')}
+            icon={Hourglass}
+            color="text-coral"
+            tooltip={`Ingresos registrados que aún no se cobran: ${formatMoney(String(porCobrarVencido), 'PEN')} vencidos y ${formatMoney(String(porCobrarPendiente), 'PEN')} pendientes (incluye meses futuros ya programados).`}
+          />
+        )}
         <KPICard
           label="Promedio mensual"
           value={formatMoney(String(promedio), 'PEN')}

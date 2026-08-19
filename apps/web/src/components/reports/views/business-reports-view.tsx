@@ -7,6 +7,7 @@ import { ArrowDownRight, ArrowUpRight, Landmark, Users } from 'lucide-react';
 import { CategoryDonut } from '@/components/charts/category-donut';
 import { DonutList } from '@/components/charts/donut-list';
 import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
+import { IncomeExpenseArea } from '@/components/charts/income-expense-area';
 import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MONTH_SHORT } from '@/components/reports/report-constants';
@@ -82,6 +83,20 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
     total: a.total,
   }));
 
+  let flujoIncAcum = 0;
+  let flujoEgrAcum = 0;
+  const flujoAcumulado = flowSeries.map((p) => {
+    flujoIncAcum += p.ingresos;
+    flujoEgrAcum += p.egresos;
+    return {
+      label: p.label,
+      ingresos: Math.round(flujoIncAcum * 100) / 100,
+      egresos: Math.round(flujoEgrAcum * 100) / 100,
+    };
+  });
+
+  const enRevision = Number(data.incomeUnderReview ?? 0);
+
   const flowRows = allYearsView
     ? data.yearlyTotals.map((y) => ({
         key: String(y.year),
@@ -115,7 +130,7 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           value={formatMoney(data.receivedIncome ?? data.income, 'PEN')}
           icon={ArrowUpRight}
           color="text-success"
-          tooltip="Lo que realmente recibe MIMOTECH de los talentos colocados. El sueldo total que pagan los clientes es mayor: la diferencia se la queda cada talento."
+          tooltip={`Lo que realmente recibe MIMOTECH de los talentos colocados. El sueldo total que pagan los clientes es mayor: la diferencia se la queda cada talento.${enRevision > 0 ? ` Incluye ${formatMoney(String(enRevision), 'PEN')} aún en revisión, no confirmados.` : ''}`}
         />
         <KPICard
           label="Costos"
@@ -161,6 +176,16 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
               {flowSeries.length ? (
                 <>
                   <MonthlyBar data={flowSeries} secondName="Costos + equipo" />
+                  {flujoAcumulado.length > 1 && (
+                    <div className="mt-6">
+                      <h4 className="mb-3 font-medium text-muted-foreground text-sm">Tendencia acumulada</h4>
+                      <p className="mb-3 text-muted-foreground text-xs">
+                        Comisión y egresos sumados {allYearsView ? 'año a año' : 'mes a mes'}. La distancia entre las
+                        dos áreas es la utilidad acumulada.
+                      </p>
+                      <IncomeExpenseArea data={flujoAcumulado} height={280} />
+                    </div>
+                  )}
                   <div className="mt-6 overflow-x-auto rounded-lg border">
                     <table className="w-full text-sm">
                       <thead>
@@ -171,29 +196,41 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
                           <th className="px-3 py-2.5 text-right font-medium">Costos</th>
                           <th className="px-3 py-2.5 text-right font-medium">Equipo</th>
                           <th className="px-3 py-2.5 text-right font-medium">Utilidad</th>
+                          <th className="px-3 py-2.5 text-right font-medium" title="Utilidad / Comisión">
+                            Margen
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {flowRows.map((row) => (
-                          <tr key={row.key} className="border-b last:border-0">
-                            <td className="px-3 py-2.5 font-semibold capitalize">{row.key}</td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
-                              {row.grossIncome ? formatMoney(row.grossIncome, 'PEN') : '—'}
-                            </td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-success">
-                              {formatMoney(row.income, 'PEN')}
-                            </td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-coral">
-                              {formatMoney(row.cost, 'PEN')}
-                            </td>
-                            <td className="px-3 py-2.5 text-right tabular-nums text-info">
-                              {formatMoney(row.teamPayment, 'PEN')}
-                            </td>
-                            <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-brand-strong dark:text-brand">
-                              {formatMoney(row.utility, 'PEN')}
-                            </td>
-                          </tr>
-                        ))}
+                        {flowRows.map((row) => {
+                          const comision = Number(row.income);
+                          const margen = comision > 0 ? (Number(row.utility) / comision) * 100 : null;
+                          return (
+                            <tr key={row.key} className="border-b last:border-0">
+                              <td className="px-3 py-2.5 font-semibold capitalize">{row.key}</td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+                                {row.grossIncome ? formatMoney(row.grossIncome, 'PEN') : '—'}
+                              </td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-success">
+                                {formatMoney(row.income, 'PEN')}
+                              </td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-coral">
+                                {formatMoney(row.cost, 'PEN')}
+                              </td>
+                              <td className="px-3 py-2.5 text-right tabular-nums text-info">
+                                {formatMoney(row.teamPayment, 'PEN')}
+                              </td>
+                              <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-brand-strong dark:text-brand">
+                                {formatMoney(row.utility, 'PEN')}
+                              </td>
+                              <td
+                                className={`px-3 py-2.5 text-right tabular-nums text-xs ${margen !== null && margen < 0 ? 'text-destructive' : 'text-muted-foreground'}`}
+                              >
+                                {margen === null ? '—' : `${margen.toFixed(0)}%`}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

@@ -7,6 +7,7 @@ import { sincronizarEmpresaCliente } from '@/common/catalog/sync-global-catalog'
 import { ordenarDeudas } from '@/common/constants/debt-order';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { distribucionEnSoles, tipoCambioPara, ultimoTipoCambio } from '@/common/talent/distribucion-soles';
 import type {
   CreateTalentDistributionDto,
   CreateTalentDto,
@@ -14,6 +15,7 @@ import type {
   UpdateTalentDistributionDto,
   UpdateTalentDto,
 } from './talent.dto';
+import { TalentIncomeSyncService } from './talent-income-sync.service';
 
 interface MonthlyBucket {
   salary: Decimal;
@@ -27,7 +29,10 @@ interface MonthlyBucket {
 
 @Injectable()
 export class TalentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly incomeSync: TalentIncomeSyncService,
+  ) {}
 
   async report(talentId: string, workspaceId: string) {
     const talent = await this.prisma.talentProfile.findFirst({
@@ -77,10 +82,11 @@ export class TalentService {
       clientName?: string | null;
       paymentType: string;
     }[] = [];
+    const tipoCambio = await ultimoTipoCambio(this.prisma);
     for (const c of talent.contracts) {
       for (const d of c.incomeDistributions) {
         allDistributions.push({
-          ...d,
+          ...distribucionEnSoles(d, c.currency, tipoCambio),
           companyName: d.companyName ?? c.companyName,
           clientName: d.clientName ?? c.clientName,
         });
@@ -259,6 +265,7 @@ export class TalentService {
         id: string;
         companyName: string | null;
         clientName: string | null;
+        currency: string;
         status: string;
         endDate: Date | null;
         incomeDistributions: {
@@ -268,9 +275,11 @@ export class TalentService {
           amountReceived: unknown;
           amountRetained: unknown;
           amountWithDiscount: unknown;
+          exchangeRate?: unknown;
         }[];
       }[];
     }[],
+    tipoCambio: Decimal,
   ) {
     const hoy = new Date();
     let year = hoy.getUTCFullYear();
@@ -298,9 +307,10 @@ export class TalentService {
         if (c.endDate && c.endDate < inicioDelMes) continue;
         const mensuales = c.incomeDistributions.filter((d) => d.paymentType === 'Mensual' && d.year && d.month);
         if (!mensuales.length) continue;
-        const ultimo = mensuales.reduce((a, b) =>
+        const masReciente = mensuales.reduce((a, b) =>
           (b.year ?? 0) > (a.year ?? 0) || ((b.year ?? 0) === (a.year ?? 0) && (b.month ?? 0) > (a.month ?? 0)) ? b : a,
         );
+        const ultimo = distribucionEnSoles(masReciente, c.currency, tipoCambio);
         filas.push({
           talentId: c.id,
           talent: t.name,
@@ -483,21 +493,29 @@ export class TalentService {
       }
     };
 
+    const tipoCambio = await ultimoTipoCambio(this.prisma);
     for (const t of talents) {
       let salary = new Decimal(0);
       let withDiscount = new Decimal(0);
       let received = new Decimal(0);
       let kept = new Decimal(0);
       for (const c of t.contracts) {
-        for (const d of c.incomeDistributions) {
-          if (year && d.year !== year) continue;
-          if (d.year) yearSet.add(d.year);
-          salary = salary.add(new Decimal(d.salary ?? 0));
-          withDiscount = withDiscount.add(new Decimal(d.amountWithDiscount));
-          received = received.add(new Decimal(d.amountReceived));
-          kept = kept.add(new Decimal(d.amountRetained));
+        for (const bruto of c.incomeDistributions) {
+          if (year && bruto.year !== year) continue;
+          if (bruto.year) yearSet.add(bruto.year);
+          const d = distribucionEnSoles(bruto, c.currency, tipoCambio);
+          salary = salary.add(new Decimal(String(d.salary ?? 0)));
+          withDiscount = withDiscount.add(new Decimal(String(d.amountWithDiscount)));
+          received = received.add(new Decimal(String(d.amountReceived)));
+          kept = kept.add(new Decimal(String(d.amountRetained)));
           if (d.year && d.month) {
-            setCell(incomePivot, incomePeriodTotals, `${d.year}-${d.month}`, t.name, new Decimal(d.amountReceived));
+            setCell(
+              incomePivot,
+              incomePeriodTotals,
+              `${d.year}-${d.month}`,
+              t.name,
+              new Decimal(String(d.amountReceived)),
+            );
           }
           addDistribAgg(t.name, t.id, {
             ...d,
@@ -673,7 +691,7 @@ export class TalentService {
           role: rolPorId.get(p.talentId) ?? null,
         }))
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
-      projection: this.proyeccionMesSiguiente(talents),
+      projection: this.proyeccionMesSiguiente(talents, tipoCambio),
       yearlyByTalent: [...yearlyByTalent.entries()]
         .map(([talentId, porAnio]) => ({
           talentId,
@@ -825,10 +843,12 @@ export class TalentService {
       where: { id, workspaceId, deletedAt: null },
     });
     if (!talent) throw new NotFoundException('Talent not found');
-    return this.prisma.talentProfile.update({
+    const eliminado = await this.prisma.talentProfile.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+    await this.incomeSync.sync(workspaceId);
+    return eliminado;
   }
   async addContract(
     talentProfileId: string,
@@ -902,7 +922,9 @@ export class TalentService {
       where: { id: contractId, talentProfile: { workspaceId, deletedAt: null } },
     });
     if (!contract) throw new NotFoundException('Contract not found');
-    return this.prisma.talentContract.delete({ where: { id: contractId } });
+    const eliminado = await this.prisma.talentContract.delete({ where: { id: contractId } });
+    await this.incomeSync.sync(workspaceId);
+    return eliminado;
   }
   async addDistribution(contractId: string, workspaceId: string, data: CreateTalentDistributionDto) {
     const contract = await this.prisma.talentContract.findFirst({
@@ -911,7 +933,7 @@ export class TalentService {
     if (!contract) throw new NotFoundException('Talent contract not found');
     const d = data.date ? new Date(data.date) : null;
     await sincronizarEmpresaCliente(this.prisma, data.companyName, data.clientName);
-    return this.prisma.talentIncomeDistribution.create({
+    const creada = await this.prisma.talentIncomeDistribution.create({
       data: {
         contractId,
         talentId: contract.talentProfileId,
@@ -926,10 +948,13 @@ export class TalentService {
         amountWithDiscount: data.amountWithDiscount,
         amountReceived: data.amountReceived,
         amountRetained: data.amountRetained,
+        exchangeRate: contract.currency === 'USD' ? (await tipoCambioPara(this.prisma, d)).toFixed(6) : null,
         notes: data.notes ?? null,
         status: data.status ?? 'PENDING',
       },
     });
+    await this.incomeSync.sync(workspaceId);
+    return creada;
   }
 
   async addLooseDistribution(talentId: string, workspaceId: string, data: CreateTalentDistributionDto) {
@@ -939,7 +964,7 @@ export class TalentService {
     if (!talent) throw new NotFoundException('Talent not found');
     const d = data.date ? new Date(data.date) : null;
     await sincronizarEmpresaCliente(this.prisma, data.companyName, data.clientName);
-    return this.prisma.talentIncomeDistribution.create({
+    const creada = await this.prisma.talentIncomeDistribution.create({
       data: {
         contractId: null,
         talentId,
@@ -958,6 +983,8 @@ export class TalentService {
         status: data.status ?? 'PAID',
       },
     });
+    await this.incomeSync.sync(workspaceId);
+    return creada;
   }
 
   async updateDistribution(distId: string, workspaceId: string, data: UpdateTalentDistributionDto) {
@@ -969,6 +996,7 @@ export class TalentService {
           { talent: { workspaceId, deletedAt: null } },
         ],
       },
+      include: { contract: { select: { currency: true } } },
     });
     if (!dist) throw new NotFoundException('Distribution not found');
     const updateData: Record<string, unknown> = {};
@@ -993,12 +1021,21 @@ export class TalentService {
       if (data.year === undefined) updateData.year = d?.getUTCFullYear() ?? null;
       if (data.month === undefined) updateData.month = d ? d.getUTCMonth() + 1 : null;
     }
+    if (dist.contract?.currency === 'USD') {
+      const fechaEfectiva = data.date !== undefined ? (data.date ? new Date(data.date) : null) : dist.date;
+      updateData.exchangeRate = (await tipoCambioPara(this.prisma, fechaEfectiva)).toFixed(6);
+    }
     await sincronizarEmpresaCliente(
       this.prisma,
       data.companyName !== undefined ? data.companyName : dist.companyName,
       data.clientName !== undefined ? data.clientName : dist.clientName,
     );
-    return this.prisma.talentIncomeDistribution.update({ where: { id: distId }, data: updateData });
+    const actualizada = await this.prisma.talentIncomeDistribution.update({
+      where: { id: distId },
+      data: updateData,
+    });
+    await this.incomeSync.sync(workspaceId);
+    return actualizada;
   }
   async removeDistribution(distId: string, workspaceId: string) {
     const dist = await this.prisma.talentIncomeDistribution.findFirst({
@@ -1011,6 +1048,8 @@ export class TalentService {
       },
     });
     if (!dist) throw new NotFoundException('Distribution not found');
-    return this.prisma.talentIncomeDistribution.delete({ where: { id: distId } });
+    const eliminada = await this.prisma.talentIncomeDistribution.delete({ where: { id: distId } });
+    await this.incomeSync.sync(workspaceId);
+    return eliminada;
   }
 }

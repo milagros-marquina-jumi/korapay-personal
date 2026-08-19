@@ -22,6 +22,8 @@ interface Options {
   onShowConversion: (tx: Transaction) => void;
   showDate?: boolean;
   ordinals?: Map<string, ConceptOrdinal>;
+  ownCompany?: string;
+  onOwnCompanyClick?: (tx: Transaction) => void;
 }
 
 export function buildIncomeColumns({
@@ -34,6 +36,8 @@ export function buildIncomeColumns({
   onShowConversion,
   showDate = true,
   ordinals,
+  ownCompany,
+  onOwnCompanyClick,
 }: Options): ColumnDef<Transaction, unknown>[] {
   const columns: ColumnDef<Transaction, unknown>[] = [];
 
@@ -71,6 +75,14 @@ export function buildIncomeColumns({
                 ({orden.position}/{orden.total})
               </span>
             )}
+            {row.original.sourceRef?.startsWith('TALENT_SYNC:') && (
+              <span
+                className="shrink-0 rounded bg-info/15 px-1.5 py-0.5 font-medium text-[10px] text-info"
+                title="Se genera automáticamente desde los pagos de Mimotalents"
+              >
+                Auto
+              </span>
+            )}
           </span>
         );
       },
@@ -79,9 +91,22 @@ export function buildIncomeColumns({
       id: 'company',
       size: 160,
       header: 'Empresa',
-      cell: ({ row }) => (
-        <span className="font-medium">{companyName(row.original.companyId) ?? row.original.category?.name ?? '-'}</span>
-      ),
+      cell: ({ row }) => {
+        const nombre = companyName(row.original.companyId) ?? row.original.category?.name ?? '-';
+        if (ownCompany && onOwnCompanyClick && nombre === ownCompany) {
+          return (
+            <button
+              type="button"
+              onClick={() => onOwnCompanyClick(row.original)}
+              title="Ver el detalle de Mimotalents de ese mes"
+              className="font-medium text-brand underline decoration-dotted underline-offset-4 hover:text-brand-strong"
+            >
+              {nombre}
+            </button>
+          );
+        }
+        return <span className="font-medium">{nombre}</span>;
+      },
     },
     {
       id: 'payment',
@@ -169,13 +194,18 @@ export function buildIncomeColumns({
       id: 'actions',
       size: 110,
       header: '',
-      cell: ({ row }) => (
-        <IconActions>
-          <IconAction icon={Eye} label="Ver detalle" onClick={() => onShowDetail(row.original)} />
-          <IconAction icon={Pencil} label="Editar" onClick={() => onEdit(row.original)} />
-          <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onRemove(row.original)} />
-        </IconActions>
-      ),
+      cell: ({ row }) => {
+        const derivada = row.original.sourceRef?.startsWith('TALENT_SYNC:');
+        return (
+          <IconActions>
+            <IconAction icon={Eye} label="Ver detalle" onClick={() => onShowDetail(row.original)} />
+            {!derivada && <IconAction icon={Pencil} label="Editar" onClick={() => onEdit(row.original)} />}
+            {!derivada && (
+              <IconAction icon={Trash2} label="Eliminar" destructive onClick={() => onRemove(row.original)} />
+            )}
+          </IconActions>
+        );
+      },
     },
   );
 

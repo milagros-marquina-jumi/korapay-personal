@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
-import type { EmploymentContract, EmploymentReports, TaxObligation } from '@/lib/api.types';
+import type { Company, EmploymentContract, EmploymentReports, TaxObligation } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
 
@@ -51,7 +51,13 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   });
 
   const [year, setYear] = useDefaultYear(allYears);
-  const { show: showOwn, toggle: toggleOwn, isHidden } = useOwnCompanyVisibility();
+  const { data: companiesCatalog } = useQuery({
+    queryKey: queryKeys.companies(workspaceId),
+    queryFn: () => apiFetch<Company[]>(`/companies?workspaceId=${workspaceId}`),
+    enabled: !!workspaceId,
+  });
+  const ownCompanyRow = (companiesCatalog ?? []).find((c) => c.syncTalentWorkspaceId);
+  const { show: showOwn, toggle: toggleOwn, isHidden, ownName } = useOwnCompanyVisibility(ownCompanyRow?.name);
   const [companiesDetail, setCompaniesDetail] = useState<CompaniesMonthSelection | null>(null);
   const [durationLimit, setDurationLimit] = useState<string>('5');
   const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
@@ -322,7 +328,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Ingresos por empresa</CardTitle>
               <div className="flex items-center gap-2">
-                <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
+                <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} name={ownName} />
                 {yearFilter}
               </div>
             </CardHeader>
@@ -349,7 +355,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Ingresos por concepto</CardTitle>
               <div className="flex items-center gap-2">
-                <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
+                <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} name={ownName} />
                 {yearFilter}
               </div>
             </CardHeader>
@@ -370,7 +376,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3">
               <CardTitle>Empresas activas por mes</CardTitle>
-              <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
+              <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} name={ownName} />
             </CardHeader>
             <CardContent>
               {heatmapRows.length ? (

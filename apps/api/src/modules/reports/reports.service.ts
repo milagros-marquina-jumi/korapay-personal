@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { distribucionEnSoles, ultimoTipoCambio } from '@/common/talent/distribucion-soles';
 import { buildCompanyProfitability } from './company-profitability';
 import { buildEmploymentBreakdown } from './employment-breakdown';
 import { buildPersonalMatrices } from './personal-matrix';
@@ -421,9 +422,20 @@ export class ReportsService {
       this.prisma.project.findMany({ where: { workspaceId, deletedAt: null } }),
       this.prisma.talentIncomeDistribution.findMany({
         where: { contract: { talentProfile: { workspaceId } } },
-        select: { amountReceived: true, amountRetained: true, amountWithDiscount: true, year: true, month: true },
+        select: {
+          amountReceived: true,
+          amountRetained: true,
+          amountWithDiscount: true,
+          year: true,
+          month: true,
+          exchangeRate: true,
+          contract: { select: { currency: true } },
+        },
       }),
     ]);
+
+    const tipoCambio = await ultimoTipoCambio(this.prisma);
+    const distribucionesSoles = distributions.map((d) => distribucionEnSoles(d, d.contract?.currency, tipoCambio));
 
     const years = [...new Set(allTransactions.map((t) => t.date.getUTCFullYear()))].sort((a, b) => b - a);
     const appName = new Map(applications.map((a) => [a.id, a.name]));
@@ -456,8 +468,8 @@ export class ReportsService {
     // meses comparaban el sueldo del cliente contra los costos de MIMOTECH.
     const comisionAnio = new Map<number, Decimal>();
     const comisionMes = new Map<string, Decimal>();
-    for (const d of distributions) {
-      const comisionMimotech = new Decimal(d.amountReceived);
+    for (const d of distribucionesSoles) {
+      const comisionMimotech = new Decimal(String(d.amountReceived));
       if (d.year) comisionAnio.set(d.year, (comisionAnio.get(d.year) ?? new Decimal(0)).add(comisionMimotech));
       if (d.year && d.month) {
         const key = `${d.year}-${d.month}`;
@@ -588,9 +600,18 @@ export class ReportsService {
     // El ingreso de un talento se registra con el monto que factura el cliente,
     // pero de ahi MIMOTECH cobra amountReceived y el talento se queda con
     // amountRetained: esa comision es el ingreso real de la empresa.
-    const paraTalento = distributions.reduce((s, d) => s.plus(new Decimal(d.amountRetained)), new Decimal(0));
-    const comision = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
-    const facturado = distributions.reduce((s, d) => s.plus(new Decimal(d.amountWithDiscount)), new Decimal(0));
+    const paraTalento = distribucionesSoles.reduce(
+      (s, d) => s.plus(new Decimal(String(d.amountRetained))),
+      new Decimal(0),
+    );
+    const comision = distribucionesSoles.reduce(
+      (s, d) => s.plus(new Decimal(String(d.amountReceived))),
+      new Decimal(0),
+    );
+    const facturado = distribucionesSoles.reduce(
+      (s, d) => s.plus(new Decimal(String(d.amountWithDiscount))),
+      new Decimal(0),
+    );
     const realIncome = comision.gt(0) ? comision : income;
 
     const incomeUnderReview = transactions

@@ -10,6 +10,7 @@ function buildPrismaMock() {
     debtPayment: { findMany: jest.fn().mockResolvedValue([]) },
     pendingItem: { findMany: jest.fn().mockResolvedValue([]) },
     talentIncomeDistribution: { findMany: jest.fn().mockResolvedValue([]) },
+    exchangeRate: { findFirst: jest.fn().mockResolvedValue(null) },
   };
 }
 

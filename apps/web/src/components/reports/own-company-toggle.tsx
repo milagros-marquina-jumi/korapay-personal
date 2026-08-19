@@ -8,8 +8,9 @@ export const OWN_COMPANY = 'MIMOTECH';
 
 const STORAGE_KEY = 'korapay.showOwnCompany';
 
-export function useOwnCompanyVisibility() {
+export function useOwnCompanyVisibility(ownName?: string) {
   const [show, setShow] = useState(false);
+  const name = ownName ?? OWN_COMPANY;
 
   useEffect(() => {
     setShow(window.localStorage.getItem(STORAGE_KEY) === 'true');
@@ -23,25 +24,26 @@ export function useOwnCompanyVisibility() {
     });
   }, []);
 
-  const isHidden = useCallback((name?: string | null) => !show && name === OWN_COMPANY, [show]);
+  const isHidden = useCallback((n?: string | null) => !show && n === name, [show, name]);
 
-  return { show, toggle, isHidden };
+  return { show, toggle, isHidden, ownName: name };
 }
 
 interface Props {
   show: boolean;
   onToggle: () => void;
   className?: string;
+  name?: string;
 }
 
-export function OwnCompanyToggle({ show, onToggle, className }: Readonly<Props>) {
+export function OwnCompanyToggle({ show, onToggle, className, name = OWN_COMPANY }: Readonly<Props>) {
   const Icon = show ? Eye : EyeOff;
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-pressed={show}
-      title={show ? `Ocultar ${OWN_COMPANY} de los cálculos` : `Incluir ${OWN_COMPANY} en los cálculos`}
+      title={show ? `Ocultar ${name} de los cálculos` : `Incluir ${name} en los cálculos`}
       className={cn(
         'inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors',
         show
@@ -51,7 +53,7 @@ export function OwnCompanyToggle({ show, onToggle, className }: Readonly<Props>)
       )}
     >
       <Icon className="size-4" aria-hidden />
-      {show ? `Con ${OWN_COMPANY}` : `Sin ${OWN_COMPANY}`}
+      {show ? `Con ${name}` : `Sin ${name}`}
     </button>
   );
 }

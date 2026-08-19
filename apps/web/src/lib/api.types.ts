@@ -127,6 +127,7 @@ export interface Category {
 }
 
 export interface Company {
+  syncTalentWorkspaceId?: string | null;
   id: string;
   name: string;
   ruc?: string | null;
@@ -183,6 +184,7 @@ export interface Transaction {
   id: string;
   type: string;
   concept: string;
+  sourceRef?: string | null;
   description?: string | null;
   date: string;
   amountOriginal: string;
@@ -512,6 +514,7 @@ export interface TalentIncomeDistribution {
   id: string;
   contractId?: string | null;
   talentId?: string | null;
+  exchangeRate?: string | null;
   date?: string | null;
   year?: number | null;
   month?: number | null;

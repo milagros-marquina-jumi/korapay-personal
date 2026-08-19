@@ -13,6 +13,7 @@ import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { buildIncomeColumns } from '@/components/income/income-columns';
+import { MimotalentMonthDialog, type MimotalentMonthSelection } from '@/components/income/mimotalent-month-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useConfirm } from '@/components/providers/confirm-provider';
@@ -38,7 +39,7 @@ import { useOpenMonth } from '@/lib/use-open-month';
 import { formatMonthYear } from '@/lib/utils';
 
 function IngresosContent() {
-  const { activeWorkspaceId, activeWorkspace } = useWorkspace();
+  const { activeWorkspaceId, activeWorkspace, workspaces } = useWorkspace();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
@@ -50,9 +51,9 @@ function IngresosContent() {
   const [paymentMethod, setPaymentMethod] = useState<string>(FILTER_ALL);
   const [month, setMonth] = useState<string>(FILTER_ALL);
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const { show: showOwn, toggle: toggleOwn, isHidden } = useOwnCompanyVisibility();
   const [detail, setDetail] = useState<Transaction | null>(null);
   const [usdDetail, setUsdDetail] = useState<Transaction | null>(null);
+  const [mimoMonth, setMimoMonth] = useState<MimotalentMonthSelection | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(activeWorkspaceId ?? '', { type: 'INCOME', all: true }),
@@ -75,6 +76,14 @@ function IngresosContent() {
     queryFn: () => apiFetch<Company[]>(`/companies?workspaceId=${activeWorkspaceId}`),
     enabled: !!activeWorkspaceId,
   });
+
+  // La empresa propia se identifica por su vinculo en BD con el workspace de talentos,
+  // no por el nombre: renombrarla no rompe el toggle ni la sincronizacion.
+  const ownCompanyRow = (companies ?? []).find((c) => c.syncTalentWorkspaceId);
+  const { show: showOwn, toggle: toggleOwn, isHidden, ownName } = useOwnCompanyVisibility(ownCompanyRow?.name);
+  const businessWorkspace = ownCompanyRow?.syncTalentWorkspaceId
+    ? workspaces.find((w) => w.id === ownCompanyRow.syncTalentWorkspaceId)
+    : workspaces.find((w) => w.type === 'BUSINESS');
 
   const { data: contracts } = useQuery({
     queryKey: queryKeys.employmentContracts(activeWorkspaceId ?? ''),
@@ -221,6 +230,20 @@ function IngresosContent() {
     if (ok) removeMutation.mutate(tx.id);
   };
 
+  const abrirMesMimotech = (tx: Transaction) => {
+    const d = new Date(tx.date);
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth() + 1;
+    const registered = (data?.data ?? [])
+      .filter((t) => {
+        if (t.companyId !== tx.companyId) return false;
+        const td = new Date(t.date);
+        return td.getUTCFullYear() === y && td.getUTCMonth() + 1 === m;
+      })
+      .reduce((s, t) => s + Number(t.amountBase), 0);
+    setMimoMonth({ year: y, month: m, registered });
+  };
+
   const columns = useMemo(
     () =>
       buildIncomeColumns({
@@ -233,8 +256,10 @@ function IngresosContent() {
         onShowConversion: setUsdDetail,
         showDate: false,
         ordinals,
+        ownCompany: ownName,
+        onOwnCompanyClick: businessWorkspace ? abrirMesMimotech : undefined,
       }),
-    [activeWorkspaceId, companies, catalogs, confirm, removeMutation, ordinals],
+    [activeWorkspaceId, companies, catalogs, confirm, removeMutation, ordinals, businessWorkspace, data?.data],
   );
 
   return (
@@ -356,7 +381,7 @@ function IngresosContent() {
               placeholder="Banco"
               allLabel="Todo banco"
             />
-            <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} />
+            <OwnCompanyToggle show={showOwn} onToggle={toggleOwn} name={ownName} />
           </>
         }
       />
@@ -421,6 +446,12 @@ function IngresosContent() {
       />
 
       <UsdConversionDialog transaction={usdDetail} onOpenChange={(next) => !next && setUsdDetail(null)} />
+
+      <MimotalentMonthDialog
+        selection={mimoMonth}
+        businessWorkspaceId={businessWorkspace?.id}
+        onOpenChange={(next) => !next && setMimoMonth(null)}
+      />
     </PageShell>
   );
 }

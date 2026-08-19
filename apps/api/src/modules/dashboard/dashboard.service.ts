@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { distribucionEnSoles, ultimoTipoCambio } from '@/common/talent/distribucion-soles';
 
 @Injectable()
 export class DashboardService {
@@ -82,12 +83,19 @@ export class DashboardService {
 
     const distributions = await this.prisma.talentIncomeDistribution.findMany({
       where: { contract: { talentProfile: { workspaceId } } },
-      select: { amountRetained: true, amountReceived: true },
+      select: {
+        amountRetained: true,
+        amountReceived: true,
+        exchangeRate: true,
+        contract: { select: { currency: true } },
+      },
     });
-    const saldoMimotalents = distributions.reduce((s, d) => s.plus(new Decimal(d.amountRetained)), new Decimal(0));
+    const tipoCambio = await ultimoTipoCambio(this.prisma);
+    const enSoles = distributions.map((d) => distribucionEnSoles(d, d.contract?.currency, tipoCambio));
+    const saldoMimotalents = enSoles.reduce((s, d) => s.plus(new Decimal(String(d.amountRetained))), new Decimal(0));
     // Los ingresos por talentos se registran con el sueldo que paga el cliente, pero
     // MIMOTECH solo recibe una parte: el resto se lo queda el talento.
-    const recibidoTalentos = distributions.reduce((s, d) => s.plus(new Decimal(d.amountReceived)), new Decimal(0));
+    const recibidoTalentos = enSoles.reduce((s, d) => s.plus(new Decimal(String(d.amountReceived))), new Decimal(0));
     const ingresoReal = recibidoTalentos.gt(0) ? recibidoTalentos : ingresos;
 
     const patrimonio = disponible.plus(savings).plus(porCobrar).minus(debtTotal.minus(paidDebts));

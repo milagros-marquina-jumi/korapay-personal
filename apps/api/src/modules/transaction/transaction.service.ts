@@ -357,6 +357,7 @@ export class TransactionService {
   }
   async update(id: string, workspaceId: string, data: UpdateTransactionDto) {
     const existing = await this.findOne(id, workspaceId);
+    this.rechazarSiEsDerivada(existing.sourceRef, 'editar');
     const updateData: Prisma.TransactionUncheckedUpdateInput = {};
     if (data.concept) updateData.concept = data.concept;
     if (data.description !== undefined) updateData.description = data.description;
@@ -408,11 +409,20 @@ export class TransactionService {
     });
   }
   async remove(id: string, workspaceId: string) {
-    await this.findOne(id, workspaceId);
+    const existing = await this.findOne(id, workspaceId);
+    this.rechazarSiEsDerivada(existing.sourceRef, 'eliminar');
     return this.prisma.transaction.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private rechazarSiEsDerivada(sourceRef: string | null, accion: string) {
+    if (sourceRef?.startsWith('TALENT_SYNC:')) {
+      throw new BadRequestException(
+        `No se puede ${accion} este ingreso: se genera automáticamente desde los pagos de Mimotalents. Corrige el pago del talento y el monto se actualizará solo.`,
+      );
+    }
   }
   async duplicate(id: string, workspaceId: string, target?: { year?: number; month?: number }) {
     const original = await this.findOne(id, workspaceId);

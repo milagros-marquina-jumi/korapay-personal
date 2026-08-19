@@ -13,8 +13,12 @@ interface Props {
 }
 
 export function PaymentConversionDialog({ distribution, rate, rateDate, onOpenChange }: Readonly<Props>) {
-  const tipoCambio = Number(rate ?? 0);
+  const tipoCambioPago = distribution?.exchangeRate ? Number(distribution.exchangeRate) : null;
+  const tipoCambio = tipoCambioPago ?? Number(rate ?? 0);
   const enSoles = (v: string) => (tipoCambio ? formatMoney((Number(v) * tipoCambio).toFixed(2), 'PEN') : '—');
+  let etiquetaTipoCambio = 'Tipo de cambio';
+  if (tipoCambioPago) etiquetaTipoCambio = 'Tipo de cambio del pago';
+  else if (rateDate) etiquetaTipoCambio = `Tipo de cambio del ${formatDate(rateDate)}`;
 
   return (
     <Dialog open={distribution !== null} onOpenChange={onOpenChange}>
@@ -30,9 +34,7 @@ export function PaymentConversionDialog({ distribution, rate, rateDate, onOpenCh
         {distribution && (
           <div className="space-y-3">
             <div className="flex items-baseline justify-between gap-4 rounded-xl border px-4 py-2.5 text-sm">
-              <span className="text-muted-foreground text-xs">
-                {rateDate ? `Tipo de cambio del ${formatDate(rateDate)}` : 'Tipo de cambio'}
-              </span>
+              <span className="text-muted-foreground text-xs">{etiquetaTipoCambio}</span>
               <span className="font-medium tabular-nums">
                 {tipoCambio ? `S/ ${tipoCambio.toFixed(3)}` : 'Sin tipo de cambio'}
               </span>
@@ -66,7 +68,9 @@ export function PaymentConversionDialog({ distribution, rate, rateDate, onOpenCh
               </table>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Referencial: usa el tipo de cambio de hoy, no el de la fecha del pago.
+              {tipoCambioPago
+                ? 'Usa el tipo de cambio guardado en la fecha del pago: es el mismo que suman los reportes.'
+                : 'Referencial: usa el tipo de cambio de hoy, no el de la fecha del pago.'}
             </p>
           </div>
         )}

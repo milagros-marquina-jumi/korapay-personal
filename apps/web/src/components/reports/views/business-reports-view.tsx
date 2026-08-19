@@ -5,6 +5,7 @@ import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowUpRight, Landmark, Users } from 'lucide-react';
 import { CategoryDonut } from '@/components/charts/category-donut';
+import { DonutList } from '@/components/charts/donut-list';
 import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
 import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
@@ -213,14 +214,7 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
               {costDonut.length ? (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <CategoryDonut data={costDonut} />
-                  <div className="divide-y">
-                    {data.costByApp.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                        <span className="truncate">{c.name}</span>
-                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <DonutList items={data.costByApp} />
                 </div>
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin costos registrados</p>
@@ -238,14 +232,7 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
               {projectDonut.length ? (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <CategoryDonut data={projectDonut} />
-                  <div className="divide-y">
-                    {data.costByProject.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                        <span className="truncate">{c.name}</span>
-                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <DonutList items={data.costByProject} />
                 </div>
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin costos por proyecto</p>

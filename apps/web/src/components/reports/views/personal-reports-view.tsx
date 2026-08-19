@@ -5,6 +5,7 @@ import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Lock, TrendingUp } from 'lucide-react';
 import { CategoryDonut } from '@/components/charts/category-donut';
+import { DonutList } from '@/components/charts/donut-list';
 import { HeatmapTable } from '@/components/charts/heatmap-table';
 import { MonthlyBar, type MonthlyPoint } from '@/components/charts/monthly-bar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
@@ -118,14 +119,7 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
               <>
                 <div className="grid gap-6 lg:grid-cols-2">
                   <CategoryDonut data={donutData} />
-                  <div className="divide-y">
-                    {data.expenseByCategory.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                        <span className="truncate">{c.name}</span>
-                        <span className="tabular-nums font-medium">{formatMoney(c.total, 'PEN')}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <DonutList items={data.expenseByCategory} />
                 </div>
                 {allYearsView && data.yearlyTotals?.length > 0 && (
                   <div className="mt-6">

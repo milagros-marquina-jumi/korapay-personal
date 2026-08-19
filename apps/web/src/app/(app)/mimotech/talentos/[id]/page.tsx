@@ -58,6 +58,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
 import type {
+  Category,
   Talent,
   TalentAuditEntry,
   TalentContract,
@@ -81,6 +82,14 @@ function formatDateOrActive(value?: string | null) {
 }
 
 const ACTION_LABELS: Record<string, string> = { CREATE: 'Creó', UPDATE: 'Editó', DELETE: 'Eliminó' };
+
+const DIST_STATUS_OPTIONS = [
+  { value: 'PAID', label: 'Pagado' },
+  { value: 'PENDING', label: 'Pendiente' },
+  { value: 'PARTIAL', label: 'Parcial' },
+  { value: 'OVERDUE', label: 'Vencido' },
+  { value: 'CANCELLED', label: 'Cancelado' },
+];
 
 function TalentDetailContent() {
   const { activeWorkspaceId } = useWorkspace();
@@ -130,6 +139,12 @@ function TalentDetailContent() {
     queryKey: queryKeys.talentReport(ws, id),
     queryFn: () => apiFetch<TalentReport>(`/talents/${id}/report?workspaceId=${ws}`),
     enabled: !!ws && !!id,
+  });
+
+  const { data: categorias } = useQuery({
+    queryKey: queryKeys.categories(ws),
+    queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${ws}`),
+    enabled: !!ws,
   });
 
   const summary = summaryList?.find((s) => s.talentId === id);
@@ -276,6 +291,18 @@ function TalentDetailContent() {
     onSuccess: () => {
       invalidateTalent();
       toast.success('Pago actualizado');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const distStatusMut = useMutation({
+    mutationFn: ({ distId, status }: { distId: string; status: string }) =>
+      apiFetch(`/talents/distributions/${distId}?workspaceId=${ws}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: () => {
+      invalidateTalent();
+      toast.success('Estado actualizado');
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -832,6 +859,7 @@ function TalentDetailContent() {
             summary={summary}
             talentName={talent.name}
             adminName={perfil?.name}
+            categoryOptions={(categorias ?? []).map((c) => c.name)}
             onCreate={(v) => createMut.mutateAsync(v).then(() => undefined)}
             onUpdate={(entryId, v) => updateMut.mutateAsync({ entryId, values: v }).then(() => undefined)}
             onQuickStatus={(entry, status) =>
@@ -967,7 +995,12 @@ function TalentDetailContent() {
                               <Money value={formatMoney(dist.amountRetained, 'PEN')} />
                             </TableCell>
                             <TableCell>
-                              <StatusBadge status={dist.status} />
+                              <StatusPicker
+                                status={dist.status}
+                                options={DIST_STATUS_OPTIONS}
+                                isPending={distStatusMut.isPending}
+                                onSelect={(next) => distStatusMut.mutate({ distId: dist.id, status: next })}
+                              />
                             </TableCell>
                             <TableCell>
                               <IconActions>
@@ -1210,7 +1243,12 @@ function TalentDetailContent() {
                                     />
                                   </TableCell>
                                   <TableCell>
-                                    <StatusBadge status={dist.status} />
+                                    <StatusPicker
+                                      status={dist.status}
+                                      options={DIST_STATUS_OPTIONS}
+                                      isPending={distStatusMut.isPending}
+                                      onSelect={(next) => distStatusMut.mutate({ distId: dist.id, status: next })}
+                                    />
                                   </TableCell>
                                   <TableCell>
                                     <IconActions>
@@ -1352,6 +1390,7 @@ function normalize(values: LedgerFormValues) {
     debtAmount: values.debtAmount || '0',
     pendingAmount: values.pendingAmount || '0',
     status: values.status,
+    category: values.category || undefined,
     description: values.description || undefined,
   };
 }

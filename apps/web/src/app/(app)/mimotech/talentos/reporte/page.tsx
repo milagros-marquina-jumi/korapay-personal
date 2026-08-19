@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { CategoryDonut } from '@/components/charts/category-donut';
+import { DonutList } from '@/components/charts/donut-list';
+import { IncomeExpenseArea } from '@/components/charts/income-expense-area';
 import { PersonBar, type PersonBarDatum } from '@/components/charts/person-bar';
 import { PivotTable } from '@/components/charts/pivot-table';
 import { YearlyHeatmap } from '@/components/charts/yearly-heatmap';
@@ -25,6 +28,7 @@ import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { PeruLaboralCalendar } from '@/components/reports/peru-laboral-calendar';
+import { SortableTh, type Sorters, useSortedRows } from '@/components/reports/sortable';
 import { GlobalProjectionDialog } from '@/components/talent/global-projection-dialog';
 import { TalentName } from '@/components/talent/talent-name';
 import { Button } from '@/components/ui/button';
@@ -35,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
 import type { Talent, TalentGlobalReport } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { categoriaLedgerLabel } from '@/lib/talent-ledger-categories';
 
 function TimeSeriesBars({
   data,
@@ -117,6 +122,55 @@ function TimeSeriesBars({
   );
 }
 
+type IncomePersonRow = TalentGlobalReport['incomeByPerson'][number];
+type ExpensePersonRow = TalentGlobalReport['expenseByPerson'][number];
+type ProfitabilityRow = TalentGlobalReport['profitabilityByPerson'][number];
+type CompanyRow = TalentGlobalReport['byCompany'][number];
+type PaymentTypeRow = TalentGlobalReport['byPaymentType'][number];
+
+const INCOME_SORTERS: Sorters<IncomePersonRow> = {
+  name: (p) => p.name,
+  salary: (p) => Number(p.salary),
+  withDiscount: (p) => Number(p.withDiscount),
+  received: (p) => Number(p.received),
+  kept: (p) => Number(p.kept),
+};
+
+const EXPENSE_SORTERS: Sorters<ExpensePersonRow> = {
+  name: (p) => p.name,
+  count: (p) => p.count,
+  paid: (p) => Number(p.paid),
+  debt: (p) => Number(p.debt),
+  pending: (p) => Number(p.pending),
+};
+
+const PROFIT_SORTERS: Sorters<ProfitabilityRow> = {
+  name: (p) => p.name,
+  received: (p) => Number(p.received),
+  paid: (p) => Number(p.paid),
+  net: (p) => Number(p.net),
+  margin: (p) => Number(p.margin),
+};
+
+const COMPANY_SORTERS: Sorters<CompanyRow> = {
+  name: (c) => c.name,
+  salary: (c) => Number(c.salary),
+  received: (c) => Number(c.received),
+  kept: (c) => Number(c.kept),
+  payments: (c) => c.payments,
+};
+
+const PAYTYPE_SORTERS: Sorters<PaymentTypeRow> = {
+  name: (p) => p.name,
+  received: (p) => Number(p.received),
+  kept: (p) => Number(p.kept),
+  count: (p) => p.count,
+};
+
+function filtrarVisibles<T extends { status?: string }>(lista: T[] | undefined, showInactive: boolean) {
+  return showInactive ? (lista ?? []) : (lista ?? []).filter((p) => (p.status ?? 'ACTIVE') === 'ACTIVE');
+}
+
 function InactiveToggle({ show, count, onToggle }: Readonly<{ show: boolean; count: number; onToggle: () => void }>) {
   if (count <= 0) return null;
   return (
@@ -184,6 +238,20 @@ function GlobalReportContent() {
     [data, activeNames, showInactive],
   );
 
+  const incomePersons = useMemo(() => filtrarVisibles(data?.incomeByPerson, showInactive), [data, showInactive]);
+  const expensePersons = useMemo(() => filtrarVisibles(data?.expenseByPerson, showInactive), [data, showInactive]);
+  const profitabilityPersons = useMemo(
+    () => filtrarVisibles(data?.profitabilityByPerson, showInactive),
+    [data, showInactive],
+  );
+  const incomeSort = useSortedRows(incomePersons, INCOME_SORTERS);
+  const expenseSort = useSortedRows(expensePersons, EXPENSE_SORTERS);
+  const profitSort = useSortedRows(profitabilityPersons, PROFIT_SORTERS);
+  const companyRows = useMemo(() => data?.byCompany ?? [], [data]);
+  const payTypeRows = useMemo(() => data?.byPaymentType ?? [], [data]);
+  const companySort = useSortedRows(companyRows, COMPANY_SORTERS);
+  const payTypeSort = useSortedRows(payTypeRows, PAYTYPE_SORTERS);
+
   if (isLoading || !data) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -197,10 +265,21 @@ function GlobalReportContent() {
   const visible = <T extends { status?: string }>(lista: T[]) =>
     showInactive ? lista : lista.filter((p) => (p.status ?? 'ACTIVE') === 'ACTIVE');
 
-  const incomePersons = visible(data.incomeByPerson);
-  const expensePersons = visible(data.expenseByPerson);
-  const profitabilityPersons = visible(data.profitabilityByPerson);
   const yearlyPersons = visible(data.yearlyByTalent);
+
+  const categoriaItems = data.expenseByCategory.map((c) => ({
+    name: categoriaLedgerLabel(c.name),
+    total: c.paid,
+  }));
+  const hayCategorias = categoriaItems.some((c) => c.name !== 'Sin categoría');
+
+  let incAcum = 0;
+  let expAcum = 0;
+  const serieAcumulada = data.timeSeries.map((d) => {
+    incAcum += Number(d.income);
+    expAcum += Number(d.expense);
+    return { label: d.label, ingresos: Math.round(incAcum * 100) / 100, egresos: Math.round(expAcum * 100) / 100 };
+  });
 
   const incomeBars: PersonBarDatum[] = incomePersons.map((p) => ({
     id: p.talentId,
@@ -246,12 +325,14 @@ function GlobalReportContent() {
           value={formatMoney(data.totals.received, 'PEN')}
           icon={ArrowDownLeft}
           color="text-info"
+          tooltip="Comisión que entró a MIMOTECH por los pagos de los talentos colocados."
         />
         <KPICard
           label="Se quedaron (talentos)"
           value={formatMoney(data.totals.kept, 'PEN')}
           icon={ArrowUpRight}
           color="text-teal"
+          tooltip="Parte del pago del cliente que se quedó cada talento."
         />
         <KPICard
           label="Invertido en talentos"
@@ -265,6 +346,7 @@ function GlobalReportContent() {
           value={formatMoney(data.totals.net, 'PEN')}
           icon={Landmark}
           color="text-brand"
+          tooltip="Recibí menos lo invertido en talentos. Es la ganancia real de la operación."
         />
       </div>
       <div className="grid gap-4 sm:grid-cols-4">
@@ -273,24 +355,28 @@ function GlobalReportContent() {
           value={formatMoney(data.totals.salary, 'PEN')}
           icon={Banknote}
           color="text-muted-foreground"
+          tooltip="Suma de los sueldos brutos que facturaron los clientes por los talentos."
         />
         <KPICard
           label="Deuda total"
           value={formatMoney(data.totals.debt, 'PEN')}
           icon={ReceiptText}
           color="text-warning"
+          tooltip="Total de deudas registradas a los talentos, pagadas o no."
         />
         <KPICard
           label="Falta pagar total"
           value={formatMoney(data.totals.pending, 'PEN')}
           icon={ReceiptText}
           color="text-destructive"
+          tooltip="De las deudas, lo que sigue sin devolverse a la fecha."
         />
         <KPICard
           label="Pérdida por fraude"
           value={formatMoney(data.totals.fraudLoss, 'PEN')}
           icon={AlertTriangle}
           color="text-destructive"
+          tooltip="Egresos y deudas marcados como perdidos: talentos que se fueron sin devolver."
         />
       </div>
 
@@ -335,15 +421,36 @@ function GlobalReportContent() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
-                      <th className="p-3">Talento</th>
-                      <th className="p-3 text-right">Sueldo</th>
-                      <th className="p-3 text-right">Con descuento</th>
-                      <th className="p-3 text-right">Recibí (MIMOTECH)</th>
-                      <th className="p-3 text-right">Se quedó (talento)</th>
+                      <SortableTh
+                        label="Talento"
+                        sortKey="name"
+                        sort={incomeSort.sort}
+                        onToggle={incomeSort.toggle}
+                        align="left"
+                      />
+                      <SortableTh label="Sueldo" sortKey="salary" sort={incomeSort.sort} onToggle={incomeSort.toggle} />
+                      <SortableTh
+                        label="Con descuento"
+                        sortKey="withDiscount"
+                        sort={incomeSort.sort}
+                        onToggle={incomeSort.toggle}
+                      />
+                      <SortableTh
+                        label="Recibí (MIMOTECH)"
+                        sortKey="received"
+                        sort={incomeSort.sort}
+                        onToggle={incomeSort.toggle}
+                      />
+                      <SortableTh
+                        label="Se quedó (talento)"
+                        sortKey="kept"
+                        sort={incomeSort.sort}
+                        onToggle={incomeSort.toggle}
+                      />
                     </tr>
                   </thead>
                   <tbody>
-                    {incomePersons.map((p) => (
+                    {incomeSort.sorted.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3">
                           <TalentName name={p.name} role={p.role} status={p.status} />
@@ -391,15 +498,31 @@ function GlobalReportContent() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-muted-foreground">
-                      <th className="p-3">Talento</th>
-                      <th className="p-3 text-right">N.º de egresos</th>
-                      <th className="p-3 text-right">Pagado</th>
-                      <th className="p-3 text-right">Deuda</th>
-                      <th className="p-3 text-right">Falta pagar</th>
+                      <SortableTh
+                        label="Talento"
+                        sortKey="name"
+                        sort={expenseSort.sort}
+                        onToggle={expenseSort.toggle}
+                        align="left"
+                      />
+                      <SortableTh
+                        label="N.º de egresos"
+                        sortKey="count"
+                        sort={expenseSort.sort}
+                        onToggle={expenseSort.toggle}
+                      />
+                      <SortableTh label="Pagado" sortKey="paid" sort={expenseSort.sort} onToggle={expenseSort.toggle} />
+                      <SortableTh label="Deuda" sortKey="debt" sort={expenseSort.sort} onToggle={expenseSort.toggle} />
+                      <SortableTh
+                        label="Falta pagar"
+                        sortKey="pending"
+                        sort={expenseSort.sort}
+                        onToggle={expenseSort.toggle}
+                      />
                     </tr>
                   </thead>
                   <tbody>
-                    {expensePersons.map((p) => (
+                    {expenseSort.sorted.map((p) => (
                       <tr key={p.talentId} className="border-b last:border-0">
                         <td className="p-3">
                           <TalentName name={p.name} role={p.role} status={p.status} />
@@ -419,6 +542,35 @@ function GlobalReportContent() {
                   </tbody>
                 </table>
               </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Egresos por categoría</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                En qué se va lo invertido en talentos. Asigna la categoría al crear o editar cada egreso.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {categoriaItems.length ? (
+                <>
+                  {!hayCategorias && (
+                    <p className="mb-4 rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                      Los egresos existentes aún no tienen categoría. Edita cada egreso y asígnale una para ver este
+                      desglose.
+                    </p>
+                  )}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    <CategoryDonut
+                      data={categoriaItems.map((c) => ({ name: c.name, value: Number(c.total) }))}
+                      height={260}
+                    />
+                    <DonutList items={categoriaItems} />
+                  </div>
+                </>
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin egresos registrados</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -483,15 +635,21 @@ function GlobalReportContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Talento</th>
-                    <th className="p-3 text-right">Recibí</th>
-                    <th className="p-3 text-right">Pagado</th>
-                    <th className="p-3 text-right">Neto</th>
-                    <th className="p-3 text-right">Margen</th>
+                    <SortableTh
+                      label="Talento"
+                      sortKey="name"
+                      sort={profitSort.sort}
+                      onToggle={profitSort.toggle}
+                      align="left"
+                    />
+                    <SortableTh label="Recibí" sortKey="received" sort={profitSort.sort} onToggle={profitSort.toggle} />
+                    <SortableTh label="Pagado" sortKey="paid" sort={profitSort.sort} onToggle={profitSort.toggle} />
+                    <SortableTh label="Neto" sortKey="net" sort={profitSort.sort} onToggle={profitSort.toggle} />
+                    <SortableTh label="Margen" sortKey="margin" sort={profitSort.sort} onToggle={profitSort.toggle} />
                   </tr>
                 </thead>
                 <tbody>
-                  {profitabilityPersons.map((p) => (
+                  {profitSort.sorted.map((p) => (
                     <tr key={p.talentId} className="border-b last:border-0">
                       <td className="p-3">
                         <TalentName name={p.name} role={p.role} status={p.status} />
@@ -520,21 +678,48 @@ function GlobalReportContent() {
           <Card>
             <CardHeader>
               <CardTitle>Ingresos por empresa</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Qué empresas generan la comisión de MIMOTECH y con qué talentos.
+              </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
+              {companyRows.length > 1 && (
+                <div className="mb-6">
+                  <CategoryDonut
+                    data={companyRows.slice(0, 8).map((c) => ({ name: c.name, value: Number(c.received) }))}
+                    height={260}
+                  />
+                </div>
+              )}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Empresa</th>
-                    <th className="p-3 text-right">Sueldo</th>
-                    <th className="p-3 text-right">Recibí (MIMOTECH)</th>
-                    <th className="p-3 text-right">Se quedó</th>
-                    <th className="p-3 text-right">Pagos</th>
+                    <SortableTh
+                      label="Empresa"
+                      sortKey="name"
+                      sort={companySort.sort}
+                      onToggle={companySort.toggle}
+                      align="left"
+                    />
+                    <SortableTh label="Sueldo" sortKey="salary" sort={companySort.sort} onToggle={companySort.toggle} />
+                    <SortableTh
+                      label="Recibí (MIMOTECH)"
+                      sortKey="received"
+                      sort={companySort.sort}
+                      onToggle={companySort.toggle}
+                    />
+                    <SortableTh label="Se quedó" sortKey="kept" sort={companySort.sort} onToggle={companySort.toggle} />
+                    <SortableTh
+                      label="Pagos"
+                      sortKey="payments"
+                      sort={companySort.sort}
+                      onToggle={companySort.toggle}
+                    />
                     <th className="p-3">Talentos</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.byCompany.map((c) => (
+                  {companySort.sorted.map((c) => (
                     <tr key={c.name} className="border-b last:border-0">
                       <td className="p-3 font-medium">{c.name}</td>
                       <td className="p-3 text-right tabular-nums">
@@ -560,19 +745,41 @@ function GlobalReportContent() {
           <Card>
             <CardHeader>
               <CardTitle>Por tipo de pago (Planilla / RxH / CTS / Gratificación / Liquidación)</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Cómo se reparte lo que recibió MIMOTECH según el tipo de pago del talento.
+              </p>
             </CardHeader>
             <CardContent className="overflow-x-auto">
+              {payTypeRows.length > 1 && (
+                <div className="mb-6">
+                  <CategoryDonut
+                    data={payTypeRows.map((p) => ({ name: p.name, value: Number(p.received) }))}
+                    height={260}
+                  />
+                </div>
+              )}
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="p-3">Tipo</th>
-                    <th className="p-3 text-right">Recibí</th>
-                    <th className="p-3 text-right">Se quedó</th>
-                    <th className="p-3 text-right">Pagos</th>
+                    <SortableTh
+                      label="Tipo"
+                      sortKey="name"
+                      sort={payTypeSort.sort}
+                      onToggle={payTypeSort.toggle}
+                      align="left"
+                    />
+                    <SortableTh
+                      label="Recibí"
+                      sortKey="received"
+                      sort={payTypeSort.sort}
+                      onToggle={payTypeSort.toggle}
+                    />
+                    <SortableTh label="Se quedó" sortKey="kept" sort={payTypeSort.sort} onToggle={payTypeSort.toggle} />
+                    <SortableTh label="Pagos" sortKey="count" sort={payTypeSort.sort} onToggle={payTypeSort.toggle} />
                   </tr>
                 </thead>
                 <tbody>
-                  {data.byPaymentType.map((p) => (
+                  {payTypeSort.sorted.map((p) => (
                     <tr key={p.name} className="border-b last:border-0">
                       <td className="p-3 font-medium">{p.name}</td>
                       <td className="p-3 text-right font-medium tabular-nums text-info">
@@ -590,10 +797,27 @@ function GlobalReportContent() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="serie" className="mt-4">
+        <TabsContent value="serie" className="mt-4 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Ingresos vs Egresos por mes</CardTitle>
+              <CardTitle>Tendencia acumulada</CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Ingresos y egresos sumados mes a mes desde el inicio. La distancia entre las dos áreas es la ganancia
+                acumulada de la operación.
+              </p>
+            </CardHeader>
+            <CardContent>
+              {serieAcumulada.length ? (
+                <IncomeExpenseArea data={serieAcumulada} height={320} />
+              ) : (
+                <p className="py-12 text-center text-sm text-muted-foreground">Sin datos.</p>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Detalle mensual</CardTitle>
+              <p className="text-xs text-muted-foreground">Lo que entró y salió en cada mes, sin acumular.</p>
             </CardHeader>
             <CardContent>
               <TimeSeriesBars data={data.timeSeries} />

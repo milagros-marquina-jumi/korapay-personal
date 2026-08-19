@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight, Landmark, TrendingUp, Users } from 'lucide-react';
 import { useState } from 'react';
 import { CategoryDonut } from '@/components/charts/category-donut';
+import { DonutList } from '@/components/charts/donut-list';
 import { GroupedBar } from '@/components/charts/grouped-bar';
 import { type HeatmapRow, HeatmapTable } from '@/components/charts/heatmap-table';
 import { INCOME_COLOR } from '@/components/charts/palette';
@@ -341,14 +342,7 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
               {conceptDonut.length ? (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <CategoryDonut data={conceptDonut} />
-                  <div className="divide-y">
-                    {conceptRows.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between py-2 text-sm">
-                        <span className="truncate">{c.name}</span>
-                        <span className="font-medium tabular-nums">{formatMoney(c.total, 'PEN')}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <DonutList items={conceptRows} />
                 </div>
               ) : (
                 <p className="py-12 text-center text-sm text-muted-foreground">Sin datos</p>

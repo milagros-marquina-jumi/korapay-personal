@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import type { TalentLedgerEntry } from '@/lib/api.types';
 import { avisoDeuda, DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
+import { cn } from '@/lib/utils';
 
 const money = z
   .string()
@@ -28,6 +29,7 @@ const schema = z.object({
   debtAmount: money,
   pendingAmount: money,
   status: z.string().min(1, 'Requerido'),
+  category: z.string().optional(),
   description: z.string().optional(),
 });
 
@@ -59,6 +61,7 @@ interface Props {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   lockType?: boolean;
+  categoryOptions?: string[];
 }
 
 export function LedgerFormDialog({
@@ -73,6 +76,7 @@ export function LedgerFormDialog({
   open: controlledOpen,
   onOpenChange,
   lockType = false,
+  categoryOptions,
 }: Readonly<Props>) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
@@ -97,6 +101,7 @@ export function LedgerFormDialog({
       debtAmount: entry?.debtAmount ?? '',
       pendingAmount: entry?.pendingAmount ?? '',
       status: entry?.status ?? (defaultType === 'DEUDA' ? 'PENDING' : 'PAID'),
+      category: entry?.category ?? '',
       description: entry?.description ?? '',
     },
   });
@@ -111,12 +116,14 @@ export function LedgerFormDialog({
         debtAmount: entry.debtAmount,
         pendingAmount: entry.pendingAmount,
         status: entry.status,
+        category: entry.category ?? '',
         description: entry.description ?? '',
       });
     }
   }, [open, entry, reset]);
 
   const esDeuda = watch('type') === 'DEUDA';
+  const opcionesCategoria = [...new Set([...(categoryOptions ?? []), ...(entry?.category ? [entry.category] : [])])];
   const etiquetas = etiquetasDeuda(viewer, talentName, adminName);
   const aviso = esDeuda
     ? avisoDeuda({
@@ -205,12 +212,32 @@ export function LedgerFormDialog({
               </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <Label htmlFor="ledger-paid">Monto desembolsado</Label>
-              <MoneyField control={control} name="paidAmount" id="ledger-paid" />
-              <p className="text-[11px] text-muted-foreground">
-                Lo que invertiste en esta persona. No se cobra, es gasto de MIMOTECH.
-              </p>
+            <div className={cn('grid gap-3', opcionesCategoria.length > 0 && 'grid-cols-2')}>
+              <div className="space-y-2">
+                <Label htmlFor="ledger-paid">Monto desembolsado</Label>
+                <MoneyField control={control} name="paidAmount" id="ledger-paid" />
+                <p className="text-[11px] text-muted-foreground">
+                  Lo que invertiste en esta persona. No se cobra, es gasto de MIMOTECH.
+                </p>
+              </div>
+              {opcionesCategoria.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Categoría</Label>
+                  <Select value={watch('category') || undefined} onValueChange={(v) => setValue('category', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {opcionesCategoria.map((nombre) => (
+                        <SelectItem key={nombre} value={nombre}>
+                          {nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">Agrupa el egreso en los reportes.</p>
+                </div>
+              )}
             </div>
           )}
 

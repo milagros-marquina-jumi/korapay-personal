@@ -39,6 +39,7 @@ interface LedgerSectionProps {
   onDelete?: (id: string) => void;
   onQuickStatus?: (entry: TalentLedgerEntry, status: string) => void;
   isMutating?: boolean;
+  categoryOptions?: string[];
 }
 
 export function LedgerSection({
@@ -54,6 +55,7 @@ export function LedgerSection({
   onDelete,
   onQuickStatus,
   isMutating,
+  categoryOptions,
 }: LedgerSectionProps) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('PENDING');
@@ -334,6 +336,7 @@ export function LedgerSection({
             adminName={adminName}
             onSubmit={onCreate}
             isPending={isMutating}
+            categoryOptions={categoryOptions}
           />
         </div>
       </div>
@@ -404,6 +407,7 @@ export function LedgerSection({
           onOpenChange={(next) => {
             if (!next) setEditing(null);
           }}
+          categoryOptions={categoryOptions}
         />
       )}
     </div>

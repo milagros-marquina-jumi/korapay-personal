@@ -31,6 +31,7 @@ function normalize(values: LedgerFormValues) {
     debtAmount: values.debtAmount || '0',
     pendingAmount: values.pendingAmount || '0',
     status: values.status,
+    category: values.category || undefined,
     description: values.description || undefined,
   };
 }

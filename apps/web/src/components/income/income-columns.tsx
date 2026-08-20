@@ -89,7 +89,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'company',
-      size: 160,
+      size: 200,
       header: 'Empresa',
       cell: ({ row }) => {
         const nombre = companyName(row.original.companyId) ?? row.original.category?.name ?? '-';
@@ -133,7 +133,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'amountGross',
-      size: 150,
+      size: 120,
       accessorFn: (r) => Number(r.amountGross ?? r.amountBase),
       sortingFn: 'basic',
       header: ({ column }) => <SortableHeader column={column} label="Bruto" />,
@@ -158,7 +158,7 @@ export function buildIncomeColumns({
     },
     {
       id: 'amount',
-      size: 150,
+      size: 130,
       accessorFn: (r) => Number(r.amountBase),
       sortingFn: 'basic',
       header: ({ column }) => <SortableHeader column={column} label="Neto" />,

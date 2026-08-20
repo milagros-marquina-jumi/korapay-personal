@@ -16,6 +16,7 @@ export function KPICard({ label, value, icon: Icon, color, trend, className, too
     <div
       className={cn(
         'group relative @container flex flex-col gap-4 rounded-2xl border border-border/70 bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lift',
+        tooltip && 'focus-within:z-100 hover:z-100',
         className,
       )}
     >
@@ -41,7 +42,7 @@ export function KPICard({ label, value, icon: Icon, color, trend, className, too
               </button>
               <span
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-lg border border-border bg-popover px-3 py-2 text-xs font-normal leading-snug text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 peer-hover:opacity-100 peer-focus:opacity-100"
+                className="pointer-events-none absolute bottom-full left-1/2 z-100 mb-2 w-56 -translate-x-1/2 rounded-lg border border-border bg-popover px-3 py-2 text-xs font-normal leading-snug text-popover-foreground opacity-0 shadow-lg transition-opacity duration-150 peer-hover:opacity-100 peer-focus:opacity-100"
               >
                 {tooltip}
               </span>

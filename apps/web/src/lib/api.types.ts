@@ -366,6 +366,8 @@ export interface CompanyProfitability {
   months: number;
   payments: number;
   monthlyAverage: string;
+  salaryAverage?: string;
+  salaryMonths?: number;
   bestMonthAmount: string;
   bestMonthLabel: string | null;
   firstDate: string | null;

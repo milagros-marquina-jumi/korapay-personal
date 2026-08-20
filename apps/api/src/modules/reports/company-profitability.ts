@@ -4,6 +4,7 @@ import { MONTH_NAMES } from '@/common/constants/months';
 export interface CompanyIncomeRow {
   date: Date;
   amountBase: Decimal | string;
+  concept?: string | null;
   company: { name: string } | null;
 }
 
@@ -13,10 +14,18 @@ export interface CompanyProfitability {
   months: number;
   payments: number;
   monthlyAverage: string;
+  salaryAverage: string;
+  salaryMonths: number;
   bestMonthAmount: string;
   bestMonthLabel: string | null;
   firstDate: string | null;
   lastDate: string | null;
+}
+
+const SALARY_CONCEPT = 'sueldo';
+
+function esSueldo(concept?: string | null) {
+  return (concept ?? '').trim().toLowerCase() === SALARY_CONCEPT;
 }
 
 function monthKey(date: Date) {
@@ -32,6 +41,7 @@ interface Bucket {
   total: Decimal;
   payments: number;
   byMonth: Map<string, Decimal>;
+  salaryByMonth: Map<string, Decimal>;
   first: Date;
   last: Date;
 }
@@ -44,7 +54,14 @@ export function buildCompanyProfitability(rows: CompanyIncomeRow[]): CompanyProf
     const amount = new Decimal(row.amountBase);
     let bucket = buckets.get(name);
     if (!bucket) {
-      bucket = { total: new Decimal(0), payments: 0, byMonth: new Map(), first: row.date, last: row.date };
+      bucket = {
+        total: new Decimal(0),
+        payments: 0,
+        byMonth: new Map(),
+        salaryByMonth: new Map(),
+        first: row.date,
+        last: row.date,
+      };
       buckets.set(name, bucket);
     }
     bucket.total = bucket.total.add(amount);
@@ -54,6 +71,9 @@ export function buildCompanyProfitability(rows: CompanyIncomeRow[]): CompanyProf
 
     const key = monthKey(row.date);
     bucket.byMonth.set(key, (bucket.byMonth.get(key) ?? new Decimal(0)).add(amount));
+    if (esSueldo(row.concept)) {
+      bucket.salaryByMonth.set(key, (bucket.salaryByMonth.get(key) ?? new Decimal(0)).add(amount));
+    }
   }
 
   return [...buckets.entries()]
@@ -68,17 +88,25 @@ export function buildCompanyProfitability(rows: CompanyIncomeRow[]): CompanyProf
         }
       }
 
+      const salaryMonths = bucket.salaryByMonth.size;
+      const salaryTotal = [...bucket.salaryByMonth.values()].reduce((s, v) => s.add(v), new Decimal(0));
+
       return {
         name,
         total: bucket.total.toFixed(2),
         months,
         payments: bucket.payments,
         monthlyAverage: months > 0 ? bucket.total.div(months).toFixed(2) : '0.00',
+        salaryAverage: salaryMonths > 0 ? salaryTotal.div(salaryMonths).toFixed(2) : '0.00',
+        salaryMonths,
         bestMonthAmount: bestAmount.toFixed(2),
         bestMonthLabel: bestKey ? monthLabel(bestKey) : null,
         firstDate: bucket.first.toISOString(),
         lastDate: bucket.last.toISOString(),
       };
     })
-    .sort((a, b) => Number(b.monthlyAverage) - Number(a.monthlyAverage));
+    .sort(
+      (a, b) =>
+        Number(b.salaryAverage) - Number(a.salaryAverage) || Number(b.monthlyAverage) - Number(a.monthlyAverage),
+    );
 }

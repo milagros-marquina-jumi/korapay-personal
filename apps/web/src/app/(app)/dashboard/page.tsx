@@ -3,7 +3,7 @@
 import { formatMoney, MONTH_SHORT, WorkspaceType } from '@korapay/domain';
 import { KPICard } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowDownRight, ArrowUpRight, PiggyBank, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Hourglass, PiggyBank, Wallet } from 'lucide-react';
 import { CategoryDonut } from '@/components/charts/category-donut';
 import { IncomeExpenseArea, type IncomeExpensePoint } from '@/components/charts/income-expense-area';
 import { PageShell } from '@/components/layout/page-shell';
@@ -70,6 +70,9 @@ export default function DashboardPage() {
 
   const isBusiness = activeWorkspace?.type === WorkspaceType.BUSINESS;
   const recent = transactions.slice(0, 6);
+  const porCobrar = transactions
+    .filter((t) => t.type === 'INCOME' && t.status !== 'PAID')
+    .reduce((total, t) => total + Number(t.amountBase), 0);
 
   return (
     <PageShell
@@ -118,27 +121,42 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <KPICard
-                  label="Egresos"
-                  value={formatMoney(summary.egresos, 'PEN')}
-                  icon={ArrowDownRight}
-                  color="text-destructive"
-                  tooltip="Suma de todos los movimientos de tipo Egreso en el periodo"
-                />
-                <KPICard
-                  label="Disponible"
-                  value={formatMoney(summary.disponible, 'PEN')}
-                  icon={Wallet}
-                  color="text-info"
-                  tooltip="Saldo actual de tus cuentas (balance inicial + ingresos pagados - egresos pagados)"
-                />
-                <KPICard
-                  label="Ahorro"
-                  value={formatMoney(summary.ahorro, 'PEN')}
-                  icon={PiggyBank}
-                  color="text-brand"
-                  tooltip="Suma de todos los movimientos de tipo Ahorro en el periodo"
-                />
+                {Number(summary.egresos) > 0 && (
+                  <KPICard
+                    label="Egresos"
+                    value={formatMoney(summary.egresos, 'PEN')}
+                    icon={ArrowDownRight}
+                    color="text-destructive"
+                    tooltip="Suma de todos los movimientos de tipo Egreso en el periodo"
+                  />
+                )}
+                {porCobrar > 0 && (
+                  <KPICard
+                    label="Por cobrar"
+                    value={formatMoney(String(porCobrar), 'PEN')}
+                    icon={Hourglass}
+                    color="text-coral"
+                    tooltip={`Ingresos registrados que aún no se cobran: ${formatMoney(summary.vencido, 'PEN')} vencidos y el resto pendientes. Ya están incluidos en el KPI de Ingresos.`}
+                  />
+                )}
+                {Number(summary.disponible) !== 0 && (
+                  <KPICard
+                    label="Disponible"
+                    value={formatMoney(summary.disponible, 'PEN')}
+                    icon={Wallet}
+                    color="text-info"
+                    tooltip="Saldo actual de tus cuentas (balance inicial + ingresos pagados - egresos pagados)"
+                  />
+                )}
+                {Number(summary.ahorro) > 0 && (
+                  <KPICard
+                    label="Ahorro"
+                    value={formatMoney(summary.ahorro, 'PEN')}
+                    icon={PiggyBank}
+                    color="text-brand"
+                    tooltip="Suma de todos los movimientos de tipo Ahorro en el periodo"
+                  />
+                )}
               </>
             )}
           </>

@@ -45,6 +45,7 @@ import type {
 import { contractDatesInverted, contractOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { buildTags, isFixedExpense, splitTags } from '@/lib/transaction-tags';
+import { useCatalogCreate } from '@/lib/use-catalog-create';
 import { cn, formatDateMedium } from '@/lib/utils';
 
 const TYPE_OPTIONS = [
@@ -116,6 +117,7 @@ export function TransactionFormDialog({
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const editing = !!transaction;
   const queryClient = useQueryClient();
+  const { createCategory, createCompany, createBank, createPaymentMethod } = useCatalogCreate(workspaceId);
   const allowedTypes = TYPES_BY_WORKSPACE[workspaceType ?? ''];
   const typeOptions = allowedTypes ? TYPE_OPTIONS.filter((t) => allowedTypes.includes(t.value)) : TYPE_OPTIONS;
 
@@ -192,7 +194,9 @@ export function TransactionFormDialog({
   const showTeamFields = currentType === 'TEAM_PAYMENT';
   const showConcept = !showBusinessFields && !showTeamFields;
   const showGross = currentType === 'INCOME';
-  const showDueDate = currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE';
+  const showDueDate =
+    currentType !== 'INCOME' &&
+    (currentStatus === 'PENDING' || currentStatus === 'PARTIAL' || currentStatus === 'OVERDUE');
   const { data: applications } = useQuery({
     queryKey: queryKeys.applications(workspaceId),
     queryFn: () => apiFetch<Application[]>(`/applications?workspaceId=${workspaceId}`),
@@ -376,10 +380,15 @@ export function TransactionFormDialog({
               <Label>Concepto</Label>
               <SearchSelect
                 placeholder="Selecciona un concepto"
-                searchPlaceholder="Buscar concepto..."
+                searchPlaceholder="Buscar o escribir para crear..."
                 value={watch('concept') ?? ''}
                 onValueChange={(v) => setValue('concept', v, { shouldValidate: true })}
                 options={(categories ?? []).map((c) => ({ value: c.name, label: c.name }))}
+                onCreate={async (nombre) => {
+                  await createCategory(nombre);
+                  setValue('concept', nombre, { shouldValidate: true });
+                }}
+                createLabel="Crear concepto"
               />
               {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
             </div>
@@ -422,10 +431,15 @@ export function TransactionFormDialog({
                 <Label>Empresa</Label>
                 <SearchSelect
                   placeholder="Selecciona empresa"
-                  searchPlaceholder="Buscar empresa..."
+                  searchPlaceholder="Buscar o escribir para crear..."
                   value={watch('companyId') ?? ''}
                   onValueChange={(v) => setValue('companyId', v)}
                   options={(companies ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                  onCreate={async (nombre) => {
+                    const creada = await createCompany(nombre);
+                    setValue('companyId', creada.id);
+                  }}
+                  createLabel="Crear empresa"
                   clearable
                 />
               </div>
@@ -435,7 +449,7 @@ export function TransactionFormDialog({
                 <Label>{showCompany ? 'Concepto' : 'Categoría'}</Label>
                 <SearchSelect
                   placeholder={showCompany ? 'Selecciona un concepto' : 'Opcional'}
-                  searchPlaceholder={showCompany ? 'Buscar concepto...' : 'Buscar categoría...'}
+                  searchPlaceholder="Buscar o escribir para crear..."
                   value={showCompany ? (watch('concept') ?? '') : (watch('categoryId') ?? '')}
                   onValueChange={(v) =>
                     showCompany ? setValue('concept', v, { shouldValidate: true }) : setValue('categoryId', v)
@@ -444,6 +458,12 @@ export function TransactionFormDialog({
                     value: showCompany ? c.name : c.id,
                     label: c.name,
                   }))}
+                  onCreate={async (nombre) => {
+                    const creada = await createCategory(nombre);
+                    if (showCompany) setValue('concept', nombre, { shouldValidate: true });
+                    else setValue('categoryId', creada.id);
+                  }}
+                  createLabel={showCompany ? 'Crear concepto' : 'Crear categoría'}
                   clearable={!showCompany}
                 />
                 {showCompany && errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
@@ -490,10 +510,15 @@ export function TransactionFormDialog({
               <Label>Medio de pago</Label>
               <SearchSelect
                 placeholder="Opcional"
-                searchPlaceholder="Buscar medio de pago..."
+                searchPlaceholder="Buscar o escribir para crear..."
                 value={watch('paymentMethod') ?? ''}
                 onValueChange={(v) => setValue('paymentMethod', v)}
                 options={(paymentMethods ?? []).map((p) => ({ value: p.name, label: p.name }))}
+                onCreate={async (nombre) => {
+                  await createPaymentMethod(nombre);
+                  setValue('paymentMethod', nombre);
+                }}
+                createLabel="Crear medio de pago"
                 clearable
               />
             </div>
@@ -501,10 +526,15 @@ export function TransactionFormDialog({
               <Label>Banco</Label>
               <SearchSelect
                 placeholder="Opcional"
-                searchPlaceholder="Buscar banco..."
+                searchPlaceholder="Buscar o escribir para crear..."
                 value={watch('bank') ?? ''}
                 onValueChange={(v) => setValue('bank', v)}
                 options={(banks ?? []).map((b) => ({ value: b.name, label: b.name }))}
+                onCreate={async (nombre) => {
+                  await createBank(nombre);
+                  setValue('bank', nombre);
+                }}
+                createLabel="Crear banco"
                 clearable
               />
             </div>

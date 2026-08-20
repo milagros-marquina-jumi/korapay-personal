@@ -26,14 +26,15 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
 
   const visible = limit === 'all' ? rows : rows.slice(0, Number(limit));
   const best = rows[0];
-  const topAverage = Number(best?.monthlyAverage ?? 0);
+  const topAverage = Number(best?.salaryAverage ?? 0);
+  const mesesDeSueldo = (row: CompanyProfitability) => row.salaryMonths ?? row.months;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Ordenado por lo que pagaban al mes, no por el total: una empresa de pocos meses puede pagar mejor que otra de
-          muchos.
+          Ordenado por el sueldo mensual, sin contar gratificaciones, CTS, AFP ni liquidaciones: una empresa de pocos
+          meses puede pagar mejor que otra de muchos.
         </p>
         <Select value={limit} onValueChange={setLimit}>
           <SelectTrigger className="h-10 w-40" aria-label="Empresas a mostrar">
@@ -53,7 +54,8 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
         <div className="rounded-xl border border-brand/30 bg-brand/10 px-4 py-3 text-sm">
           <span className="font-medium">{best.name} es donde mejor te pagaban</span>
           <span className="ml-2 text-muted-foreground">
-            {formatMoney(best.monthlyAverage, 'PEN')} al mes durante {best.months} {best.months === 1 ? 'mes' : 'meses'}
+            {formatMoney(best.salaryAverage ?? best.monthlyAverage, 'PEN')} de sueldo al mes durante{' '}
+            {mesesDeSueldo(best)} {mesesDeSueldo(best) === 1 ? 'mes' : 'meses'}
           </span>
         </div>
       )}
@@ -65,7 +67,9 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
               <th className="w-10 px-3 py-2.5 font-medium">#</th>
               <th className="px-3 py-2.5 font-medium">Empresa</th>
               <th className="px-3 py-2.5 text-center font-medium">Meses</th>
-              <th className="px-3 py-2.5 font-medium">Promedio por mes</th>
+              <th className="px-3 py-2.5 font-medium" title="Solo el concepto Sueldo, sin extras">
+                Sueldo por mes
+              </th>
               <th className="px-3 py-2.5 text-right font-medium">Total</th>
               <th className="whitespace-nowrap px-3 py-2.5 text-right font-medium">Mejor mes</th>
               <th className="whitespace-nowrap px-3 py-2.5 text-right font-medium">Periodo</th>
@@ -73,7 +77,7 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
           </thead>
           <tbody>
             {visible.map((row, index) => {
-              const average = Number(row.monthlyAverage);
+              const average = Number(row.salaryAverage ?? row.monthlyAverage);
               const width = topAverage > 0 ? Math.max(2, (average / topAverage) * 100) : 0;
               const isTop = index === 0;
               return (
@@ -92,7 +96,7 @@ export function CompanyProfitabilityPanel({ rows }: Readonly<{ rows: CompanyProf
                           style={{ width: `${width}%` }}
                         />
                       </div>
-                      <span className="tabular-nums">{formatMoney(row.monthlyAverage, 'PEN')}</span>
+                      <span className="tabular-nums">{average > 0 ? formatMoney(String(average), 'PEN') : '—'}</span>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-muted-foreground">

@@ -46,7 +46,7 @@ import { contractDatesInverted, contractOf } from '@/lib/employment-income';
 import { queryKeys } from '@/lib/query-keys';
 import { buildTags, isFixedExpense, splitTags } from '@/lib/transaction-tags';
 import { useCatalogCreate } from '@/lib/use-catalog-create';
-import { cn, formatDateMedium } from '@/lib/utils';
+import { formatDateMedium } from '@/lib/utils';
 
 const TYPE_OPTIONS = [
   { value: 'INCOME', label: 'Ingreso' },
@@ -190,8 +190,7 @@ export function TransactionFormDialog({
     if (!showCompany || !companySeleccionada || !fechaElegida) return null;
     return contractOf({ companyId: companySeleccionada, date: fechaElegida }, contracts ?? []);
   }, [showCompany, companySeleccionada, fechaElegida, contracts]);
-  const tieneDatosOpcionales =
-    editing && !!(watch('paymentMethod') || watch('bank') || watch('notes') || watch('dueDate'));
+  const tieneDatosOpcionales = editing && !!(watch('notes') || watch('dueDate'));
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
   const showConcept = !showBusinessFields && !showTeamFields;
@@ -339,14 +338,14 @@ export function TransactionFormDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="flex max-h-[88vh] w-[min(42rem,95vw)] max-w-none flex-col overflow-hidden sm:max-w-none">
+      <DialogContent className="flex max-h-[88vh] w-[min(34rem,95vw)] max-w-none flex-col overflow-hidden sm:max-w-none">
         <DialogHeader className="shrink-0">
           <DialogTitle>{editing ? 'Editar movimiento' : 'Nuevo movimiento'}</DialogTitle>
           <DialogDescription>Registra un ingreso, egreso u otro movimiento.</DialogDescription>
         </DialogHeader>
         <form
           onSubmit={handleSubmit((v) => mutation.mutate(v))}
-          className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1"
+          className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto pr-1"
         >
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -377,6 +376,38 @@ export function TransactionFormDialog({
             </div>
           </div>
 
+          {!showGross && (
+            <div className="grid grid-cols-2 items-end gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">Monto</Label>
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <MoneyInput
+                      id="amount"
+                      value={watch('amount') ?? ''}
+                      onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
+                    />
+                  </div>
+                  <CurrencyToggle value={watch('currency')} onChange={(v) => setValue('currency', v)} />
+                </div>
+                {errors.amount && <p className="text-destructive text-xs">{errors.amount.message}</p>}
+              </div>
+              {watch('type') === 'EXPENSE' && (
+                <div className="flex h-10 flex-col justify-center">
+                  <label htmlFor="isFixed" className="flex cursor-pointer items-center gap-2 text-sm">
+                    <Checkbox
+                      id="isFixed"
+                      checked={watch('isFixed') ?? false}
+                      onCheckedChange={(v) => setValue('isFixed', v === true)}
+                    />
+                    <span className="font-medium">Gasto fijo</span>
+                  </label>
+                  <p className="mt-0.5 pl-6 text-muted-foreground text-xs">Solo lo clasifica en reportes.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {showConcept && !showCompany && (
             <div className="space-y-1.5">
               <Label htmlFor="concept">Concepto</Label>
@@ -385,8 +416,8 @@ export function TransactionFormDialog({
             </div>
           )}
 
-          <div className={cn('grid gap-3', showGross ? 'grid-cols-2' : 'grid-cols-1')}>
-            {showGross && (
+          {showGross && (
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="amountGross">Monto bruto</Label>
                 <MoneyInput
@@ -396,25 +427,23 @@ export function TransactionFormDialog({
                 />
                 <p className="text-muted-foreground text-xs">Antes de descuentos. Si lo dejas vacío, se usa el neto.</p>
               </div>
-            )}
-            <div className="space-y-1.5">
-              <Label htmlFor="amount">{showGross ? 'Monto neto' : 'Monto'}</Label>
-              <div className="flex gap-2">
-                <div className="min-w-0 flex-1">
-                  <MoneyInput
-                    id="amount"
-                    value={watch('amount') ?? ''}
-                    onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
-                  />
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">Monto neto</Label>
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1">
+                    <MoneyInput
+                      id="amount"
+                      value={watch('amount') ?? ''}
+                      onValueChange={(raw) => setValue('amount', raw, { shouldValidate: true })}
+                    />
+                  </div>
+                  <CurrencyToggle value={watch('currency')} onChange={(v) => setValue('currency', v)} />
                 </div>
-                <CurrencyToggle value={watch('currency')} onChange={(v) => setValue('currency', v)} />
+                <p className="text-muted-foreground text-xs">Lo que realmente recibiste.</p>
+                {errors.amount && <p className="text-destructive text-xs">{errors.amount.message}</p>}
               </div>
-              <p className="text-muted-foreground text-xs">
-                {showGross ? 'Lo que realmente recibiste.' : 'Lo que se pagó.'}
-              </p>
-              {errors.amount && <p className="text-destructive text-xs">{errors.amount.message}</p>}
             </div>
-          </div>
+          )}
 
           {showTeamFields && (
             <div className="space-y-1.5">
@@ -586,67 +615,46 @@ export function TransactionFormDialog({
             </p>
           )}
 
-          {watch('type') === 'EXPENSE' && (
-            <label
-              htmlFor="isFixed"
-              className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50"
-            >
-              <Checkbox
-                id="isFixed"
-                checked={watch('isFixed') ?? false}
-                onCheckedChange={(v) => setValue('isFixed', v === true)}
-                className="mt-0.5"
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Medio de pago</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar o escribir para crear..."
+                value={watch('paymentMethod') ?? ''}
+                onValueChange={(v) => setValue('paymentMethod', v)}
+                options={(paymentMethods ?? []).map((p) => ({ value: p.name, label: p.name }))}
+                onCreate={async (nombre) => {
+                  await createPaymentMethod(nombre);
+                  setValue('paymentMethod', nombre);
+                }}
+                createLabel="Crear medio de pago"
+                clearable
               />
-              <span className="space-y-0.5">
-                <span className="block text-sm font-medium">Gasto fijo</span>
-                <span className="block text-xs text-muted-foreground">
-                  Se repite cada mes con un monto similar (alquiler, servicios). Solo clasifica el gasto en los
-                  reportes.
-                </span>
-              </span>
-            </label>
-          )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Banco</Label>
+              <SearchSelect
+                placeholder="Opcional"
+                searchPlaceholder="Buscar o escribir para crear..."
+                value={watch('bank') ?? ''}
+                onValueChange={(v) => setValue('bank', v)}
+                options={(banks ?? []).map((b) => ({ value: b.name, label: b.name }))}
+                onCreate={async (nombre) => {
+                  await createBank(nombre);
+                  setValue('bank', nombre);
+                }}
+                createLabel="Crear banco"
+                clearable
+              />
+            </div>
+          </div>
 
           <CollapsibleSection
             key={tieneDatosOpcionales ? 'con-datos' : 'sin-datos'}
             label="Ver más opciones"
             defaultOpen={tieneDatosOpcionales}
           >
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Medio de pago</Label>
-                <SearchSelect
-                  placeholder="Opcional"
-                  searchPlaceholder="Buscar o escribir para crear..."
-                  value={watch('paymentMethod') ?? ''}
-                  onValueChange={(v) => setValue('paymentMethod', v)}
-                  options={(paymentMethods ?? []).map((p) => ({ value: p.name, label: p.name }))}
-                  onCreate={async (nombre) => {
-                    await createPaymentMethod(nombre);
-                    setValue('paymentMethod', nombre);
-                  }}
-                  createLabel="Crear medio de pago"
-                  clearable
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Banco</Label>
-                <SearchSelect
-                  placeholder="Opcional"
-                  searchPlaceholder="Buscar o escribir para crear..."
-                  value={watch('bank') ?? ''}
-                  onValueChange={(v) => setValue('bank', v)}
-                  options={(banks ?? []).map((b) => ({ value: b.name, label: b.name }))}
-                  onCreate={async (nombre) => {
-                    await createBank(nombre);
-                    setValue('bank', nombre);
-                  }}
-                  createLabel="Crear banco"
-                  clearable
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>
               <Textarea

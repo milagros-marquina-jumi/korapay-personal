@@ -6,10 +6,22 @@ import type { UpdateDetectedDto } from './detected-transactions.dto';
 
 const INCOME_LIKE_TYPES = ['REFUND', 'REVERSAL'];
 
+const BANK_ALIASES: Record<string, string> = {
+  interbank: 'IBK',
+  ibk: 'Interbank',
+  'banco de credito': 'BCP',
+  'banco de crédito': 'BCP',
+  continental: 'BBVA',
+  mibanco: 'Mi Banco',
+  scotia: 'Scotiabank',
+};
+
 interface ConfirmData {
   workspaceId: string;
   accountId?: string;
   categoryId?: string;
+  bank?: string;
+  paymentMethod?: string;
   projectId?: string;
   applicationId?: string;
   description?: string;
@@ -93,6 +105,34 @@ export class DetectedTransactionsService {
     return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
   }
 
+  private notaImportacion(detected: { bankName: string | null; bankCode: string | null; cardLast4: string | null }) {
+    const partes = [`Importado desde correo bancario (${detected.bankName ?? detected.bankCode ?? 'banco'})`];
+    if (detected.cardLast4) partes.push(`Tarjeta ***${detected.cardLast4}`);
+    return partes.join('\n');
+  }
+
+  private async bancoDelCatalogo(bankName: string | null, bankCode: string | null): Promise<string | null> {
+    const candidatos = [bankName, bankCode]
+      .filter((v): v is string => !!v)
+      .flatMap((v) => [v, BANK_ALIASES[v.toLowerCase()]])
+      .filter((v): v is string => !!v);
+    if (!candidatos.length) return null;
+    const bancos = await this.prisma.bank.findMany({ select: { name: true } });
+    for (const candidato of candidatos) {
+      const exacto = bancos.find((b) => b.name.toLowerCase() === candidato.toLowerCase());
+      if (exacto) return exacto.name;
+    }
+    for (const candidato of candidatos) {
+      const parcial = bancos.find(
+        (b) =>
+          b.name.toLowerCase().startsWith(candidato.toLowerCase()) ||
+          candidato.toLowerCase().startsWith(b.name.toLowerCase()),
+      );
+      if (parcial) return parcial.name;
+    }
+    return null;
+  }
+
   async confirm(id: string, profileId: string, data: ConfirmData) {
     const detected = await this.prisma.detectedBankTransaction.findFirst({ where: { id, profileId } });
     if (!detected) throw new NotFoundException('Movimiento detectado no encontrado');
@@ -118,6 +158,11 @@ export class DetectedTransactionsService {
     const exchangeRate = data.exchangeRate ?? (detected.exchangeRate ? detected.exchangeRate.toString() : '1');
     const amountBase = new Decimal(amount).times(new Decimal(exchangeRate)).toFixed(2);
 
+    const banco = data.bank ?? (await this.bancoDelCatalogo(detected.bankName, detected.bankCode));
+    const tags = ['EMAIL_IMPORT'];
+    if (banco) tags.push(banco);
+    if (data.paymentMethod) tags.push(data.paymentMethod);
+
     const result = await this.prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.create({
         data: {
@@ -135,8 +180,8 @@ export class DetectedTransactionsService {
           projectId: data.projectId ?? detected.projectId ?? undefined,
           applicationId: data.applicationId ?? detected.applicationId ?? undefined,
           status: 'PAID',
-          notes: `Importado desde correo bancario (${detected.bankName ?? detected.bankCode ?? 'banco'})`,
-          tags: ['EMAIL_IMPORT'],
+          notes: this.notaImportacion(detected),
+          tags,
         },
       });
       const updated = await tx.detectedBankTransaction.update({

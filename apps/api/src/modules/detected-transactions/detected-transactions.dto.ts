@@ -82,6 +82,14 @@ export class ConfirmDetectedDto {
 
   @IsOptional()
   @IsString()
+  bank?: string;
+
+  @IsOptional()
+  @IsString()
+  paymentMethod?: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
 
   @IsOptional()

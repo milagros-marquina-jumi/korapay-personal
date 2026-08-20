@@ -588,6 +588,13 @@ export interface TalentPivotPeriod {
   cells: { name: string; amount: string }[];
 }
 
+export interface TalentMonthlyDetail {
+  year: number;
+  month: number;
+  label: string;
+  talents: { name: string; withDiscount: string; received: string; kept: string }[];
+}
+
 export interface TalentGlobalReport {
   years: number[];
   totals: {
@@ -646,6 +653,7 @@ export interface TalentGlobalReport {
     role: string | null;
     years: { year: number; received: string; paid: string; count: number }[];
   }[];
+  monthlyDetail?: TalentMonthlyDetail[];
   incomePivot: TalentPivotPeriod[];
   expensePivot: TalentPivotPeriod[];
   byCompany: { name: string; received: string; kept: string; salary: string; talents: string[]; payments: number }[];

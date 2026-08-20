@@ -26,8 +26,6 @@ export async function tipoCambioPara(prisma: PrismaService, date: Date | null): 
   return ultimoTipoCambio(prisma);
 }
 
-// Los pagos de contratos en dolares se guardan en su moneda original con el tipo de
-// cambio del dia del pago; toda agregacion debe sumar en soles usando esta conversion.
 export function distribucionEnSoles<T extends DistribucionConvertible>(
   d: T,
   currency: string | null | undefined,

@@ -232,16 +232,7 @@ function IngresosContent() {
 
   const abrirMesMimotech = (tx: Transaction) => {
     const d = new Date(tx.date);
-    const y = d.getUTCFullYear();
-    const m = d.getUTCMonth() + 1;
-    const registered = (data?.data ?? [])
-      .filter((t) => {
-        if (t.companyId !== tx.companyId) return false;
-        const td = new Date(t.date);
-        return td.getUTCFullYear() === y && td.getUTCMonth() + 1 === m;
-      })
-      .reduce((s, t) => s + Number(t.amountBase), 0);
-    setMimoMonth({ year: y, month: m, registered });
+    setMimoMonth({ year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 });
   };
 
   const columns = useMemo(

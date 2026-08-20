@@ -1,7 +1,6 @@
 'use client';
 
 import { formatMoney } from '@korapay/domain';
-import { StatusBadge } from '@korapay/ui';
 import { CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +22,16 @@ function restanteCorto(days?: number | null): string {
   const texto = formatDaysRemaining(days);
   if (!texto) return 'Sin fecha de fin';
   return texto.replace(/^Faltan /, '');
+}
+
+function avanceDe(contract: EmploymentContract): number {
+  if (!contract.endDate) return 100;
+  const inicio = new Date(contract.startDate).getTime();
+  const fin = new Date(contract.endDate).getTime();
+  const total = fin - inicio;
+  if (total <= 0) return 100;
+  const transcurrido = Date.now() - inicio;
+  return Math.min(100, Math.max(2, Math.round((transcurrido / total) * 100)));
 }
 
 export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
@@ -56,42 +65,39 @@ export function ActiveContractsDialog({ contracts }: Readonly<Props>) {
         </DialogHeader>
 
         {vigentes.length > 0 && (
-          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+          <div className="max-h-[60vh] divide-y overflow-y-auto">
             {vigentes.map((c) => (
-              <div key={c.id} className="rounded-lg border px-3 py-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{c.companyName ?? 'Sin empresa'}</span>
-                    <StatusBadge status={c.state ?? c.status} />
-                  </div>
-                  <span className="text-sm font-medium tabular-nums">
+              <div key={c.id} className="py-4 first:pt-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className="font-medium">{c.companyName ?? 'Sin empresa'}</span>
+                  <span className="font-semibold tabular-nums">
                     {c.salary || c.grossSalary
                       ? formatMoney(c.salary ?? c.grossSalary ?? '0', c.currency as 'PEN' | 'USD')
-                      : '-'}
-                  </span>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 text-muted-foreground text-xs">
-                  <span>{c.type ?? 'Sin tipo'}</span>
-                  <span>
-                    {formatDateMedium(c.startDate)} → {c.endDate ? formatDateMedium(c.endDate) : 'indefinido'}
+                      : '—'}
                   </span>
                 </div>
 
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-lg border bg-muted/30 px-3 py-2">
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Llevas</p>
-                    <p className="font-semibold text-sm">{formatDurationExact(c.startDate)}</p>
+                <p className="mt-0.5 text-muted-foreground text-xs">
+                  {c.type ?? 'Sin tipo'} · {formatDateMedium(c.startDate)} →{' '}
+                  {c.endDate ? formatDateMedium(c.endDate) : 'indefinido'}
+                </p>
+
+                <div className="mt-2.5 space-y-1.5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={cn('h-full rounded-full', c.state === 'EXPIRING' ? 'bg-warning' : 'bg-brand')}
+                      style={{ width: `${avanceDe(c)}%` }}
+                    />
                   </div>
-                  <div
-                    className={cn(
-                      'rounded-lg border px-3 py-2',
-                      c.state === 'EXPIRING' ? 'border-warning/40 bg-warning/8' : 'bg-muted/30',
-                    )}
-                  >
-                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Te falta</p>
-                    <p className={cn('font-semibold text-sm', c.state === 'EXPIRING' && 'text-warning-foreground')}>
-                      {restanteCorto(c.daysRemaining)}
-                    </p>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs">
+                    <span className="text-muted-foreground">
+                      Lleva <span className="font-medium text-foreground">{formatDurationExact(c.startDate)}</span>
+                    </span>
+                    <span
+                      className={cn('font-medium', c.state === 'EXPIRING' ? 'text-warning' : 'text-muted-foreground')}
+                    >
+                      {c.endDate ? `Faltan ${restanteCorto(c.daysRemaining)}` : 'Sin fecha de fin'}
+                    </span>
                   </div>
                 </div>
               </div>

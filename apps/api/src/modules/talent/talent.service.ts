@@ -420,6 +420,26 @@ export class TalentService {
       totals.set(period, (totals.get(period) ?? new Decimal(0)).add(amount));
     };
 
+    const monthlyDetail = new Map<string, Map<string, { withDiscount: Decimal; received: Decimal; kept: Decimal }>>();
+    const addMonthlyDetail = (
+      period: string,
+      name: string,
+      withDiscount: Decimal,
+      received: Decimal,
+      kept: Decimal,
+    ) => {
+      let row = monthlyDetail.get(period);
+      if (!row) {
+        row = new Map();
+        monthlyDetail.set(period, row);
+      }
+      const cell = row.get(name) ?? { withDiscount: new Decimal(0), received: new Decimal(0), kept: new Decimal(0) };
+      cell.withDiscount = cell.withDiscount.add(withDiscount);
+      cell.received = cell.received.add(received);
+      cell.kept = cell.kept.add(kept);
+      row.set(name, cell);
+    };
+
     const companyAgg = new Map<
       string,
       { received: Decimal; kept: Decimal; salary: Decimal; talents: Set<string>; count: number }
@@ -509,12 +529,14 @@ export class TalentService {
           received = received.add(new Decimal(String(d.amountReceived)));
           kept = kept.add(new Decimal(String(d.amountRetained)));
           if (d.year && d.month) {
-            setCell(
-              incomePivot,
-              incomePeriodTotals,
-              `${d.year}-${d.month}`,
+            const period = `${d.year}-${d.month}`;
+            setCell(incomePivot, incomePeriodTotals, period, t.name, new Decimal(String(d.amountReceived)));
+            addMonthlyDetail(
+              period,
               t.name,
+              new Decimal(String(d.amountWithDiscount)),
               new Decimal(String(d.amountReceived)),
+              new Decimal(String(d.amountRetained)),
             );
           }
           addDistribAgg(t.name, t.id, {
@@ -533,12 +555,14 @@ export class TalentService {
         received = received.add(new Decimal(String(d.amountReceived)));
         kept = kept.add(new Decimal(String(d.amountRetained)));
         if (d.year && d.month) {
-          setCell(
-            incomePivot,
-            incomePeriodTotals,
-            `${d.year}-${d.month}`,
+          const period = `${d.year}-${d.month}`;
+          setCell(incomePivot, incomePeriodTotals, period, t.name, new Decimal(String(d.amountReceived)));
+          addMonthlyDetail(
+            period,
             t.name,
+            new Decimal(String(d.amountWithDiscount)),
             new Decimal(String(d.amountReceived)),
+            new Decimal(String(d.amountRetained)),
           );
         }
         addDistribAgg(t.name, t.id, d);
@@ -708,6 +732,19 @@ export class TalentService {
             .sort((a, b) => a.year - b.year),
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
+      monthlyDetail: [...monthlyDetail.entries()]
+        .map(([key, row]) => ({
+          ...periodLabel(key),
+          talents: [...row.entries()]
+            .map(([name, v]) => ({
+              name,
+              withDiscount: v.withDiscount.toFixed(2),
+              received: v.received.toFixed(2),
+              kept: v.kept.toFixed(2),
+            }))
+            .sort((a, b) => Number(b.received) - Number(a.received)),
+        }))
+        .sort((a, b) => b.year - a.year || b.month - a.month),
       incomePivot: buildPivot(incomePivot, incomePeriodTotals),
       expensePivot: buildPivot(expensePivot, expensePeriodTotals),
       byCompany: [...companyAgg.entries()]

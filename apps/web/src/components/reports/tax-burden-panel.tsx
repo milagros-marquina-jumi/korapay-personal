@@ -41,8 +41,15 @@ export function TaxBurdenPanel({ taxBurden }: TaxBurdenPanelProps) {
       <CardHeader>
         <CardTitle>Ingresos después de renta</CardTitle>
         <CardDescription>
-          Devengado imputa la renta al año que la generó. Caja la resta del año en que realmente la pagas, porque la
-          renta de un ejercicio se declara al año siguiente.
+          La renta de un año se declara y paga al año siguiente, así que el mismo impuesto se puede mirar de dos formas.
+          <span className="mt-1 block">
+            <span className="font-medium text-foreground">Devengado:</span> le resta a cada año la renta que ese año
+            generó, aunque la pagues después. Sirve para saber cuánto te dejó realmente ese año de trabajo.
+          </span>
+          <span className="mt-1 block">
+            <span className="font-medium text-foreground">Caja:</span> le resta a cada año la renta que efectivamente
+            saliste a pagar en él (la del año anterior). Sirve para ver tu flujo de dinero real.
+          </span>
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -56,11 +63,21 @@ export function TaxBurdenPanel({ taxBurden }: TaxBurdenPanelProps) {
                 <th className="px-3 py-2.5 text-right font-medium" rowSpan={2}>
                   Ingreso neto
                 </th>
-                <th className="border-l px-3 py-2 text-center font-medium" colSpan={3}>
+                <th
+                  className="border-l px-3 py-2 text-center font-medium"
+                  colSpan={3}
+                  title="Renta que generó ese año, aunque se pague al año siguiente"
+                >
                   Devengado
+                  <span className="block font-normal text-[10px] text-muted-foreground">renta que generó</span>
                 </th>
-                <th className="border-l px-3 py-2 text-center font-medium" colSpan={3}>
+                <th
+                  className="border-l px-3 py-2 text-center font-medium"
+                  colSpan={3}
+                  title="Renta que se pagó durante ese año, correspondiente al ejercicio anterior"
+                >
                   Caja
+                  <span className="block font-normal text-[10px] text-muted-foreground">renta que pagó</span>
                 </th>
               </tr>
               <tr className="border-b bg-muted/40 text-left">

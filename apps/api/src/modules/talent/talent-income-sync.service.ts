@@ -15,14 +15,10 @@ export class TalentIncomeSyncService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // Refleja los ingresos mensuales de Mimotalents como transacciones INCOME en el
-  // workspace que tenga una empresa vinculada via sync_talent_workspace_id.
-  // Es idempotente: crea, corrige o elimina las filas derivadas segun la suma real.
   async sync(businessWorkspaceId: string): Promise<void> {
     try {
       await this.syncInterno(businessWorkspaceId);
     } catch (error) {
-      // La sincronizacion nunca debe romper el guardado del pago que la dispara.
       this.logger.error(`Fallo la sincronizacion de ingresos de talentos: ${(error as Error).message}`);
     }
   }
@@ -73,8 +69,6 @@ export class TalentIncomeSyncService {
     });
     const derivadaPorRef = new Map(derivadas.map((t) => [t.sourceRef ?? '', t]));
 
-    // Se hereda concepto y categoria de las filas historicas de la empresa para que
-    // los reportes por concepto y categoria sigan agrupando igual.
     const plantilla = await this.prisma.transaction.findFirst({
       where: { workspaceId: target.workspaceId, companyId: target.id, deletedAt: null },
       orderBy: { date: 'desc' },

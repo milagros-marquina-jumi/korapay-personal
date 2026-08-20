@@ -136,14 +136,14 @@ export function buildIncomeColumns({
       size: 150,
       accessorFn: (r) => Number(r.amountGross ?? r.amountBase),
       sortingFn: 'basic',
-      header: ({ column }) => <SortableHeader column={column} label="Bruto" className="ml-auto" />,
+      header: ({ column }) => <SortableHeader column={column} label="Bruto" />,
       cell: ({ row }) => {
         const tx = row.original;
         const isUsd = tx.currency === 'USD';
         const gross = isUsd ? Number(tx.amountOriginal) : grossOf(tx);
         const discount = isUsd ? 0 : gross - Number(tx.amountBase);
         return (
-          <div className="flex flex-col items-end">
+          <div className="flex flex-col items-start">
             <span className="tabular-nums text-muted-foreground">
               {formatMoney(String(gross), isUsd ? 'USD' : 'PEN')}
             </span>
@@ -161,11 +161,11 @@ export function buildIncomeColumns({
       size: 150,
       accessorFn: (r) => Number(r.amountBase),
       sortingFn: 'basic',
-      header: ({ column }) => <SortableHeader column={column} label="Neto" className="ml-auto" />,
+      header: ({ column }) => <SortableHeader column={column} label="Neto" />,
       cell: ({ row }) => {
         const tx = row.original;
         return (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex items-center justify-start gap-1.5">
             <span className="font-semibold tabular-nums text-success">+{formatMoney(tx.amountBase, 'PEN')}</span>
             {tx.currency === 'USD' && (
               <button

@@ -299,10 +299,10 @@ export default function MovimientosPage() {
       },
       {
         accessorKey: 'status',
-        size: 152,
+        size: 158,
         header: 'Estado',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 whitespace-nowrap">
             {activeWorkspaceId && !row.original.isRecurring ? (
               <StatusToggle
                 transactionId={row.original.id}
@@ -312,7 +312,7 @@ export default function MovimientosPage() {
             ) : (
               <StatusBadge status={row.original.status} />
             )}
-            <DueDateHint transaction={row.original} />
+            <DueDateHint transaction={row.original} compact />
           </div>
         ),
       },

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { ExchangeRateService } from '@/modules/exchange-rate/exchange-rate.service';
+import { RecurrenceService } from '@/modules/recurrence/recurrence.service';
 
 @Injectable()
 export class ScheduledTasksService {
@@ -10,6 +11,7 @@ export class ScheduledTasksService {
   constructor(
     private readonly exchangeRate: ExchangeRateService,
     private readonly prisma: PrismaService,
+    private readonly recurrence: RecurrenceService,
   ) {}
 
   @Cron('0 8 * * *', { name: 'refresh-exchange-rate', timeZone: 'America/Lima' })
@@ -20,6 +22,17 @@ export class ScheduledTasksService {
       this.logger.log(`Tipo de cambio actualizado: 1 USD = ${result.rate} PEN (${result.date})`);
     } catch (err) {
       this.logger.error(`Fallo refresh tipo de cambio: ${(err as Error).message}`);
+    }
+  }
+
+  @Cron('10 0 * * *', { name: 'generate-recurrences', timeZone: 'America/Lima' })
+  async generateRecurrences() {
+    this.logger.log('Generando movimientos recurrentes del periodo...');
+    try {
+      const { generadas, finalizadas } = await this.recurrence.generarPendientes();
+      this.logger.log(`Recurrencias: ${generadas} movimientos generados, ${finalizadas} finalizadas`);
+    } catch (err) {
+      this.logger.error(`Fallo generacion de recurrencias: ${(err as Error).message}`);
     }
   }
 

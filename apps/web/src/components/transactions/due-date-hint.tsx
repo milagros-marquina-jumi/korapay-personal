@@ -13,7 +13,16 @@ function dueLabel(days: number) {
   return `Vence en ${days} días`;
 }
 
-export function DueDateHint({ transaction }: Readonly<{ transaction: Transaction }>) {
+function dueShort(days: number) {
+  if (days < 0) return `-${Math.abs(days)}d`;
+  if (days === 0) return 'hoy';
+  return `${days}d`;
+}
+
+export function DueDateHint({
+  transaction,
+  compact = false,
+}: Readonly<{ transaction: Transaction; compact?: boolean }>) {
   if (!transaction.dueDate || transaction.status === 'PAID' || transaction.status === 'CANCELLED') return null;
 
   const days = daysUntilDue(transaction.dueDate);
@@ -22,14 +31,14 @@ export function DueDateHint({ transaction }: Readonly<{ transaction: Transaction
 
   return (
     <span
-      title={`Fecha límite: ${formatDate(transaction.dueDate)}`}
+      title={`${dueLabel(days)} · Fecha límite: ${formatDate(transaction.dueDate)}`}
       className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+        'inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 font-medium text-[10px]',
         vencido || days === 0 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning',
       )}
     >
       <AlertTriangle className="size-3" aria-hidden />
-      {dueLabel(days)}
+      {compact ? dueShort(days) : dueLabel(days)}
     </span>
   );
 }

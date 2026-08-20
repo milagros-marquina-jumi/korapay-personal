@@ -32,6 +32,7 @@ export const queryKeys = {
     ['business-reports', workspaceId, filters ?? {}] as const,
   debts: (workspaceId: string) => ['debts', workspaceId] as const,
   pendingItems: (workspaceId: string) => ['pending-items', workspaceId] as const,
+  recurrences: (workspaceId: string) => ['recurrences', workspaceId] as const,
   talents: (workspaceId: string) => ['talents', workspaceId] as const,
   talent: (workspaceId: string, id: string) => ['talents', workspaceId, id] as const,
   talentLedgerSummary: (workspaceId: string) => ['talent-ledger-summary', workspaceId] as const,

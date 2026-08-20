@@ -495,6 +495,29 @@ export interface PendingItem {
   notes?: string | null;
 }
 
+export interface RecurrenceRule {
+  id: string;
+  frequency: string;
+  interval: number;
+  type?: string | null;
+  concept?: string | null;
+  amount?: string | null;
+  currency?: string | null;
+  categoryId?: string | null;
+  category?: { id: string; name: string } | null;
+  paymentMethod?: string | null;
+  bank?: string | null;
+  notes?: string | null;
+  isFixedExpense: boolean;
+  status: string;
+  nextRunAt?: string | null;
+  lastRunAt?: string | null;
+  generatedCount: number;
+  endDate?: string | null;
+  endAfterCount?: number | null;
+  _count?: { transactions: number };
+}
+
 export interface TalentContract {
   id: string;
   companyName?: string | null;

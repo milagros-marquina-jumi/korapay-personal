@@ -24,6 +24,7 @@ import { PendingItemModule } from './modules/pending-item/pending-item.module';
 import { PersonModule } from './modules/person/person.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { ReconciliationRulesModule } from './modules/reconciliation-rules/reconciliation-rules.module';
+import { RecurrenceModule } from './modules/recurrence/recurrence.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SavingBalanceModule } from './modules/saving-balance/saving-balance.module';
 import { SavingGoalModule } from './modules/saving-goal/saving-goal.module';
@@ -53,6 +54,7 @@ import { WorkspaceModule } from './modules/workspace/workspace.module';
     CalendarModule,
     DashboardModule,
     PendingItemModule,
+    RecurrenceModule,
     DebtModule,
     SavingGoalModule,
     SavingBalanceModule,

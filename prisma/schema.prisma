@@ -63,6 +63,7 @@ model Workspace {
   projects         Project[]
   applications     Application[]
   pendingItems     PendingItem[]
+  recurrenceRules  RecurrenceRule[]
   debts            Debt[]
   savingGoals      SavingGoal[]
   savingBalances   SavingBalance[]
@@ -141,6 +142,7 @@ model Category {
   parent     Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children   Category[] @relation("CategoryTree")
   transactions Transaction[]
+  recurrenceRules RecurrenceRule[]
 
   @@index([workspaceId])
   @@map("categories")
@@ -431,8 +433,30 @@ model RecurrenceRule {
   endAfterCount Int?     @map("end_after_count")
   createdAt     DateTime @default(now()) @map("created_at")
 
+  workspaceId    String?   @map("workspace_id")
+  type           String?
+  concept        String?
+  amount         Decimal?  @db.Decimal(18, 2)
+  currency       String?
+  categoryId     String?   @map("category_id")
+  paymentMethod  String?   @map("payment_method")
+  bank           String?
+  notes          String?
+  isFixedExpense Boolean   @default(false) @map("is_fixed_expense")
+  status         String    @default("ACTIVE")
+  nextRunAt      DateTime? @map("next_run_at") @db.Date
+  lastRunAt      DateTime? @map("last_run_at") @db.Date
+  generatedCount Int       @default(0) @map("generated_count")
+  cancelledAt    DateTime? @map("cancelled_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category  Category?  @relation(fields: [categoryId], references: [id])
+
   transactions Transaction[]
 
+  @@index([workspaceId, status])
+  @@index([status, nextRunAt])
   @@map("recurrence_rules")
 }
 

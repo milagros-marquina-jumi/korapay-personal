@@ -3,7 +3,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { apiFetch } from '@/lib/api';
-import type { Debt, DetectedSummary, Paginated, PendingItem, TaxObligation, Transaction } from '@/lib/api.types';
+import type {
+  Debt,
+  DetectedSummary,
+  Paginated,
+  PendingItem,
+  RecurrenceRule,
+  TaxObligation,
+  Transaction,
+} from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const SIN_SALDAR = new Set(['PENDING', 'PARTIAL', 'OVERDUE']);
@@ -34,6 +42,12 @@ export function useNavBadges(): Record<string, number> {
     enabled: !!ws && esPersonal,
   });
 
+  const { data: recurrentes } = useQuery({
+    queryKey: queryKeys.recurrences(ws),
+    queryFn: () => apiFetch<RecurrenceRule[]>(`/recurrences?workspaceId=${ws}`),
+    enabled: !!ws && esPersonal,
+  });
+
   const { data: movimientos } = useQuery({
     queryKey: queryKeys.transactions(ws, { badge: true }),
     queryFn: () =>
@@ -57,6 +71,7 @@ export function useNavBadges(): Record<string, number> {
     badges['/pendientes'] = (pendientes ?? []).filter((p) => SIN_SALDAR.has(p.status)).length;
     badges['/deudas'] = (deudas ?? []).filter((d) => SIN_SALDAR.has(d.status)).length;
     badges['/movimientos/detectados'] = detectados?.pendingReview ?? 0;
+    badges['/movimientos/recurrentes'] = (recurrentes ?? []).filter((r) => r.status === 'ACTIVE').length;
     badges['/movimientos'] = sinPagar(filas, ['EXPENSE', 'INCOME', 'SAVING']);
   }
 

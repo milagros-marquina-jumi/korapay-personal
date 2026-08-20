@@ -679,11 +679,11 @@ export function TransactionFormDialog({
               <div className="space-y-3 rounded-lg border border-border/60 p-3">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label htmlFor="isRecurring">Pago recurrente</Label>
+                    <Label htmlFor="isRecurring">Crear en cuotas</Label>
                     <p className="text-xs text-muted-foreground">
                       {isRecurring
-                        ? 'Al guardar se crean todos los movimientos de una vez, desde la fecha de arriba.'
-                        : 'Crea de una vez un movimiento por cada periodo.'}
+                        ? 'Al guardar se crean todas las cuotas de una vez, desde la fecha de arriba.'
+                        : 'Para montos fijos con fin conocido. Para suscripciones usa Movimientos › Recurrentes.'}
                     </p>
                   </div>
                   <Switch

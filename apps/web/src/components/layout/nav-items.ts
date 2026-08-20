@@ -9,6 +9,7 @@ import {
   MailCheck,
   PiggyBank,
   Receipt,
+  RefreshCw,
   Settings,
   TrendingUp,
   UserCircle,
@@ -32,6 +33,7 @@ const PERSONAL: NavItem[] = [
     icon: ArrowLeftRight,
     children: [
       { href: '/movimientos', label: 'Todos', icon: ArrowLeftRight },
+      { href: '/movimientos/recurrentes', label: 'Recurrentes', icon: RefreshCw },
       { href: '/movimientos/detectados', label: 'Detectados', icon: MailCheck },
     ],
   },

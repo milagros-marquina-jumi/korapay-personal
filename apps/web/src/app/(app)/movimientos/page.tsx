@@ -34,7 +34,7 @@ import { FIXED_TAG, isRentaInstallment, VARIABLE_TAG } from '@/lib/transaction-t
 import { useDefaultYear } from '@/lib/use-default-year';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { useOpenMonth } from '@/lib/use-open-month';
-import { formatMonthYear } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 export default function MovimientosPage() {
   const { activeWorkspaceId, activeWorkspace } = useWorkspace();
@@ -216,8 +216,8 @@ export default function MovimientosPage() {
         size: 110,
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
         cell: ({ row }) => (
-          <span className="whitespace-nowrap text-sm capitalize text-muted-foreground">
-            {formatMonthYear(row.original.date)}
+          <span className="whitespace-nowrap text-muted-foreground text-sm tabular-nums">
+            {formatDate(row.original.date)}
           </span>
         ),
       },

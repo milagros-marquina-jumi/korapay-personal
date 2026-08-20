@@ -105,9 +105,27 @@ export class DetectedTransactionsService {
     return { ...row, amount: row.amount.toString(), confidence: Number(row.confidence) };
   }
 
-  private notaImportacion(detected: { bankName: string | null; bankCode: string | null; cardLast4: string | null }) {
-    const partes = [`Importado desde correo bancario (${detected.bankName ?? detected.bankCode ?? 'banco'})`];
-    if (detected.cardLast4) partes.push(`Tarjeta ***${detected.cardLast4}`);
+  private notaImportacion(
+    detected: {
+      bankName: string | null;
+      bankCode: string | null;
+      cardLast4: string | null;
+      merchantOriginal: string | null;
+      externalReference: string | null;
+      occurredAt: Date;
+    },
+    medioDePago?: string,
+    bancoResuelto?: string | null,
+  ) {
+    const banco = bancoResuelto ?? detected.bankName ?? detected.bankCode;
+    const partes = ['Importado desde correo bancario'];
+    const linea = [banco, detected.cardLast4 ? `***${detected.cardLast4}` : null, medioDePago]
+      .filter(Boolean)
+      .join(' · ');
+    if (linea) partes.push(linea);
+    if (detected.merchantOriginal) partes.push(`Comercio: ${detected.merchantOriginal}`);
+    if (detected.externalReference) partes.push(`Referencia: ${detected.externalReference}`);
+    partes.push(`Fecha del consumo: ${detected.occurredAt.toISOString().slice(0, 10)}`);
     return partes.join('\n');
   }
 
@@ -180,7 +198,7 @@ export class DetectedTransactionsService {
           projectId: data.projectId ?? detected.projectId ?? undefined,
           applicationId: data.applicationId ?? detected.applicationId ?? undefined,
           status: 'PAID',
-          notes: this.notaImportacion(detected),
+          notes: this.notaImportacion(detected, data.paymentMethod, banco),
           tags,
         },
       });

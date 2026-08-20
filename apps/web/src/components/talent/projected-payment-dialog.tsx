@@ -81,11 +81,6 @@ export function ProjectedPaymentDialog({ contracts, trigger }: Readonly<Props>) 
                         <span className="block truncate font-medium" title={f.empresa}>
                           {f.empresa}
                         </span>
-                        {f.cliente && (
-                          <span className="block truncate text-muted-foreground text-xs" title={f.cliente}>
-                            {f.cliente}
-                          </span>
-                        )}
                       </td>
                       <td className="whitespace-nowrap p-3 text-muted-foreground text-xs">{f.desdePeriodo}</td>
                       <td className="whitespace-nowrap p-3 text-right font-medium text-info tabular-nums">

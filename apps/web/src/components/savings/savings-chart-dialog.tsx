@@ -31,7 +31,7 @@ export function SavingsChartDialog({ open, onOpenChange }: Readonly<Props>) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] w-[min(78rem,95vw)] max-w-none flex-col overflow-hidden">
+      <DialogContent className="flex max-h-[90vh] w-[min(96rem,97vw)] max-w-none flex-col overflow-hidden">
         <DialogHeader className="shrink-0">
           <DialogTitle>Ahorros por año y mes</DialogTitle>
           <DialogDescription>Total ahorrado en cada periodo, expresado en soles</DialogDescription>

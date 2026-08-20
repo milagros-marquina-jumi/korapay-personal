@@ -100,11 +100,6 @@ export function GlobalProjectionDialog({ projection }: Readonly<Props>) {
                               <span className="block truncate font-medium" title={r.company}>
                                 {r.company}
                               </span>
-                              {r.client && (
-                                <span className="block truncate text-muted-foreground text-xs" title={r.client}>
-                                  {r.client}
-                                </span>
-                              )}
                             </td>
                             <td className="whitespace-nowrap p-3 text-muted-foreground text-xs">{r.from}</td>
                             <td className="whitespace-nowrap p-3 text-right tabular-nums">{money(r.received)}</td>

@@ -9,9 +9,9 @@ import {
 } from './parser.utils';
 
 function extractAmount(text: string): string | undefined {
-  const m = text.match(/(?:S\/|US\$|\$|USD|PEN)\s*([\d.,]+\d)/i);
+  const m = text.match(/(?:S\/\.?|US\$|\$|USD|PEN)\s*([\d.,]+\d)/i);
   if (m?.[1]) return parseAmount(m[1]);
-  const alt = text.match(/(?:por|importe|monto)[:\s]+(?:S\/|US\$|\$)?\s*([\d.,]+\d)/i);
+  const alt = text.match(/(?:por|importe|monto)[:\s]+(?:S\/\.?|US\$|\$)?\s*([\d.,]+\d)/i);
   return alt?.[1] ? parseAmount(alt[1]) : undefined;
 }
 

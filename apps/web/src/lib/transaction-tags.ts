@@ -1,13 +1,8 @@
-// Las transacciones guardan en `tags` cuatro cosas mezcladas: el tipo de gasto (Fijo/No Fijo),
-// el medio de pago, el banco y restos heredados de la migracion (meses, cargos). Este modulo
-// es la unica fuente de verdad para separarlos.
-
 export const FIXED_TAG = 'Fijo';
 export const VARIABLE_TAG = 'No Fijo';
 
 export const EXPENSE_TYPE_TAGS = [FIXED_TAG, VARIABLE_TAG];
 
-// Nombres de mes en mayusculas que la migracion dejo como tags sueltos.
 const MONTH_TAG = /^(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)/;
 
 export function isExpenseTypeTag(tag: string): boolean {
@@ -24,8 +19,6 @@ export function isFixedExpense(tags?: string[] | null): boolean {
 
 export const RENTA_TAG = 'Renta';
 
-// Los gastos generados al pagar una cuota de renta anual pertenecen al cronograma
-// tributario: su monto y fecha salen de la cuota, no se editan desde movimientos.
 export function isRentaInstallment(tags?: string[] | null): boolean {
   return tags?.includes(RENTA_TAG) ?? false;
 }

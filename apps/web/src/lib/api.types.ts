@@ -488,6 +488,7 @@ export interface PendingItem {
   concept: string;
   amount: string;
   currency: string;
+  issuedDate?: string | null;
   dueDate: string;
   status: string;
   personId?: string | null;

@@ -448,6 +448,7 @@ model PendingItem {
   concept     String
   amount      Decimal   @db.Decimal(18, 2)
   currency    String    @default("PEN")
+  issuedDate  DateTime? @map("issued_date") @db.Date
   dueDate     DateTime  @map("due_date") @db.Date
   status      String    @default("PENDING")
   notes       String?

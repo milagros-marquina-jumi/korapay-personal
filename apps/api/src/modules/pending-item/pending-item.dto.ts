@@ -26,6 +26,12 @@ export class CreatePendingItemDto {
   @IsIn(['PEN', 'USD'])
   currency?: string;
 
+  @ApiPropertyOptional({ example: '2026-07-15', description: 'Fecha en que se hizo el préstamo o se generó el cobro' })
+  @IsOptional()
+  @VacioComoNulo()
+  @IsDateString()
+  issuedDate?: string;
+
   @ApiProperty({ example: '2026-08-01' })
   @IsDateString()
   dueDate!: string;

@@ -27,6 +27,10 @@ export class PendingItemController {
   pay(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto, @Body() body: PayPendingItemDto) {
     return this.pendingItemService.pay(id, workspaceId, { ...body });
   }
+  @Delete(':id/payments')
+  unpay(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
+    return this.pendingItemService.unpay(id, workspaceId);
+  }
   @Delete(':id')
   remove(@Param('id') id: string, @Query() { workspaceId }: WorkspaceQueryDto) {
     return this.pendingItemService.remove(id, workspaceId);

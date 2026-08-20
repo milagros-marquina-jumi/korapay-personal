@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Trash2 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Pencil, Trash2, Undo2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -39,21 +39,33 @@ import type { PendingItem } from '@/lib/api.types';
 import { PENDING_KIND_LABELS } from '@/lib/labels';
 import { queryKeys } from '@/lib/query-keys';
 import { useHighlightNew } from '@/lib/use-highlight-new';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, formatDurationExact } from '@/lib/utils';
 
 const schema = z.object({
   kind: z.enum(['COBRAR', 'PAGAR']),
   concept: z.string().min(1, 'Requerido'),
   amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Monto inválido'),
   currency: z.enum(['PEN', 'USD']),
+  issuedDate: z.string().optional(),
   dueDate: z.string().min(1, 'Requerido'),
   notes: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; onCreated?: (id: string) => void }) {
-  const [open, setOpen] = useState(false);
+interface PendingFormProps {
+  workspaceId: string;
+  onCreated?: (id: string) => void;
+  item?: PendingItem;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+function PendingFormDialog({ workspaceId, onCreated, item, open: openProp, onOpenChange }: Readonly<PendingFormProps>) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
+  const editando = !!item;
   const queryClient = useQueryClient();
 
   const {
@@ -71,39 +83,63 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
       concept: '',
       amount: '',
       currency: 'PEN',
+      issuedDate: '',
       dueDate: new Date().toISOString().slice(0, 10),
       notes: '',
     },
   });
 
+  useEffect(() => {
+    if (!open) return;
+    reset({
+      kind: (item?.kind as FormValues['kind']) ?? 'COBRAR',
+      concept: item?.concept ?? '',
+      amount: item?.amount ?? '',
+      currency: (item?.currency as FormValues['currency']) ?? 'PEN',
+      issuedDate: item?.issuedDate ? item.issuedDate.slice(0, 10) : '',
+      dueDate: item?.dueDate ? item.dueDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      notes: item?.notes ?? '',
+    });
+  }, [open, item, reset]);
+
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
-      apiFetch<PendingItem>('/pending-items', { method: 'POST', body: JSON.stringify({ ...values, workspaceId }) }),
-    onSuccess: (created) => {
+      editando
+        ? apiFetch<PendingItem>(`/pending-items/${item.id}?workspaceId=${workspaceId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(values),
+          })
+        : apiFetch<PendingItem>('/pending-items', {
+            method: 'POST',
+            body: JSON.stringify({ ...values, workspaceId }),
+          }),
+    onSuccess: (guardado) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.pendingItems(workspaceId) });
-      toast.success('Pendiente creado');
+      toast.success(editando ? 'Pendiente actualizado' : 'Pendiente creado');
       reset();
       setOpen(false);
-      if (created?.id) onCreated?.(created.id);
+      if (!editando && guardado?.id) onCreated?.(guardado.id);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>Nuevo pendiente</Button>
-      </DialogTrigger>
+      {openProp === undefined && (
+        <DialogTrigger asChild>
+          <Button>Nuevo pendiente</Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nuevo pendiente</DialogTitle>
+          <DialogTitle>{editando ? 'Editar pendiente' : 'Nuevo pendiente'}</DialogTitle>
           <DialogDescription>Registra un cobro o pago pendiente.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <Select defaultValue="COBRAR" onValueChange={(v) => setValue('kind', v as FormValues['kind'])}>
+              <Select value={watch('kind')} onValueChange={(v) => setValue('kind', v as FormValues['kind'])}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -114,10 +150,16 @@ function PendingFormDialog({ workspaceId, onCreated }: { workspaceId: string; on
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dueDate">Vencimiento</Label>
-              <Input id="dueDate" type="date" {...register('dueDate')} />
-              {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
+              <Label htmlFor="issuedDate">Fecha del préstamo</Label>
+              <Input id="issuedDate" type="date" {...register('issuedDate')} />
+              <p className="text-[11px] text-muted-foreground">Cuándo se prestó o se generó el cobro.</p>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dueDate">Vencimiento</Label>
+            <Input id="dueDate" type="date" {...register('dueDate')} />
+            {errors.dueDate && <p className="text-xs text-destructive">{errors.dueDate.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -179,12 +221,33 @@ function MarkPaidButton({ workspaceId, item }: { workspaceId: string; item: Pend
   );
 }
 
+function UndoPaidButton({ workspaceId, item }: Readonly<{ workspaceId: string; item: PendingItem }>) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: () => apiFetch(`/pending-items/${item.id}/payments?workspaceId=${workspaceId}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pendingItems(workspaceId) });
+      toast.success('Vuelve a estar pendiente');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Button variant="ghost" size="sm" disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+      <Undo2 className="mr-1.5 size-4" aria-hidden="true" />
+      {mutation.isPending ? 'Guardando...' : 'Deshacer pago'}
+    </Button>
+  );
+}
+
 export default function PendientesPage() {
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const { markNew, highlightClass } = useHighlightNew();
   const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<PendingItem | null>(null);
   const [kindFilter, setKindFilter] = useState(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
@@ -302,12 +365,37 @@ export default function PendientesPage() {
                   </div>
                   <p className="text-xl font-bold tabular-nums">{formatMoney(item.amount, currency)}</p>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">Vence: {formatDate(item.dueDate)}</p>
+                <CardContent className="space-y-2">
+                  <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+                    {item.issuedDate && (
+                      <div className="flex gap-1.5">
+                        <dt className="text-muted-foreground">Prestado:</dt>
+                        <dd className="font-medium">{formatDate(item.issuedDate)}</dd>
+                      </div>
+                    )}
+                    <div className="flex gap-1.5">
+                      <dt className="text-muted-foreground">Vence:</dt>
+                      <dd className="font-medium">{formatDate(item.dueDate)}</dd>
+                    </div>
+                    {item.issuedDate && (
+                      <div className="flex gap-1.5">
+                        <dt className="text-muted-foreground">Plazo:</dt>
+                        <dd className="font-medium">{formatDurationExact(item.issuedDate, item.dueDate)}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  {item.notes && <p className="whitespace-pre-wrap text-muted-foreground text-sm">{item.notes}</p>}
                 </CardContent>
                 {activeWorkspaceId && (
-                  <CardFooter className="justify-between">
-                    {item.status !== 'PAID' ? <MarkPaidButton workspaceId={activeWorkspaceId} item={item} /> : <span />}
+                  <CardFooter className="justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                      {item.status !== 'PAID' ? (
+                        <MarkPaidButton workspaceId={activeWorkspaceId} item={item} />
+                      ) : (
+                        <UndoPaidButton workspaceId={activeWorkspaceId} item={item} />
+                      )}
+                      <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(item)} />
+                    </div>
                     <IconAction
                       icon={Trash2}
                       label="Eliminar"
@@ -330,6 +418,17 @@ export default function PendientesPage() {
         </div>
       ) : (
         <EmptyState title="Sin pendientes" description="No tienes cobros ni pagos pendientes." />
+      )}
+
+      {activeWorkspaceId && editing && (
+        <PendingFormDialog
+          workspaceId={activeWorkspaceId}
+          item={editing}
+          open
+          onOpenChange={(abierto) => {
+            if (!abierto) setEditing(null);
+          }}
+        />
       )}
     </PageShell>
   );

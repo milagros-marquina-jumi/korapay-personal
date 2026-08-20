@@ -17,11 +17,17 @@ export class PendingItemService {
     concept: string;
     amount: string;
     currency?: string;
+    issuedDate?: string;
     dueDate: string;
     personId?: string;
   }) {
+    const { issuedDate, ...resto } = data;
     return this.prisma.pendingItem.create({
-      data: { ...data, dueDate: new Date(data.dueDate) },
+      data: {
+        ...resto,
+        dueDate: new Date(data.dueDate),
+        issuedDate: issuedDate ? new Date(issuedDate) : null,
+      },
     });
   }
   async update(id: string, workspaceId: string, data: UpdatePendingItemDto) {
@@ -29,7 +35,15 @@ export class PendingItemService {
       where: { id, workspaceId, deletedAt: null },
     });
     if (!item) throw new NotFoundException('Pending item not found');
-    return this.prisma.pendingItem.update({ where: { id }, data });
+    const { issuedDate, dueDate, workspaceId: _ws, ...resto } = data;
+    return this.prisma.pendingItem.update({
+      where: { id },
+      data: {
+        ...resto,
+        ...(dueDate !== undefined && { dueDate: new Date(dueDate) }),
+        ...(issuedDate !== undefined && { issuedDate: issuedDate ? new Date(issuedDate) : null }),
+      },
+    });
   }
   async pay(id: string, workspaceId: string, data?: { amount?: string }) {
     const item = await this.prisma.pendingItem.findFirst({
@@ -42,6 +56,13 @@ export class PendingItemService {
       where: { id },
       data: { status },
     });
+  }
+  async unpay(id: string, workspaceId: string) {
+    const item = await this.prisma.pendingItem.findFirst({
+      where: { id, workspaceId, deletedAt: null },
+    });
+    if (!item) throw new NotFoundException('Pending item not found');
+    return this.prisma.pendingItem.update({ where: { id }, data: { status: 'PENDING' } });
   }
   async remove(id: string, workspaceId: string) {
     const item = await this.prisma.pendingItem.findFirst({

@@ -323,3 +323,38 @@ export class DuplicateTransactionDto {
   @Max(12)
   month?: number;
 }
+
+export class DuplicateMonthDto {
+  @ApiProperty({ example: 2026, description: 'Año del mes que se copia' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  sourceYear!: number;
+
+  @ApiProperty({ example: 2, description: 'Mes que se copia' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  sourceMonth!: number;
+
+  @ApiProperty({ example: 2026 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(2000)
+  @Max(2100)
+  targetYear!: number;
+
+  @ApiProperty({ example: 3 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  targetMonth!: number;
+
+  @ApiPropertyOptional({ enum: ['BUSINESS_COST', 'EXPENSE', 'TEAM_PAYMENT'] })
+  @IsOptional()
+  @IsIn(['BUSINESS_COST', 'EXPENSE', 'TEAM_PAYMENT'])
+  type?: string;
+}

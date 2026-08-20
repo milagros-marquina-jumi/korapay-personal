@@ -3,11 +3,13 @@
 import { formatMoney } from '@korapay/domain';
 import { KPICard, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Eye, Pencil, Plus, Server, Trash2 } from 'lucide-react';
+import { ChevronDown, Copy, CopyPlus, Eye, Pencil, Plus, Server, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
+import { DuplicateMonthDialog } from '@/components/forms/duplicate-month-dialog';
+import { DuplicateTransactionDialog } from '@/components/forms/duplicate-transaction-dialog';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -47,6 +49,8 @@ function CostosContent() {
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [usdDetail, setUsdDetail] = useState<Transaction | null>(null);
   const [detailOpen, setDetailOpen] = useState<Transaction | null>(null);
+  const [duplicating, setDuplicating] = useState<Transaction | null>(null);
+  const [duplicatingMonth, setDuplicatingMonth] = useState<{ year: number; month: number; count: number } | null>(null);
   const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
   const [touched, setTouched] = useState(false);
 
@@ -314,6 +318,13 @@ function CostosContent() {
                   <span className="text-sm font-semibold tabular-nums text-destructive">
                     {formatMoney(String(group.total), 'PEN')}
                   </span>
+                  <IconAction
+                    icon={CopyPlus}
+                    label="Copiar el mes completo"
+                    onClick={() =>
+                      setDuplicatingMonth({ year: group.year, month: group.month, count: group.txs.length })
+                    }
+                  />
                 </div>
                 {open && (
                   <div className="divide-y">
@@ -373,6 +384,7 @@ function CostosContent() {
                         <div className="flex shrink-0 gap-1.5">
                           <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetailOpen(tx)} />
                           <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(tx)} />
+                          <IconAction icon={Copy} label="Copiar a otro mes" onClick={() => setDuplicating(tx)} />
                           <IconAction
                             icon={Trash2}
                             label="Eliminar"
@@ -495,6 +507,24 @@ function CostosContent() {
           )}
         </DialogContent>
       </Dialog>
+
+      {ws && (
+        <DuplicateTransactionDialog
+          workspaceId={ws}
+          transaction={duplicating}
+          onOpenChange={(next) => !next && setDuplicating(null)}
+        />
+      )}
+
+      {ws && (
+        <DuplicateMonthDialog
+          workspaceId={ws}
+          type="BUSINESS_COST"
+          open={duplicatingMonth !== null}
+          source={duplicatingMonth}
+          onOpenChange={(next) => !next && setDuplicatingMonth(null)}
+        />
+      )}
 
       {ws && editing && (
         <TransactionFormDialog

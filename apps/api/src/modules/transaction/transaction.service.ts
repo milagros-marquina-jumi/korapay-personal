@@ -429,6 +429,55 @@ export class TransactionService {
       );
     }
   }
+  async duplicateMonth(
+    workspaceId: string,
+    data: { sourceYear: number; sourceMonth: number; targetYear: number; targetMonth: number; type?: string },
+  ) {
+    const inicio = new Date(Date.UTC(data.sourceYear, data.sourceMonth - 1, 1));
+    const fin = new Date(Date.UTC(data.sourceYear, data.sourceMonth, 1));
+    const origen = await this.prisma.transaction.findMany({
+      where: {
+        workspaceId,
+        deletedAt: null,
+        date: { gte: inicio, lt: fin },
+        ...(data.type && { type: data.type }),
+      },
+      select: { id: true, concept: true },
+    });
+    if (!origen.length) throw new BadRequestException('No hay movimientos en el mes de origen');
+
+    const destinoInicio = new Date(Date.UTC(data.targetYear, data.targetMonth - 1, 1));
+    const destinoFin = new Date(Date.UTC(data.targetYear, data.targetMonth, 1));
+    const yaExisten = await this.prisma.transaction.findMany({
+      where: {
+        workspaceId,
+        deletedAt: null,
+        date: { gte: destinoInicio, lt: destinoFin },
+        ...(data.type && { type: data.type }),
+      },
+      select: { concept: true },
+    });
+    const conceptosDestino = new Set(yaExisten.map((t) => this.conceptoBase(t.concept)));
+
+    const creadas = [];
+    let omitidas = 0;
+    for (const tx of origen) {
+      if (conceptosDestino.has(this.conceptoBase(tx.concept))) {
+        omitidas += 1;
+        continue;
+      }
+      creadas.push(await this.duplicate(tx.id, workspaceId, { year: data.targetYear, month: data.targetMonth }));
+    }
+    return { copiadas: creadas.length, omitidas, total: origen.length };
+  }
+
+  private conceptoBase(concept: string) {
+    return concept
+      .replace(/\s?\(copia\)$/i, '')
+      .trim()
+      .toLowerCase();
+  }
+
   async duplicate(id: string, workspaceId: string, target?: { year?: number; month?: number }) {
     const original = await this.findOne(id, workspaceId);
 
@@ -466,6 +515,9 @@ export class TransactionService {
         status: 'PENDING',
         date,
         dueDate,
+        ...(original.projects?.length && {
+          projects: { connect: original.projects.map((p) => ({ id: p.id })) },
+        }),
       },
     });
   }

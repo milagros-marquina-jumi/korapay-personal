@@ -1,6 +1,8 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
+import { useRef } from 'react';
+import { useLandingMotion } from '@/components/landing/animations/use-landing-motion';
 import { Character } from '@/components/landing/character';
 
 const ANTES = [
@@ -16,8 +18,11 @@ const DESPUES = [
 ];
 
 export function StorySection() {
+  const scope = useRef<HTMLElement>(null);
+  useLandingMotion({ scope });
+
   return (
-    <section className="relative overflow-hidden border-t px-4 py-20 md:px-6 md:py-28">
+    <section ref={scope} className="relative overflow-hidden border-t px-4 py-20 md:px-6 md:py-28">
       <div
         aria-hidden="true"
         className="-z-10 -translate-y-1/2 pointer-events-none absolute top-1/2 left-1/2 size-[40rem] -translate-x-1/2 rounded-full bg-brand/10 blur-3xl"

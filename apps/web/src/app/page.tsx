@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { HeroSection } from '@/components/landing/hero-section';
 import { LandingFooter, LandingNav } from '@/components/landing/landing-chrome';
 import { LandingSections } from '@/components/landing/landing-sections';
+import { MarqueeStrip } from '@/components/landing/marquee-strip';
+import { SpotlightSection } from '@/components/landing/spotlight-section';
 import { StorySection } from '@/components/landing/story-section';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from '@/lib/seo';
 
@@ -18,7 +20,9 @@ export default function Home() {
       <LandingNav />
       <main>
         <HeroSection />
+        <MarqueeStrip />
         <StorySection />
+        <SpotlightSection />
         <LandingSections />
       </main>
       <LandingFooter />

@@ -19,7 +19,7 @@ export const HERO = {
   badge: 'Hecho para quien factura por su cuenta',
   titulo: ['Cobras de varios sitios.', 'Tus cuentas', 'deberían saberlo.'],
   subtitulo:
-    'Sueldo, proyectos, cliente propio y renta anual no caben en la misma hoja de Excel. KoraPay los separa en workspaces y te dice qué debes, qué te deben y cuándo.',
+    'Sueldo, proyectos, cliente propio y renta anual en un solo lugar. KoraPay los separa en workspaces y te dice qué debes, qué te deben y cuándo.',
   ctaPrincipal: { label: 'Entrar a mi cuenta', href: '/dashboard' },
   ctaSecundario: { label: 'Ver qué hace', href: '#funcionalidades' },
 } as const;

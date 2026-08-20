@@ -332,8 +332,21 @@ select:not(:disabled),
 	}
 }
 
+@keyframes korapay-marquee {
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
+}
+
 .animate-float {
 	animation: korapay-float 6s ease-in-out infinite;
+}
+
+.animate-marquee {
+	animation: korapay-marquee 32s linear infinite;
 }
 
 .animate-float-soft {

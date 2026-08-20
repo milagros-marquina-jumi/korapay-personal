@@ -52,7 +52,17 @@ export function LandingFooter() {
             </Link>
           ))}
         </nav>
-        <p className="text-muted-foreground text-xs">Un producto de MIMOTECH</p>
+        <p className="text-muted-foreground text-xs">
+          Un producto de{' '}
+          <a
+            href="https://mimotech.vip"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-foreground underline decoration-brand/40 underline-offset-4 transition-colors hover:text-brand"
+          >
+            MIMOTECH
+          </a>
+        </p>
       </div>
     </footer>
   );

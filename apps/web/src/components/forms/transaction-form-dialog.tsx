@@ -190,6 +190,8 @@ export function TransactionFormDialog({
     if (!showCompany || !companySeleccionada || !fechaElegida) return null;
     return contractOf({ companyId: companySeleccionada, date: fechaElegida }, contracts ?? []);
   }, [showCompany, companySeleccionada, fechaElegida, contracts]);
+  const tieneDatosOpcionales =
+    editing && !!(watch('paymentMethod') || watch('bank') || watch('notes') || watch('dueDate'));
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
   const showConcept = !showBusinessFields && !showTeamFields;
@@ -425,6 +427,56 @@ export function TransactionFormDialog({
             </div>
           </div>
 
+          {showTeamFields && (
+            <div className="space-y-1.5">
+              <Label>Persona (equipo)</Label>
+              <SearchSelect
+                placeholder="Selecciona a quién es el pago"
+                searchPlaceholder="Buscar persona..."
+                value={watch('personId') ?? ''}
+                onValueChange={(v) => {
+                  setValue('personId', v);
+                  const name = people?.find((p) => p.id === v)?.name;
+                  if (name) setValue('concept', `Pago ${name}`, { shouldValidate: true });
+                }}
+                options={(people ?? []).map((p) => ({ value: p.id, label: p.name }))}
+              />
+              <p className="text-muted-foreground text-xs">Define el concepto del pago.</p>
+            </div>
+          )}
+
+          {showBusinessFields && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Aplicación</Label>
+                <SearchSelect
+                  placeholder="Opcional"
+                  searchPlaceholder="Buscar aplicación..."
+                  value={watch('applicationId') ?? ''}
+                  onValueChange={(v) => {
+                    setValue('applicationId', v);
+                    const name = applications?.find((a) => a.id === v)?.name;
+                    if (name) setValue('concept', name, { shouldValidate: true });
+                  }}
+                  options={(applications ?? []).map((a) => ({ value: a.id, label: a.name }))}
+                />
+                <p className="text-muted-foreground text-xs">Define el concepto del costo.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Proyecto(s)</Label>
+                <MultiSelectCreatable
+                  placeholder="Uno o varios"
+                  searchPlaceholder="Buscar proyecto..."
+                  selected={watch('projectIds') ?? []}
+                  onChange={(ids) => setValue('projectIds', ids)}
+                  options={(projects ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                  showChips={false}
+                />
+                <p className="text-muted-foreground text-xs">A qué proyectos se reparte.</p>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             {showCompany && (
               <div className="space-y-1.5">
@@ -505,41 +557,6 @@ export function TransactionFormDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Medio de pago</Label>
-              <SearchSelect
-                placeholder="Opcional"
-                searchPlaceholder="Buscar o escribir para crear..."
-                value={watch('paymentMethod') ?? ''}
-                onValueChange={(v) => setValue('paymentMethod', v)}
-                options={(paymentMethods ?? []).map((p) => ({ value: p.name, label: p.name }))}
-                onCreate={async (nombre) => {
-                  await createPaymentMethod(nombre);
-                  setValue('paymentMethod', nombre);
-                }}
-                createLabel="Crear medio de pago"
-                clearable
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Banco</Label>
-              <SearchSelect
-                placeholder="Opcional"
-                searchPlaceholder="Buscar o escribir para crear..."
-                value={watch('bank') ?? ''}
-                onValueChange={(v) => setValue('bank', v)}
-                options={(banks ?? []).map((b) => ({ value: b.name, label: b.name }))}
-                onCreate={async (nombre) => {
-                  await createBank(nombre);
-                  setValue('bank', nombre);
-                }}
-                createLabel="Crear banco"
-                clearable
-              />
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <Label>Estado</Label>
             <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
@@ -583,53 +600,45 @@ export function TransactionFormDialog({
             </label>
           )}
 
-          {showTeamFields && (
-            <div className="space-y-2">
-              <Label>Persona (equipo)</Label>
-              <SearchSelect
-                placeholder="Selecciona a quién es el pago"
-                searchPlaceholder="Buscar persona..."
-                value={watch('personId') ?? ''}
-                onValueChange={(v) => {
-                  setValue('personId', v);
-                  const name = people?.find((p) => p.id === v)?.name;
-                  if (name) setValue('concept', `Pago ${name}`, { shouldValidate: true });
-                }}
-                options={(people ?? []).map((p) => ({ value: p.id, label: p.name }))}
-              />
-            </div>
-          )}
-
-          <CollapsibleSection label="Ver más opciones">
-            {showBusinessFields && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Aplicación</Label>
-                  <SearchSelect
-                    placeholder="Opcional"
-                    searchPlaceholder="Buscar aplicación..."
-                    value={watch('applicationId') ?? ''}
-                    onValueChange={(v) => {
-                      setValue('applicationId', v);
-                      const name = applications?.find((a) => a.id === v)?.name;
-                      if (name) setValue('concept', name, { shouldValidate: true });
-                    }}
-                    options={(applications ?? []).map((a) => ({ value: a.id, label: a.name }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Proyecto(s)</Label>
-                  <MultiSelectCreatable
-                    placeholder="Uno o varios"
-                    searchPlaceholder="Buscar proyecto..."
-                    selected={watch('projectIds') ?? []}
-                    onChange={(ids) => setValue('projectIds', ids)}
-                    options={(projects ?? []).map((p) => ({ value: p.id, label: p.name }))}
-                    showChips={false}
-                  />
-                </div>
+          <CollapsibleSection
+            key={tieneDatosOpcionales ? 'con-datos' : 'sin-datos'}
+            label="Ver más opciones"
+            defaultOpen={tieneDatosOpcionales}
+          >
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Medio de pago</Label>
+                <SearchSelect
+                  placeholder="Opcional"
+                  searchPlaceholder="Buscar o escribir para crear..."
+                  value={watch('paymentMethod') ?? ''}
+                  onValueChange={(v) => setValue('paymentMethod', v)}
+                  options={(paymentMethods ?? []).map((p) => ({ value: p.name, label: p.name }))}
+                  onCreate={async (nombre) => {
+                    await createPaymentMethod(nombre);
+                    setValue('paymentMethod', nombre);
+                  }}
+                  createLabel="Crear medio de pago"
+                  clearable
+                />
               </div>
-            )}
+              <div className="space-y-1.5">
+                <Label>Banco</Label>
+                <SearchSelect
+                  placeholder="Opcional"
+                  searchPlaceholder="Buscar o escribir para crear..."
+                  value={watch('bank') ?? ''}
+                  onValueChange={(v) => setValue('bank', v)}
+                  options={(banks ?? []).map((b) => ({ value: b.name, label: b.name }))}
+                  onCreate={async (nombre) => {
+                    await createBank(nombre);
+                    setValue('bank', nombre);
+                  }}
+                  createLabel="Crear banco"
+                  clearable
+                />
+              </div>
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="notes">Notas</Label>

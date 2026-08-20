@@ -557,6 +557,7 @@ export interface TalentDebtRow {
   pending: string;
   status: string;
   debtOwner?: string;
+  updatedAt?: string;
 }
 
 export interface TalentReport {

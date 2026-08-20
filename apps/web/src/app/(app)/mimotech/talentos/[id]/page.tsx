@@ -1425,19 +1425,34 @@ interface LedgerSnapshot {
   description?: string | null;
 }
 
-function snapshotFields(snap: LedgerSnapshot): { key: string; line: string }[] {
-  const fields: { key: string; line: string }[] = [];
-  if (snap.date) fields.push({ key: 'date', line: `Fecha: ${formatDate(snap.date)}` });
-  if (snap.type) fields.push({ key: 'type', line: `Tipo: ${TYPE_LABELS[snap.type] ?? snap.type}` });
+interface CampoSnapshot {
+  key: string;
+  label: string;
+  value: string;
+}
+
+function snapshotFields(snap: LedgerSnapshot): CampoSnapshot[] {
+  const fields: CampoSnapshot[] = [];
+  if (snap.date) fields.push({ key: 'date', label: 'Fecha', value: formatDate(snap.date) });
+  if (snap.type) fields.push({ key: 'type', label: 'Tipo', value: TYPE_LABELS[snap.type] ?? snap.type });
   if (snap.paidAmount !== undefined)
-    fields.push({ key: 'paidAmount', line: `Pagado: ${formatMoney(snap.paidAmount, 'PEN')}` });
+    fields.push({ key: 'paidAmount', label: 'Pagado', value: formatMoney(snap.paidAmount, 'PEN') });
   if (snap.debtAmount !== undefined)
-    fields.push({ key: 'debtAmount', line: `Deuda: ${formatMoney(snap.debtAmount, 'PEN')}` });
+    fields.push({ key: 'debtAmount', label: 'Deuda', value: formatMoney(snap.debtAmount, 'PEN') });
   if (snap.pendingAmount !== undefined)
-    fields.push({ key: 'pendingAmount', line: `Falta pagar: ${formatMoney(snap.pendingAmount, 'PEN')}` });
-  if (snap.status) fields.push({ key: 'status', line: `Estado: ${statusLabel(snap.status)}` });
-  if (snap.description) fields.push({ key: 'description', line: `Descripción: ${snap.description}` });
+    fields.push({ key: 'pendingAmount', label: 'Falta pagar', value: formatMoney(snap.pendingAmount, 'PEN') });
+  if (snap.status) fields.push({ key: 'status', label: 'Estado', value: statusLabel(snap.status) });
+  if (snap.description) fields.push({ key: 'description', label: 'Descripción', value: snap.description });
   return fields;
+}
+
+function resumenDelCambio(before: LedgerSnapshot, after: LedgerSnapshot): string | null {
+  const saldado = before.status !== 'PAID' && after.status === 'PAID';
+  const reabierto = before.status === 'PAID' && after.status !== 'PAID';
+  if (saldado) return 'Marcó la deuda como saldada';
+  if (reabierto) return 'Revirtió el pago: vuelve a estar pendiente';
+  if (Number(after.paidAmount ?? 0) > Number(before.paidAmount ?? 0)) return 'Registró un pago';
+  return null;
 }
 
 function tituloRegistro(snap?: LedgerSnapshot): string | null {
@@ -1461,20 +1476,49 @@ function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
         {snapshotFields(before)
           .filter((f) => f.key !== 'description')
           .map((f) => (
-            <p key={f.key}>{f.line}</p>
+            <p key={f.key}>
+              {f.label}: {f.value}
+            </p>
           ))}
       </div>
     );
   }
 
   if (entry.action === 'UPDATE' && before && after) {
-    const previas = new Map(snapshotFields(before).map((f) => [f.key, f.line]));
-    const changed = snapshotFields(after).filter((f) => previas.get(f.key) !== f.line);
+    const previas = new Map(snapshotFields(before).map((f) => [f.key, f.value]));
+    const actuales = snapshotFields(after);
+    const clavesActuales = new Set(actuales.map((f) => f.key));
+    const changed = [
+      ...actuales.filter((f) => previas.get(f.key) !== f.value),
+      ...snapshotFields(before)
+        .filter((f) => !clavesActuales.has(f.key))
+        .map((f) => ({ ...f, value: '—' })),
+    ];
     const titulo = tituloRegistro(after) ?? tituloRegistro(before);
+    const motivo = resumenDelCambio(before, after);
     return (
       <div className="space-y-0.5 text-xs text-muted-foreground">
         {titulo && <p className="font-medium text-foreground">{titulo}</p>}
-        {changed.length ? changed.map((f) => <p key={f.key}>{f.line}</p>) : <p>Sin cambios de valor</p>}
+        {motivo && <p className="text-foreground/80">{motivo}</p>}
+        {changed.length ? (
+          changed.map((f) => {
+            const anterior = previas.get(f.key);
+            return (
+              <p key={f.key}>
+                {f.label}:{' '}
+                {anterior !== undefined && (
+                  <>
+                    <span className="text-muted-foreground/70 line-through">{anterior}</span>{' '}
+                    <span aria-hidden="true">→</span>{' '}
+                  </>
+                )}
+                <span className="font-medium text-foreground">{f.value}</span>
+              </p>
+            );
+          })
+        ) : (
+          <p>Sin cambios de valor</p>
+        )}
       </div>
     );
   }
@@ -1487,7 +1531,9 @@ function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
         {snapshotFields(after)
           .filter((f) => f.key !== 'description')
           .map((f) => (
-            <p key={f.key}>{f.line}</p>
+            <p key={f.key}>
+              {f.label}: {f.value}
+            </p>
           ))}
       </div>
     );

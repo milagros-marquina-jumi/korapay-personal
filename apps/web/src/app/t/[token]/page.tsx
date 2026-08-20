@@ -8,6 +8,7 @@ import { useParams } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { StatusPicker } from '@/components/data-table/status-toggle';
+import { SortableTh, type Sorters, useSortedRows } from '@/components/reports/sortable';
 import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { TalentLedgerDetailDialog } from '@/components/talent/ledger-detail-dialog';
 import type { LedgerFormValues } from '@/components/talent/ledger-form-dialog';
@@ -18,10 +19,10 @@ import { IconAction, IconActions } from '@/components/ui/icon-action';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { apiFetch } from '@/lib/api';
-import type { TalentLedgerEntry, TalentPortalProfile } from '@/lib/api.types';
+import type { TalentDebtRow, TalentLedgerEntry, TalentPortalProfile } from '@/lib/api.types';
 import { DEBT_STATUS_OPTIONS, normalizarDeuda } from '@/lib/debt-status';
 import { queryKeys } from '@/lib/query-keys';
-import { cn, formatDate } from '@/lib/utils';
+import { cn, formatDate, formatDateTime } from '@/lib/utils';
 
 function normalize(values: LedgerFormValues) {
   return {
@@ -35,6 +36,15 @@ function normalize(values: LedgerFormValues) {
     description: values.description || undefined,
   };
 }
+
+const DEBT_SORTERS: Sorters<TalentDebtRow> = {
+  date: (d) => d.date,
+  debtOwner: (d) => d.debtOwner ?? '',
+  description: (d) => d.description ?? '',
+  pending: (d) => Number(d.pending),
+  status: (d) => d.status,
+  updatedAt: (d) => d.updatedAt ?? '',
+};
 
 export default function TalentPortalPage() {
   const { token } = useParams<{ token: string }>();
@@ -60,6 +70,8 @@ export default function TalentPortalPage() {
   const [detalle, setDetalle] = useState<TalentLedgerEntry | null>(null);
   const [editando, setEditando] = useState<TalentLedgerEntry | null>(null);
   const entradaDe = (id: string) => (entries ?? []).find((e) => e.id === id) ?? null;
+
+  const { sorted: deudasOrdenadas, sort, toggle } = useSortedRows(profile?.debtRows ?? [], DEBT_SORTERS);
 
   const cambiarEstado = (entryId: string, status: string) => {
     const entrada = entradaDe(entryId);
@@ -161,16 +173,51 @@ export default function TalentPortalPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-28">Fecha</TableHead>
-                    <TableHead className="w-24">De quién</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="w-40 whitespace-nowrap text-right">Falta pagar</TableHead>
-                    <TableHead className="w-28">Estado</TableHead>
+                    <SortableTh
+                      label="Fecha"
+                      sortKey="date"
+                      sort={sort}
+                      onToggle={toggle}
+                      align="left"
+                      className="w-28"
+                    />
+                    <SortableTh
+                      label="De quién"
+                      sortKey="debtOwner"
+                      sort={sort}
+                      onToggle={toggle}
+                      align="left"
+                      className="w-24"
+                    />
+                    <SortableTh label="Descripción" sortKey="description" sort={sort} onToggle={toggle} align="left" />
+                    <SortableTh
+                      label="Falta pagar"
+                      sortKey="pending"
+                      sort={sort}
+                      onToggle={toggle}
+                      className="w-40 whitespace-nowrap"
+                    />
+                    <SortableTh
+                      label="Estado"
+                      sortKey="status"
+                      sort={sort}
+                      onToggle={toggle}
+                      align="left"
+                      className="w-28"
+                    />
+                    <SortableTh
+                      label="Últ. modificación"
+                      sortKey="updatedAt"
+                      sort={sort}
+                      onToggle={toggle}
+                      align="left"
+                      className="w-36 whitespace-nowrap"
+                    />
                     <TableHead className="w-20" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {profile.debtRows.map((d) => (
+                  {deudasOrdenadas.map((d) => (
                     <TableRow key={d.id}>
                       <TableCell className="whitespace-nowrap text-sm">{formatDate(d.date)}</TableCell>
                       <TableCell>
@@ -200,6 +247,9 @@ export default function TalentPortalPage() {
                           onSelect={(next) => cambiarEstado(d.id, next)}
                         />
                       </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground text-xs">
+                        {d.updatedAt ? formatDateTime(d.updatedAt) : '—'}
+                      </TableCell>
                       <TableCell>
                         <IconActions>
                           <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetalle(entradaDe(d.id))} />
@@ -215,7 +265,7 @@ export default function TalentPortalPage() {
                     <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">
                       {formatMoney(profile.summary.totalPending, 'PEN')}
                     </TableCell>
-                    <TableCell colSpan={2} />
+                    <TableCell colSpan={3} />
                   </TableRow>
                 </TableBody>
               </Table>

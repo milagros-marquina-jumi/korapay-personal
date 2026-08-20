@@ -130,6 +130,7 @@ export class TalentLedgerService {
           pending: new Decimal(String(e.pendingAmount)).toFixed(2),
           status: e.status,
           debtOwner: e.debtOwner,
+          updatedAt: e.updatedAt.toISOString(),
         })),
     );
   }

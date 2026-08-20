@@ -11,7 +11,7 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
-import type { Company, DashboardSummary, Paginated, Transaction } from '@/lib/api.types';
+import type { BusinessReports, Company, DashboardSummary, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
@@ -41,6 +41,12 @@ export default function DashboardPage() {
     enabled: !!activeWorkspaceId && activeWorkspace?.type === WorkspaceType.EMPLOYMENT,
   });
 
+  const { data: businessReport } = useQuery({
+    queryKey: queryKeys.businessReports(activeWorkspaceId ?? '', { dashboard: true }),
+    queryFn: () => apiFetch<BusinessReports>(`/reports/business?workspaceId=${activeWorkspaceId}`),
+    enabled: !!activeWorkspaceId && activeWorkspace?.type === WorkspaceType.BUSINESS,
+  });
+
   const transactions = txPage?.data ?? [];
 
   const monthly = new Map<string, IncomeExpensePoint>();
@@ -54,10 +60,18 @@ export default function DashboardPage() {
     else if (t.type === 'EXPENSE' || t.type === 'BUSINESS_COST' || t.type === 'TEAM_PAYMENT') point.egresos += amount;
     monthly.set(key, point);
   }
-  const areaData = [...monthly.entries()]
+  const areaTransacciones = [...monthly.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-12)
     .map(([, v]) => v);
+
+  const areaNegocio: IncomeExpensePoint[] = (businessReport?.monthlyFlow ?? []).slice(-12).map((m) => ({
+    label: `${MONTH_SHORT[m.month - 1]} ${String(m.year).slice(2)}`,
+    ingresos: Number(m.income),
+    egresos: Number(m.cost) + Number(m.teamPayment),
+  }));
+
+  const areaData = activeWorkspace?.type === WorkspaceType.BUSINESS ? areaNegocio : areaTransacciones;
 
   const byCategory = new Map<string, number>();
   for (const t of transactions) {
@@ -80,6 +94,7 @@ export default function DashboardPage() {
 
   const detalleDe = (t: Transaction) => {
     if (isEmployment) return companies?.find((c) => c.id === t.companyId)?.name ?? '';
+    if (isBusiness) return t.person?.name ?? t.application?.name ?? '';
     return t.category?.name ?? 'Sin categoría';
   };
   const porCobrar = transactions

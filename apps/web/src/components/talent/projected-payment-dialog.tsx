@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { TalentContract } from '@/lib/api.types';
-import { proyectarMesSiguiente } from '@/lib/payment-projection';
+import { proyectarMesActual } from '@/lib/payment-projection';
 
 interface Props {
   contracts: TalentContract[];
@@ -22,7 +22,7 @@ interface Props {
 
 export function ProjectedPaymentDialog({ contracts, trigger }: Readonly<Props>) {
   const [open, setOpen] = useState(false);
-  const proyeccion = proyectarMesSiguiente(contracts);
+  const proyeccion = proyectarMesActual(contracts);
   const money = (v: number) => formatMoney(String(v), 'PEN');
 
   return (
@@ -38,8 +38,8 @@ export function ProjectedPaymentDialog({ contracts, trigger }: Readonly<Props>) 
         <DialogHeader>
           <DialogTitle>Proyección de {proyeccion.etiqueta}</DialogTitle>
           <DialogDescription>
-            Estimado a partir del último pago mensual de cada contrato vigente. No incluye CTS, gratificaciones ni
-            liquidaciones.
+            Lo que falta cobrar este mes, estimado con el último pago de cada contrato vigente. No incluye CTS,
+            gratificaciones ni liquidaciones.
           </DialogDescription>
         </DialogHeader>
 

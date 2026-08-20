@@ -38,29 +38,27 @@ export interface Proyeccion {
   totalBase: number;
 }
 
-function siguienteMes(hoy: Date): { year: number; month: number } {
-  const y = hoy.getUTCFullYear();
-  const m = hoy.getUTCMonth() + 2;
-  return m > 12 ? { year: y + 1, month: m - 12 } : { year: y, month: m };
-}
-
-function ultimoMensual(c: Contrato): Distribucion | null {
+function ultimoMensual(c: Contrato, year: number, month: number): Distribucion | null {
   const mensuales = (c.incomeDistributions ?? []).filter((d) => d.paymentType === 'Mensual' && d.year && d.month);
   if (!mensuales.length) return null;
-  return mensuales.reduce((a, b) =>
+  if (mensuales.some((d) => d.year === year && d.month === month)) return null;
+  const previos = mensuales.filter((d) => (d.year ?? 0) < year || ((d.year ?? 0) === year && (d.month ?? 0) < month));
+  if (!previos.length) return null;
+  return previos.reduce((a, b) =>
     (b.year ?? 0) > (a.year ?? 0) || ((b.year ?? 0) === (a.year ?? 0) && (b.month ?? 0) > (a.month ?? 0)) ? b : a,
   );
 }
 
-export function proyectarMesSiguiente(contracts: Contrato[], hoy: Date = new Date()): Proyeccion {
-  const { year, month } = siguienteMes(hoy);
+export function proyectarMesActual(contracts: Contrato[], hoy: Date = new Date()): Proyeccion {
+  const year = hoy.getUTCFullYear();
+  const month = hoy.getUTCMonth() + 1;
   const finDelMes = `${year}-${String(month).padStart(2, '0')}-01`;
 
   const filas: FilaProyectada[] = [];
   for (const c of contracts) {
     if (c.status !== 'ACTIVE') continue;
     if (c.endDate && c.endDate.slice(0, 10) < finDelMes) continue;
-    const ultimo = ultimoMensual(c);
+    const ultimo = ultimoMensual(c, year, month);
     if (!ultimo) continue;
     filas.push({
       contractId: c.id,

@@ -43,8 +43,8 @@ export function GlobalProjectionDialog({ projection }: Readonly<Props>) {
         <DialogHeader>
           <DialogTitle>Proyección de {projection.label}</DialogTitle>
           <DialogDescription>
-            Estimado a partir del último pago mensual de cada contrato vigente. No incluye CTS, gratificaciones ni
-            liquidaciones.
+            Lo que falta cobrar este mes, estimado con el último pago de cada contrato vigente. No incluye CTS,
+            gratificaciones ni liquidaciones.
           </DialogDescription>
         </DialogHeader>
 

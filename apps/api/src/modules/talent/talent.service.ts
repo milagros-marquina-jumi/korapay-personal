@@ -257,7 +257,7 @@ export class TalentService {
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
     };
   }
-  private proyeccionMesSiguiente(
+  private proyeccionDelMes(
     talents: {
       name: string;
       status: string | null;
@@ -282,12 +282,8 @@ export class TalentService {
     tipoCambio: Decimal,
   ) {
     const hoy = new Date();
-    let year = hoy.getUTCFullYear();
-    let month = hoy.getUTCMonth() + 2;
-    if (month > 12) {
-      year += 1;
-      month -= 12;
-    }
+    const year = hoy.getUTCFullYear();
+    const month = hoy.getUTCMonth() + 1;
     const inicioDelMes = new Date(Date.UTC(year, month - 1, 1));
 
     const filas: {
@@ -307,7 +303,13 @@ export class TalentService {
         if (c.endDate && c.endDate < inicioDelMes) continue;
         const mensuales = c.incomeDistributions.filter((d) => d.paymentType === 'Mensual' && d.year && d.month);
         if (!mensuales.length) continue;
-        const masReciente = mensuales.reduce((a, b) =>
+        const yaCobrado = mensuales.some((d) => d.year === year && d.month === month);
+        if (yaCobrado) continue;
+        const previos = mensuales.filter(
+          (d) => (d.year ?? 0) < year || ((d.year ?? 0) === year && (d.month ?? 0) < month),
+        );
+        if (!previos.length) continue;
+        const masReciente = previos.reduce((a, b) =>
           (b.year ?? 0) > (a.year ?? 0) || ((b.year ?? 0) === (a.year ?? 0) && (b.month ?? 0) > (a.month ?? 0)) ? b : a,
         );
         const ultimo = distribucionEnSoles(masReciente, c.currency, tipoCambio);
@@ -715,7 +717,7 @@ export class TalentService {
           role: rolPorId.get(p.talentId) ?? null,
         }))
         .sort((a, b) => Number(b.paid) - Number(a.paid)),
-      projection: this.proyeccionMesSiguiente(talents, tipoCambio),
+      projection: this.proyeccionDelMes(talents, tipoCambio),
       yearlyByTalent: [...yearlyByTalent.entries()]
         .map(([talentId, porAnio]) => ({
           talentId,

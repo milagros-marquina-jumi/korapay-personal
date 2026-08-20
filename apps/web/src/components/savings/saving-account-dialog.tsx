@@ -17,12 +17,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MoneyInput } from '@/components/ui/money-input';
+import { SearchSelect } from '@/components/ui/search-select';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api';
-import type { BankCatalog, SavingBalanceAccount } from '@/lib/api.types';
+import type { BankCatalog, SavingBalanceAccount, SavingBucket } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
 const NO_BANK = '__none__';
+const NUEVA = '__nueva__';
 
 interface Props {
   open: boolean;
@@ -31,11 +33,21 @@ interface Props {
   month: number;
   periodLabel: string;
   account?: SavingBalanceAccount;
+  existingBuckets?: string[];
 }
 
-export function SavingAccountDialog({ open, onOpenChange, year, month, periodLabel, account }: Readonly<Props>) {
+export function SavingAccountDialog({
+  open,
+  onOpenChange,
+  year,
+  month,
+  periodLabel,
+  account,
+  existingBuckets,
+}: Readonly<Props>) {
   const { activeWorkspaceId } = useWorkspace();
   const queryClient = useQueryClient();
+  const [seleccion, setSeleccion] = useState(NUEVA);
   const [bucket, setBucket] = useState('');
   const [bank, setBank] = useState(NO_BANK);
   const [currency, setCurrency] = useState('PEN');
@@ -47,13 +59,37 @@ export function SavingAccountDialog({ open, onOpenChange, year, month, periodLab
     enabled: open,
   });
 
+  const { data: buckets } = useQuery({
+    queryKey: queryKeys.savingBuckets(activeWorkspaceId ?? ''),
+    queryFn: () => apiFetch<SavingBucket[]>(`/saving-balances/buckets?workspaceId=${activeWorkspaceId}`),
+    enabled: open && !account && !!activeWorkspaceId,
+  });
+
+  const disponibles = (buckets ?? []).filter((b) => !(existingBuckets ?? []).includes(`${b.bucket}|${b.currency}`));
+
   useEffect(() => {
     if (!open) return;
+    setSeleccion(NUEVA);
     setBucket(account?.bucket ?? '');
     setBank(account?.bank || NO_BANK);
     setCurrency(account?.currency ?? 'PEN');
     setAmount(account?.amount ?? '0');
   }, [open, account]);
+
+  const elegirCuenta = (valor: string) => {
+    setSeleccion(valor);
+    if (valor === NUEVA) {
+      setBucket('');
+      setBank(NO_BANK);
+      setCurrency('PEN');
+      return;
+    }
+    const elegida = disponibles.find((b) => `${b.bucket}|${b.currency}` === valor);
+    if (!elegida) return;
+    setBucket(elegida.bucket);
+    setBank(elegida.bank || NO_BANK);
+    setCurrency(elegida.currency);
+  };
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -99,14 +135,30 @@ export function SavingAccountDialog({ open, onOpenChange, year, month, periodLab
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label htmlFor="account-bucket">Cuenta</Label>
-            <Input
-              id="account-bucket"
-              value={bucket}
-              onChange={(e) => setBucket(e.target.value)}
-              placeholder="Ej. Ahorro (Agora)"
-              maxLength={80}
-              disabled={!!account}
-            />
+            {account ? (
+              <Input id="account-bucket" value={bucket} disabled />
+            ) : (
+              <SearchSelect
+                options={disponibles.map((b) => ({
+                  value: `${b.bucket}|${b.currency}`,
+                  label: b.currency === 'USD' ? `${b.bucket} (USD)` : b.bucket,
+                }))}
+                value={seleccion === NUEVA ? undefined : seleccion}
+                onValueChange={elegirCuenta}
+                placeholder="Busca o crea una cuenta"
+                searchPlaceholder="Buscar cuenta..."
+                onCreate={(nombre) => {
+                  setSeleccion(NUEVA);
+                  setBucket(nombre);
+                  setBank(NO_BANK);
+                  setCurrency('PEN');
+                }}
+                createLabel="Crear cuenta"
+              />
+            )}
+            {!account && seleccion === NUEVA && bucket && (
+              <p className="text-muted-foreground text-xs">Se creará la cuenta "{bucket}".</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -132,9 +184,13 @@ export function SavingAccountDialog({ open, onOpenChange, year, month, periodLab
               <div className="min-w-0 flex-1">
                 <MoneyInput id="account-amount" value={amount} onValueChange={setAmount} />
               </div>
-              {account ? null : <CurrencyToggle value={currency as 'PEN' | 'USD'} onChange={(v) => setCurrency(v)} />}
+              {account || seleccion !== NUEVA ? null : (
+                <CurrencyToggle value={currency as 'PEN' | 'USD'} onChange={(v) => setCurrency(v)} />
+              )}
             </div>
-            {account && <p className="text-muted-foreground text-xs">Moneda: {currency}. No se puede cambiar.</p>}
+            {(account || seleccion !== NUEVA) && (
+              <p className="text-muted-foreground text-xs">Moneda: {currency}. No se puede cambiar.</p>
+            )}
           </div>
         </div>
 

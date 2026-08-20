@@ -279,6 +279,7 @@ export default function AhorrosPage() {
           month={editing.period.month}
           periodLabel={editing.period.label}
           account={editing.account}
+          existingBuckets={editing.period.accounts.map((a) => `${a.bucket}|${a.currency}`)}
         />
       )}
     </PageShell>

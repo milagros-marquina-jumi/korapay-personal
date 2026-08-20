@@ -1083,8 +1083,23 @@ function TalentDetailContent() {
                   c.paymentType === contractPayment ||
                   (c.incomeDistributions ?? []).some((d) => d.paymentType === contractPayment)),
             );
+            const ocultos = contracts.length - filtered.length;
             return filtered.length ? (
               <div className="space-y-4">
+                {ocultos > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContractFilter(FILTER_ALL);
+                      setContractCompany(FILTER_ALL);
+                      setContractPayment(FILTER_ALL);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-left text-muted-foreground text-xs hover:border-brand/40 hover:text-foreground"
+                  >
+                    <Eye className="size-3.5 shrink-0" />
+                    Los filtros ocultan {ocultos} {ocultos === 1 ? 'contrato' : 'contratos'} con sus pagos. Ver todos.
+                  </button>
+                )}
                 {filtered.map((contract) => (
                   <Card key={contract.id}>
                     <CardHeader className="flex flex-row items-start justify-between gap-4">

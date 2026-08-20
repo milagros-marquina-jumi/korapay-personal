@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { distribucionEnSoles, ultimoTipoCambio } from '@/common/talent/distribucion-soles';
+import { workspacesDeIngresoPersonal } from '@/common/workspace/ingresos-personales';
 
 @Injectable()
 export class DashboardService {
@@ -24,10 +25,25 @@ export class DashboardService {
       select: { type: true, status: true, amountBase: true },
     });
 
+    const externos = await workspacesDeIngresoPersonal(this.prisma, workspaceId);
+    const ingresosExternos = externos.length
+      ? await this.prisma.transaction.findMany({
+          where: {
+            workspaceId: { in: externos },
+            deletedAt: null,
+            type: 'INCOME',
+            ...(startDate || endDate ? dateFilter : {}),
+          },
+          select: { amountBase: true },
+        })
+      : [];
+
     const sumByType = (type: string) =>
       transactions.filter((t) => t.type === type).reduce((s, t) => s.plus(new Decimal(t.amountBase)), new Decimal(0));
 
-    const ingresos = sumByType('INCOME');
+    const ingresos = ingresosExternos
+      .reduce((s, t) => s.plus(new Decimal(t.amountBase)), new Decimal(0))
+      .plus(sumByType('INCOME'));
     const egresos = sumByType('EXPENSE');
     const savings = sumByType('SAVING');
     const businessCosts = sumByType('BUSINESS_COST');

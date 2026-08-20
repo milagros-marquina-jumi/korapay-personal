@@ -4,6 +4,7 @@ import Decimal from 'decimal.js';
 import { MONTH_NAMES } from '@/common/constants/months';
 import { PrismaService } from '@/common/prisma/prisma.service';
 import { distribucionEnSoles, ultimoTipoCambio } from '@/common/talent/distribucion-soles';
+import { workspacesDeIngresoPersonal } from '@/common/workspace/ingresos-personales';
 import { buildCompanyProfitability } from './company-profitability';
 import { buildEmploymentBreakdown } from './employment-breakdown';
 import { buildPersonalMatrices } from './personal-matrix';
@@ -95,9 +96,15 @@ export class ReportsService {
   }
 
   async personal(workspaceId: string, year?: number) {
+    const externos = await workspacesDeIngresoPersonal(this.prisma, workspaceId);
+    const scopeTransaccion = externos.length
+      ? {
+          OR: [{ workspaceId }, { workspaceId: { in: externos }, type: 'INCOME' }],
+        }
+      : { workspaceId };
     const [transactions, balances, allTransactions, allBalanceYears] = await Promise.all([
       this.prisma.transaction.findMany({
-        where: { workspaceId, deletedAt: null, ...this.yearFilter(year) },
+        where: { ...scopeTransaccion, deletedAt: null, ...this.yearFilter(year) },
         include: { category: true },
       }),
       this.prisma.savingBalance.findMany({
@@ -105,7 +112,7 @@ export class ReportsService {
         orderBy: [{ year: 'asc' }, { month: 'asc' }],
       }),
       this.prisma.transaction.findMany({
-        where: { workspaceId, deletedAt: null },
+        where: { ...scopeTransaccion, deletedAt: null },
         select: { date: true, type: true, amountBase: true, tags: true, category: { select: { name: true } } },
       }),
       this.prisma.savingBalance.findMany({

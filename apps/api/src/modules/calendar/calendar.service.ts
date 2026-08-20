@@ -89,11 +89,13 @@ export class CalendarService {
   ): CalendarEventDto {
     const dias = this.daysUntil(base.at, ctx.today);
     const { at, ...resto } = base;
+    const inicioDelMes = Date.UTC(ctx.today.getUTCFullYear(), ctx.today.getUTCMonth(), 1);
+    const vencido = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate()) < inicioDelMes;
     return {
       ...resto,
       date: toIsoDate(at),
       workspaceName: ctx.workspaceName.get(base.workspaceId) ?? '',
-      status: status ?? (dias < 0 ? 'OVERDUE' : 'PENDING'),
+      status: status ?? (vencido ? 'OVERDUE' : 'PENDING'),
       daysUntil: dias,
     };
   }

@@ -11,7 +11,7 @@ import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api';
-import type { DashboardSummary, Paginated, Transaction } from '@/lib/api.types';
+import type { Company, DashboardSummary, Paginated, Transaction } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 import { formatDate } from '@/lib/utils';
 
@@ -33,6 +33,12 @@ export default function DashboardPage() {
         `/transactions?workspaceId=${activeWorkspaceId}&pageSize=200&sortBy=date&sortOrder=desc`,
       ),
     enabled: !!activeWorkspaceId,
+  });
+
+  const { data: companies } = useQuery({
+    queryKey: queryKeys.companies(activeWorkspaceId ?? ''),
+    queryFn: () => apiFetch<Company[]>(`/companies?workspaceId=${activeWorkspaceId}`),
+    enabled: !!activeWorkspaceId && activeWorkspace?.type === WorkspaceType.EMPLOYMENT,
   });
 
   const transactions = txPage?.data ?? [];
@@ -69,7 +75,13 @@ export default function DashboardPage() {
     : [];
 
   const isBusiness = activeWorkspace?.type === WorkspaceType.BUSINESS;
+  const isEmployment = activeWorkspace?.type === WorkspaceType.EMPLOYMENT;
   const recent = transactions.slice(0, 6);
+
+  const detalleDe = (t: Transaction) => {
+    if (isEmployment) return companies?.find((c) => c.id === t.companyId)?.name ?? '';
+    return t.category?.name ?? 'Sin categoría';
+  };
   const porCobrar = transactions
     .filter((t) => t.type === 'INCOME' && t.status !== 'PAID')
     .reduce((total, t) => total + Number(t.amountBase), 0);
@@ -201,7 +213,7 @@ export default function DashboardPage() {
                     {t.concept}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
-                    {formatDate(t.date)} · {t.category?.name ?? 'Sin categoría'}
+                    {[formatDate(t.date), detalleDe(t)].filter(Boolean).join(' · ')}
                   </p>
                 </div>
                 <span

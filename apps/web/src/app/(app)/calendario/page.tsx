@@ -140,19 +140,6 @@ export default function CalendarioPage() {
             />
           </div>
 
-          <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-xl border border-border bg-card px-3.5 py-2.5">
-            <input
-              type="checkbox"
-              checked={verPagados}
-              onChange={(e) => setVerPagados(e.target.checked)}
-              className="size-4 accent-brand"
-            />
-            <span className="text-foreground text-sm">Mostrar lo ya pagado</span>
-            <span className="text-muted-foreground text-xs">
-              {verPagados ? `${pagadosVisibles} en el historial` : 'El calendario muestra solo lo que falta'}
-            </span>
-          </label>
-
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="space-y-4">
               <Card>
@@ -161,6 +148,22 @@ export default function CalendarioPage() {
                     {MESES[mes]} {anio}
                   </CardTitle>
                   <div className="flex items-center gap-1">
+                    <label
+                      className="mr-1 flex cursor-pointer items-center gap-2 text-muted-foreground text-xs hover:text-foreground"
+                      title={
+                        verPagados
+                          ? `${pagadosVisibles} movimientos pagados en el historial`
+                          : 'El calendario muestra solo lo que falta'
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={verPagados}
+                        onChange={(e) => setVerPagados(e.target.checked)}
+                        className="size-3.5 accent-brand"
+                      />
+                      Ver pagados
+                    </label>
                     <Button variant="ghost" size="sm" onClick={irHoy}>
                       Hoy
                     </Button>

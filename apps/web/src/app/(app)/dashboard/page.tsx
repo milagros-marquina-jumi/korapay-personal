@@ -179,6 +179,11 @@ export default function DashboardPage() {
         <Card className={donutData.length ? 'lg:col-span-2' : 'lg:col-span-3'}>
           <CardHeader>
             <CardTitle>{donutData.length ? 'Ingresos vs Egresos' : 'Evolución de ingresos'}</CardTitle>
+            <p className="text-muted-foreground text-xs">
+              {isBusiness
+                ? 'Últimos 12 meses: comisión recibida contra costos y pagos al equipo.'
+                : 'Últimos 12 meses de movimientos registrados, cobrados y pendientes.'}
+            </p>
           </CardHeader>
           <CardContent>
             {areaData.length ? (
@@ -192,6 +197,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Gastos por categoría</CardTitle>
+              <p className="text-muted-foreground text-xs">En qué se va el dinero que sale, agrupado por categoría.</p>
             </CardHeader>
             <CardContent>
               <CategoryDonut data={donutData} />

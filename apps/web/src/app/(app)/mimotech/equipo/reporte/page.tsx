@@ -99,6 +99,9 @@ function ReporteEquipoContent() {
           <Card>
             <CardHeader>
               <CardTitle>Pagos por colaborador</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Cuánto ha recibido cada persona del equipo en total, de mayor a menor.
+              </p>
             </CardHeader>
             <CardContent>
               {barras.length ? (
@@ -199,6 +202,9 @@ function ReporteEquipoContent() {
           <Card>
             <CardHeader>
               <CardTitle>Pagos por colaborador y mes</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Cada fila es una persona y cada columna un mes. Cuanto más intenso el color, más se le pagó ese mes.
+              </p>
             </CardHeader>
             <CardContent>
               {heatmapEquipo.length ? (

@@ -246,6 +246,9 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           <Card>
             <CardHeader>
               <CardTitle>Costos por aplicación</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Cuánto cuesta mantener cada app al año: hosting, dominios y servicios asociados.
+              </p>
             </CardHeader>
             <CardContent>
               {costDonut.length ? (
@@ -264,6 +267,9 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           <Card>
             <CardHeader>
               <CardTitle>Costos por proyecto</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Los mismos costos agrupados por proyecto, para ver cuál consume más presupuesto.
+              </p>
             </CardHeader>
             <CardContent>
               {projectDonut.length ? (
@@ -282,6 +288,9 @@ export function BusinessReportsView({ workspaceId }: Readonly<{ workspaceId: str
           <Card>
             <CardHeader>
               <CardTitle>Costos por aplicación y mes</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Cada fila es una app y cada columna un mes. Cuanto más intenso el color, mayor el costo de ese mes.
+              </p>
             </CardHeader>
             <CardContent>
               {appHeatmap.length ? (

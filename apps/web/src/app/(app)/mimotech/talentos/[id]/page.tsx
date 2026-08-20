@@ -38,6 +38,7 @@ import { useConfirm } from '@/components/providers/confirm-provider';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { PeruLaboralCalendar } from '@/components/reports/peru-laboral-calendar';
 import { ActiveContractsSummary } from '@/components/talent/active-contracts-summary';
+import { CompanyHistorySummary } from '@/components/talent/company-history-summary';
 import { type ContractFormValues, TalentContractFormDialog } from '@/components/talent/contract-form-dialog';
 import { DebtOwnerBadge } from '@/components/talent/debt-owner-badge';
 import { DistributionFormDialog, type DistributionFormValues } from '@/components/talent/distribution-form-dialog';
@@ -614,6 +615,8 @@ function TalentDetailContent() {
               </div>
 
               <ActiveContractsSummary contracts={contracts} />
+
+              <CompanyHistorySummary contracts={contracts} />
 
               {report.byCompany.length > 0 && (
                 <div className="grid gap-4 lg:grid-cols-2">

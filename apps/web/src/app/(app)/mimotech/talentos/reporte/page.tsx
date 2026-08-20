@@ -396,7 +396,11 @@ function GlobalReportContent() {
         <TabsContent value="ingresos" className="mt-4 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Ingresos por talento</CardTitle>
+              <CardTitle>Cómo se reparte lo que factura cada talento</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                La barra completa es el pago del cliente: la parte azul es la comisión que queda en MIMOTECH y la verde
+                lo que se lleva el talento. Cuanto más larga la barra, más facturó.
+              </p>
             </CardHeader>
             <CardContent>
               {incomeBars.length ? (
@@ -480,6 +484,10 @@ function GlobalReportContent() {
           <Card>
             <CardHeader>
               <CardTitle>Egresos por talento</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Lo que MIMOTECH desembolsó en cada persona: formación, equipos, pruebas técnicas. No es lo que cobran
+                por su trabajo.
+              </p>
             </CardHeader>
             <CardContent>
               {expenseBars.length ? (
@@ -578,7 +586,11 @@ function GlobalReportContent() {
         <TabsContent value="pivot-ingresos" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Ingresos (recibí) por mes y talento</CardTitle>
+              <CardTitle>Comisión recibida, mes por mes y talento</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Cada fila es un mes y cada columna un talento: el número es la comisión que entró a MIMOTECH por sus
+                pagos de ese mes.
+              </p>
             </CardHeader>
             <CardContent>
               <PivotTable periods={data.incomePivot} columns={incomeColumns} />
@@ -589,7 +601,11 @@ function GlobalReportContent() {
         <TabsContent value="pivot-egresos" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle>Egresos (pagado) por mes y talento</CardTitle>
+              <CardTitle>Gasto en talentos, mes por mes</CardTitle>
+              <p className="text-muted-foreground text-xs">
+                Cada fila es un mes y cada columna un talento: el número es lo que MIMOTECH desembolsó en él (formación,
+                equipos, pruebas), no lo que cobra por su trabajo.
+              </p>
             </CardHeader>
             <CardContent>
               <PivotTable periods={data.expensePivot} columns={expenseColumns} />

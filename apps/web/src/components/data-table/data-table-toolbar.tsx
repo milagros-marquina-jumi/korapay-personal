@@ -41,9 +41,30 @@ export function DataTableToolbar({
           <Input
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' && search) {
+                e.preventDefault();
+                onSearchChange('');
+              }
+            }}
             placeholder={placeholder}
-            className="border-transparent bg-muted/50 pl-9 shadow-none focus-visible:bg-card"
+            className={cn('border-transparent bg-muted/50 pl-9 shadow-none focus-visible:bg-card', search && 'pr-9')}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              aria-label="Limpiar búsqueda"
+              title="Limpiar búsqueda"
+              className={cn(
+                'absolute right-2 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md',
+                'text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/60',
+              )}
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
         {filters}
         {showClear && onClear && (

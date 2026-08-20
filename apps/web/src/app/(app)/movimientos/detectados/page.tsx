@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { PageShell } from '@/components/layout/page-shell';
 import { useConfirm } from '@/components/providers/confirm-provider';
@@ -28,6 +29,7 @@ import { InfoTooltip } from '@/components/ui/info-tooltip';
 import { apiFetch, buildQuery } from '@/lib/api';
 import type { DetectedSummary, DetectedTransaction, EmailSource, ExchangeRateInfo } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
+import { useDefaultYear } from '@/lib/use-default-year';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { ConfirmDialog } from './confirm-dialog';
 import { confirmBlockedReason, STATUS_LABELS, STATUS_VARIANTS, TRANSACTION_TYPE_LABELS } from './detected.constants';
@@ -36,6 +38,7 @@ export default function DetectadosPage() {
   const queryClient = useQueryClient();
   const confirm = useConfirm();
   const [search, setSearch] = useState('');
+  const [monthFilter, setMonthFilter] = useState<string>(FILTER_ALL);
   const [statusFilter, setStatusFilter] = useState('PENDING_REVIEW');
   const [bankFilter, setBankFilter] = useState(FILTER_ALL);
   const [currencyFilter, setCurrencyFilter] = useState(FILTER_ALL);
@@ -147,13 +150,28 @@ export default function DetectadosPage() {
     [emailSources],
   );
 
+  const years = useMemo(() => {
+    const set = new Set((data ?? []).map((t) => new Date(t.occurredAt).getUTCFullYear()));
+    return [...set].sort((a, b) => b - a);
+  }, [data]);
+
+  const [yearFilter, setYearFilter] = useDefaultYear(years);
+
   const rows = useMemo(() => {
     let filtered = data ?? [];
     const q = search.trim().toLowerCase();
     if (q) {
       filtered = filtered.filter((t) =>
-        `${t.merchantOriginal ?? ''} ${t.description} ${t.bankName ?? ''}`.toLowerCase().includes(q),
+        `${t.merchantOriginal ?? ''} ${t.description} ${t.bankName ?? ''} ${t.cardLast4 ?? ''}`
+          .toLowerCase()
+          .includes(q),
       );
+    }
+    if (yearFilter !== FILTER_ALL) {
+      filtered = filtered.filter((t) => new Date(t.occurredAt).getUTCFullYear() === Number(yearFilter));
+    }
+    if (monthFilter !== FILTER_ALL) {
+      filtered = filtered.filter((t) => new Date(t.occurredAt).getUTCMonth() + 1 === Number(monthFilter));
     }
     if (confidenceFilter === 'high') {
       filtered = filtered.filter((t) => t.confidence >= 0.8);
@@ -163,31 +181,36 @@ export default function DetectadosPage() {
       filtered = filtered.filter((t) => t.confidence < 0.55);
     }
     return filtered;
-  }, [data, search, confidenceFilter]);
+  }, [data, search, confidenceFilter, yearFilter, monthFilter]);
 
   const columns = useMemo<ColumnDef<DetectedTransaction, unknown>[]>(
     () => [
       {
         accessorKey: 'occurredAt',
+        size: 110,
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
-        cell: ({ row }) => <span className="text-sm">{formatDate(row.original.occurredAt)}</span>,
+        cell: ({ row }) => <span className="whitespace-nowrap text-sm">{formatDate(row.original.occurredAt)}</span>,
       },
       {
         id: 'bank',
+        size: 130,
         header: 'Banco',
-        cell: ({ row }) => <span className="text-sm">{row.original.bankName ?? '—'}</span>,
+        cell: ({ row }) => <span className="whitespace-nowrap text-sm">{row.original.bankName ?? '—'}</span>,
       },
       {
         id: 'card',
+        size: 110,
         header: 'Tarjeta',
         cell: ({ row }) => (
-          <span className="text-sm tabular-nums text-muted-foreground">
+          <span className="whitespace-nowrap text-muted-foreground text-sm tabular-nums">
             {row.original.cardLast4 ? `••••${row.original.cardLast4}` : '—'}
           </span>
         ),
       },
       {
         id: 'merchant',
+        size: 320,
+        minSize: 240,
         header: 'Comercio',
         cell: ({ row }) => {
           const tx = row.original;
@@ -204,8 +227,8 @@ export default function DetectadosPage() {
             navigator.clipboard.writeText(text).then(() => toast.success('Busqueda Gmail copiada'));
           };
           return (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="font-medium" title={subject}>
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="min-w-0 truncate font-medium" title={subject ?? tx.merchantOriginal ?? tx.description}>
                 {tx.merchantOriginal ?? tx.description}
               </span>
               <button
@@ -333,6 +356,8 @@ export default function DetectadosPage() {
 
   const hasFilters =
     search !== '' ||
+    yearFilter !== FILTER_ALL ||
+    monthFilter !== FILTER_ALL ||
     statusFilter !== FILTER_ALL ||
     bankFilter !== FILTER_ALL ||
     currencyFilter !== FILTER_ALL ||
@@ -379,10 +404,12 @@ export default function DetectadosPage() {
       <DataTableToolbar
         search={search}
         onSearchChange={setSearch}
-        placeholder="Buscar por comercio o banco..."
+        placeholder="Buscar por comercio, banco o tarjeta..."
         showClear={hasFilters}
         onClear={() => {
           setSearch('');
+          setYearFilter(FILTER_ALL);
+          setMonthFilter(FILTER_ALL);
           setStatusFilter(FILTER_ALL);
           setBankFilter(FILTER_ALL);
           setCurrencyFilter(FILTER_ALL);
@@ -391,6 +418,13 @@ export default function DetectadosPage() {
         }}
         filters={
           <>
+            <MonthYearFilter
+              year={yearFilter}
+              month={monthFilter}
+              onYearChange={setYearFilter}
+              onMonthChange={setMonthFilter}
+              years={years}
+            />
             <FilterSelect
               value={statusFilter}
               onValueChange={setStatusFilter}
@@ -441,10 +475,6 @@ export default function DetectadosPage() {
           </>
         }
       />
-
-      <p className="text-sm text-muted-foreground">
-        {rows.length} resultado{rows.length === 1 ? '' : 's'}
-      </p>
 
       <DataTable
         columns={columns}

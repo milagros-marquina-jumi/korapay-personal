@@ -380,7 +380,11 @@ function IngresosContent() {
       {isLoading && <p className="py-12 text-center text-sm text-muted-foreground">Cargando ingresos...</p>}
 
       {!isLoading && monthGroups.length === 0 && (
-        <EmptyState title="Sin ingresos" description="Registra tu primer ingreso con el botón de arriba." />
+        <EmptyState
+          mood="empty"
+          title="Sin ingresos"
+          description="Registra tu primer ingreso con el botón de arriba."
+        />
       )}
 
       {!isLoading && monthGroups.length > 0 && (

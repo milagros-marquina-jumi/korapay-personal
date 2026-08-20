@@ -266,7 +266,7 @@ export default function AhorrosPage() {
           })}
         </div>
       ) : (
-        <EmptyState title="Sin ahorros" description="Crea tu primer periodo con el botón de arriba." />
+        <EmptyState mood="happy" title="Sin ahorros" description="Crea tu primer periodo con el botón de arriba." />
       )}
 
       <SavingsChartDialog open={chartOpen} onOpenChange={setChartOpen} />

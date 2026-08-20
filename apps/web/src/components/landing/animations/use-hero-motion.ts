@@ -67,6 +67,24 @@ export function useHeroMotion({ scope }: Options): void {
             ease: EASE.entrance,
           });
 
+          gsap.from('[data-parallax]', {
+            autoAlpha: 0,
+            scale: 0.7,
+            y: DISTANCE.expressive,
+            duration: DURATION.deliberate,
+            stagger: STAGGER.loose,
+            delay: 1.1,
+            ease: 'back.out(1.6)',
+          });
+
+          for (const el of gsap.utils.toArray<HTMLElement>('[data-parallax]')) {
+            gsap.to(el, {
+              yPercent: -22 * Number(el.dataset.parallax ?? 0.4),
+              ease: 'none',
+              scrollTrigger: { trigger: el.parentElement, start: 'top bottom', end: 'bottom top', scrub: 0.6 },
+            });
+          }
+
           // Brillo lento de fondo: decorativo, sin informacion asociada.
           gsap.to('[data-hero="glow"]', {
             scale: 1.12,

@@ -4,6 +4,7 @@ import { ArrowRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { useRef } from 'react';
 import { useLandingMotion } from '@/components/landing/animations/use-landing-motion';
+import { Character } from '@/components/landing/character';
 import { FEATURES, PWA, REPORTES, WORKSPACES } from '@/components/landing/landing-data';
 import { Button } from '@/components/ui/button';
 
@@ -153,9 +154,19 @@ export function LandingSections() {
         </div>
       </section>
 
-      <section className="border-t px-4 py-20 md:px-6 md:py-28">
+      <section className="relative overflow-hidden border-t px-4 py-20 md:px-6 md:py-28">
+        <div
+          aria-hidden="true"
+          className="-z-10 -translate-x-1/2 pointer-events-none absolute bottom-[-14rem] left-1/2 size-[36rem] rounded-full bg-brand/15 blur-3xl"
+        />
         <div data-reveal className="mx-auto w-full max-w-3xl text-center">
-          <h2 className="font-display font-bold text-3xl text-foreground tracking-tight md:text-4xl">
+          <Character
+            name="heroAvion"
+            width={620}
+            float
+            className="mx-auto w-72 drop-shadow-[0_24px_40px_rgba(120,72,10,0.32)] md:w-[26rem]"
+          />
+          <h2 className="mt-8 font-display font-bold text-3xl text-foreground tracking-tight md:text-4xl">
             Empieza por el bolsillo que más te preocupa
           </h2>
           <p className="mt-3 text-base text-muted-foreground">

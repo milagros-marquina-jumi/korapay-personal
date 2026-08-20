@@ -562,7 +562,7 @@ export default function DeudasPage() {
           })}
         </div>
       ) : (
-        <EmptyState title="Sin deudas" description="No tienes deudas registradas." />
+        <EmptyState mood="happy" title="Sin deudas" description="No tienes deudas registradas." />
       )}
 
       {activeWorkspaceId && (

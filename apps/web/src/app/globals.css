@@ -312,6 +312,34 @@ select:not(:disabled),
 	transform: translateX(120%);
 }
 
+@keyframes korapay-float {
+	0%,
+	100% {
+		transform: translateY(0) rotate(0deg);
+	}
+	50% {
+		transform: translateY(-14px) rotate(-1.2deg);
+	}
+}
+
+@keyframes korapay-float-soft {
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-8px);
+	}
+}
+
+.animate-float {
+	animation: korapay-float 6s ease-in-out infinite;
+}
+
+.animate-float-soft {
+	animation: korapay-float-soft 4.5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRef } from 'react';
 import { useHeroMotion } from '@/components/landing/animations/use-hero-motion';
 import { AppWindow } from '@/components/landing/app-window';
+import { Character } from '@/components/landing/character';
 import { HERO } from '@/components/landing/landing-data';
 import { Button } from '@/components/ui/button';
 
@@ -57,7 +58,22 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div data-hero="panel" className="mx-auto mt-14 max-w-4xl">
+        <div data-hero="panel" className="relative mx-auto mt-16 max-w-4xl">
+          <Character
+            name="capibaraFeliz"
+            width={340}
+            priority
+            float
+            data-parallax="0.35"
+            className="-left-10 -bottom-10 pointer-events-none absolute z-20 w-32 drop-shadow-[0_18px_28px_rgba(120,72,10,0.28)] sm:w-44 lg:-left-24 lg:w-60 xl:-left-32 xl:w-72"
+          />
+          <Character
+            name="caballoFeliz"
+            width={340}
+            priority
+            data-parallax="0.55"
+            className="-right-8 -top-20 pointer-events-none absolute z-20 w-28 animate-float-soft drop-shadow-[0_18px_28px_rgba(120,72,10,0.28)] sm:w-40 lg:-right-24 lg:-top-24 lg:w-56 xl:-right-32 xl:w-68"
+          />
           <AppWindow />
         </div>
       </div>

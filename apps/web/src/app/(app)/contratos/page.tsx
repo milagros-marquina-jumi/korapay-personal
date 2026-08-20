@@ -332,7 +332,11 @@ function ContratosContent() {
         onGlobalFilterChange={setSearch}
         rowClassName={(c) => highlightClass(c.id)}
         emptyState={
-          <EmptyState title="Sin contratos" description="Registra tu primer contrato con el botón de arriba." />
+          <EmptyState
+            mood="neutral"
+            title="Sin contratos"
+            description="Registra tu primer contrato con el botón de arriba."
+          />
         }
       />
 

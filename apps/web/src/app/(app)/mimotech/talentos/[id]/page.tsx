@@ -1449,7 +1449,8 @@ function snapshotFields(snap: LedgerSnapshot): CampoSnapshot[] {
 function resumenDelCambio(before: LedgerSnapshot, after: LedgerSnapshot): string | null {
   const saldado = before.status !== 'PAID' && after.status === 'PAID';
   const reabierto = before.status === 'PAID' && after.status !== 'PAID';
-  if (saldado) return 'Marcó la deuda como saldada';
+  const debia = before.pendingAmount !== undefined ? formatMoney(before.pendingAmount, 'PEN') : null;
+  if (saldado) return debia ? `Saldó la deuda: debía ${debia}` : 'Marcó la deuda como saldada';
   if (reabierto) return 'Revirtió el pago: vuelve a estar pendiente';
   if (Number(after.paidAmount ?? 0) > Number(before.paidAmount ?? 0)) return 'Registró un pago';
   return null;
@@ -1459,8 +1460,12 @@ function tituloRegistro(snap?: LedgerSnapshot): string | null {
   if (!snap) return null;
   const descripcion = snap.description?.trim();
   if (descripcion) return descripcion;
-  if (snap.type) return TYPE_LABELS[snap.type] ?? snap.type;
-  return null;
+  const tipo = snap.type ? (TYPE_LABELS[snap.type] ?? snap.type) : 'Registro';
+  const monto = snap.debtAmount ?? snap.paidAmount;
+  const partes = [tipo];
+  if (monto !== undefined) partes.push(`de ${formatMoney(monto, 'PEN')}`);
+  if (snap.date) partes.push(`del ${formatDate(snap.date)}`);
+  return partes.join(' ');
 }
 
 function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
@@ -1494,7 +1499,7 @@ function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
         .filter((f) => !clavesActuales.has(f.key))
         .map((f) => ({ ...f, value: '—' })),
     ];
-    const titulo = tituloRegistro(after) ?? tituloRegistro(before);
+    const titulo = tituloRegistro(before) ?? tituloRegistro(after);
     const motivo = resumenDelCambio(before, after);
     return (
       <div className="space-y-0.5 text-xs text-muted-foreground">

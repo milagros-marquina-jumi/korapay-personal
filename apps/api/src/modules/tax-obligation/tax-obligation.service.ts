@@ -193,7 +193,7 @@ export class TaxObligationService {
       amount: Decimal | null;
       paidInstallments: number | null;
       dueDate: Date;
-      installmentRows: { number: number; status: string }[];
+      installmentRows: { number: number; status: string; paidDate?: Date | null; transactionId?: string | null }[];
     },
     data: UpdateTaxObligationDto,
   ): Promise<void> {
@@ -201,13 +201,19 @@ export class TaxObligationService {
 
     if (data.schedule?.length) {
       const estado = (data.status as string) ?? found.status;
-      const yaPagadas = new Set(found.installmentRows.filter((r) => r.status === 'PAID').map((r) => r.number));
+      const previas = new Map(found.installmentRows.map((r) => [r.number, r]));
       await this.prisma.taxObligationInstallment.deleteMany({ where: { taxObligationId: id } });
       await this.prisma.taxObligationInstallment.createMany({
-        data: this.mapSchedule(id, data.schedule, vence).map((r) => ({
-          ...r,
-          status: estado === 'PAID' || yaPagadas.has(r.number) ? 'PAID' : r.status,
-        })),
+        data: this.mapSchedule(id, data.schedule, vence).map((r) => {
+          const previa = previas.get(r.number);
+          const pagada = estado === 'PAID' || previa?.status === 'PAID';
+          return {
+            ...r,
+            status: pagada ? 'PAID' : r.status,
+            paidDate: pagada ? (previa?.paidDate ?? null) : null,
+            transactionId: pagada ? (previa?.transactionId ?? null) : null,
+          };
+        }),
       });
       return;
     }
@@ -308,6 +314,7 @@ export class TaxObligationService {
 
     const personalId = await this.personalWorkspaceId(workspaceId);
     const paidDate = new Date();
+    const fechaDelGasto = installment.dueDate ?? obligation.dueDate ?? paidDate;
 
     await this.prisma.$transaction(async (tx) => {
       const expense = await tx.transaction.create({
@@ -315,7 +322,7 @@ export class TaxObligationService {
           workspaceId: personalId,
           type: 'EXPENSE',
           concept: `${obligation.name} - Cuota ${installment.number}/${obligation.installments ?? ''}`.trim(),
-          date: paidDate,
+          date: fechaDelGasto,
           amountOriginal: installment.amount,
           currency: 'PEN',
           amountBase: installment.amount,

@@ -379,19 +379,8 @@ export function TransactionFormDialog({
 
           {showConcept && !showCompany && (
             <div className="space-y-1.5">
-              <Label>Concepto</Label>
-              <SearchSelect
-                placeholder="Selecciona un concepto"
-                searchPlaceholder="Buscar o escribir para crear..."
-                value={watch('concept') ?? ''}
-                onValueChange={(v) => setValue('concept', v, { shouldValidate: true })}
-                options={(categories ?? []).map((c) => ({ value: c.name, label: c.name }))}
-                onCreate={async (nombre) => {
-                  await createCategory(nombre);
-                  setValue('concept', nombre, { shouldValidate: true });
-                }}
-                createLabel="Crear concepto"
-              />
+              <Label htmlFor="concept">Concepto</Label>
+              <Input id="concept" placeholder="Ej. Netflix, alquiler, mercado" {...register('concept')} />
               {errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
             </div>
           )}
@@ -521,6 +510,22 @@ export function TransactionFormDialog({
                 {showCompany && errors.concept && <p className="text-xs text-destructive">{errors.concept.message}</p>}
               </div>
             )}
+            {!showCompany && (
+              <div className="space-y-1.5">
+                <Label>Estado</Label>
+                <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PENDING">Pendiente</SelectItem>
+                    <SelectItem value="PAID">Pagado</SelectItem>
+                    <SelectItem value="PARTIAL">Parcial</SelectItem>
+                    <SelectItem value="OVERDUE">Vencido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           {contratoVigente && (
@@ -557,20 +562,22 @@ export function TransactionFormDialog({
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <Label>Estado</Label>
-            <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PENDING">Pendiente</SelectItem>
-                <SelectItem value="PAID">Pagado</SelectItem>
-                <SelectItem value="PARTIAL">Parcial</SelectItem>
-                <SelectItem value="OVERDUE">Vencido</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {showCompany && (
+            <div className="space-y-1.5">
+              <Label>Estado</Label>
+              <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDING">Pendiente</SelectItem>
+                  <SelectItem value="PAID">Pagado</SelectItem>
+                  <SelectItem value="PARTIAL">Parcial</SelectItem>
+                  <SelectItem value="OVERDUE">Vencido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {!editing && contractDrivenIncome && (
             <p className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">

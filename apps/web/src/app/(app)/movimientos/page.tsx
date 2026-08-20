@@ -29,7 +29,7 @@ import { apiFetch, buildQuery } from '@/lib/api';
 import type { Category, Paginated, Transaction } from '@/lib/api.types';
 import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
-import { FIXED_TAG, VARIABLE_TAG } from '@/lib/transaction-tags';
+import { FIXED_TAG, isRentaInstallment, VARIABLE_TAG } from '@/lib/transaction-tags';
 import { useDefaultYear } from '@/lib/use-default-year';
 import { useHighlightNew } from '@/lib/use-highlight-new';
 import { useOpenMonth } from '@/lib/use-open-month';
@@ -318,29 +318,38 @@ export default function MovimientosPage() {
         id: 'actions',
         size: 168,
         header: '',
-        cell: ({ row }) => (
-          <IconActions>
-            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetail(row.original)} />
-            <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
-            <IconAction icon={Copy} label="Copiar a otro mes" onClick={() => setDuplicating(row.original)} />
-            <IconAction
-              icon={Trash2}
-              label="Eliminar"
-              destructive
-              onClick={async () => {
-                const shortConcept =
-                  row.original.concept.length > 60 ? `${row.original.concept.slice(0, 60)}…` : row.original.concept;
-                const ok = await confirm({
-                  title: 'Eliminar movimiento',
-                  description: `Se eliminará "${shortConcept}". Esta acción no se puede deshacer.`,
-                  confirmLabel: 'Eliminar',
-                  destructive: true,
-                });
-                if (ok) removeMutation.mutate(row.original.id);
-              }}
-            />
-          </IconActions>
-        ),
+        cell: ({ row }) => {
+          const deRenta = isRentaInstallment(row.original.tags);
+          return (
+            <IconActions>
+              <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetail(row.original)} />
+              <IconAction
+                icon={Pencil}
+                label={deRenta ? 'Se edita desde Renta anual' : 'Editar'}
+                disabled={deRenta}
+                onClick={() => setEditing(row.original)}
+              />
+              <IconAction icon={Copy} label="Copiar a otro mes" onClick={() => setDuplicating(row.original)} />
+              <IconAction
+                icon={Trash2}
+                label={deRenta ? 'Se elimina desde Renta anual' : 'Eliminar'}
+                destructive
+                disabled={deRenta}
+                onClick={async () => {
+                  const shortConcept =
+                    row.original.concept.length > 60 ? `${row.original.concept.slice(0, 60)}…` : row.original.concept;
+                  const ok = await confirm({
+                    title: 'Eliminar movimiento',
+                    description: `Se eliminará "${shortConcept}". Esta acción no se puede deshacer.`,
+                    confirmLabel: 'Eliminar',
+                    destructive: true,
+                  });
+                  if (ok) removeMutation.mutate(row.original.id);
+                }}
+              />
+            </IconActions>
+          );
+        },
       },
     ],
     [removeMutation, confirm],

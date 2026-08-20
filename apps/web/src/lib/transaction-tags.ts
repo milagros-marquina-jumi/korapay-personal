@@ -22,6 +22,14 @@ export function isFixedExpense(tags?: string[] | null): boolean {
   return tags?.includes(FIXED_TAG) ?? false;
 }
 
+export const RENTA_TAG = 'Renta';
+
+// Los gastos generados al pagar una cuota de renta anual pertenecen al cronograma
+// tributario: su monto y fecha salen de la cuota, no se editan desde movimientos.
+export function isRentaInstallment(tags?: string[] | null): boolean {
+  return tags?.includes(RENTA_TAG) ?? false;
+}
+
 export function meaningfulTags(tags?: string[] | null): string[] {
   return (tags ?? []).filter((t) => !isExpenseTypeTag(t) && !isMonthTag(t));
 }

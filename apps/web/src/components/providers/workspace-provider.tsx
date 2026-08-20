@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { Workspace } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
@@ -10,7 +11,7 @@ interface WorkspaceContextValue {
   workspaces: Workspace[];
   activeWorkspace: Workspace | null;
   activeWorkspaceId: string | null;
-  setActiveWorkspaceId: (id: string) => void;
+  setActiveWorkspaceId: (id: string, options?: { redirect?: boolean }) => void;
   isLoading: boolean;
 }
 
@@ -20,6 +21,7 @@ const STORAGE_KEY = 'korapay.activeWorkspaceId';
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(null);
+  const router = useRouter();
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.workspaces(),
@@ -41,16 +43,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     });
   }, [workspaces]);
 
-  const setActiveWorkspaceId = (id: string) => {
-    setActiveWorkspaceIdState(id);
-    if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, id);
-  };
+  const setActiveWorkspaceId = useCallback(
+    (id: string, options?: { redirect?: boolean }) => {
+      setActiveWorkspaceIdState((current) => {
+        if (typeof window !== 'undefined') window.localStorage.setItem(STORAGE_KEY, id);
+        if (current !== id && options?.redirect !== false) router.push('/dashboard');
+        return id;
+      });
+    },
+    [router],
+  );
 
   const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null;
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({ workspaces, activeWorkspace, activeWorkspaceId, setActiveWorkspaceId, isLoading }),
-    [workspaces, activeWorkspace, activeWorkspaceId, isLoading],
+    [workspaces, activeWorkspace, activeWorkspaceId, setActiveWorkspaceId, isLoading],
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

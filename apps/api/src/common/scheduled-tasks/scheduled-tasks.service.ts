@@ -36,13 +36,13 @@ export class ScheduledTasksService {
 
   async markOverdueTransactions() {
     const today = new Date();
-    const startOfToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const startOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
 
     return this.prisma.transaction.updateMany({
       where: {
         deletedAt: null,
         status: { in: ['PENDING', 'PARTIAL'] },
-        dueDate: { not: null, lt: startOfToday },
+        dueDate: { not: null, lt: startOfMonth },
       },
       data: { status: 'OVERDUE' },
     });

@@ -75,7 +75,7 @@ export function EventRow({
 
   const handleClick = () => {
     if (event.workspaceId && event.workspaceId !== activeWorkspaceId) {
-      setActiveWorkspaceId(event.workspaceId);
+      setActiveWorkspaceId(event.workspaceId, { redirect: false });
     }
     onNavigate?.();
   };

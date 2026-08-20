@@ -3,6 +3,7 @@
 import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { CalendarHeaderPanel } from '@/components/calendar/calendar-header-panel';
+import { HistoryNav } from '@/components/layout/history-nav';
 import { ScrollToTop } from '@/components/layout/scroll-to-top';
 import { SidebarNav } from '@/components/layout/sidebar-nav';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
@@ -47,6 +48,8 @@ export function AppShell({ children }: { readonly children: React.ReactNode }) {
               <SidebarNav onNavigate={() => setMobileOpen(false)} />
             </SheetContent>
           </Sheet>
+
+          <HistoryNav />
 
           <div className="flex-1" />
           <CalendarHeaderPanel />

@@ -27,7 +27,6 @@ export function WorkspaceSwitcher({ collapsed = false }: Readonly<WorkspaceSwitc
   const handleChange = (id: string) => {
     if (id === activeWorkspaceId) return;
     setActiveWorkspaceId(id);
-    router.push('/dashboard');
   };
 
   if (collapsed) {

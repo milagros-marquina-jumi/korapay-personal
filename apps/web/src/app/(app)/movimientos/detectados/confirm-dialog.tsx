@@ -41,7 +41,7 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
     enabled: open && !!workspaceId,
   });
 
-  const { data: categories } = useQuery({
+  const { data: categories, isSuccess: categoriesLoaded } = useQuery({
     queryKey: queryKeys.categories(workspaceId),
     queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${workspaceId}`),
     enabled: open && !!workspaceId,
@@ -98,26 +98,30 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label>Cuenta</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sin cuenta" />
-              </SelectTrigger>
-              <SelectContent>
-                {(accounts ?? []).map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {(accounts ?? []).length > 0 && (
+            <div className="space-y-2">
+              <Label>Cuenta</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin cuenta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(accounts ?? []).map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Categoría</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger>
-                <SelectValue placeholder="Sin categoría" />
+                <SelectValue
+                  placeholder={categoriesLoaded && !categories?.length ? 'Sin categorías' : 'Sin categoría'}
+                />
               </SelectTrigger>
               <SelectContent>
                 {(categories ?? []).map((c) => (
@@ -127,6 +131,11 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
                 ))}
               </SelectContent>
             </Select>
+            {categoriesLoaded && !categories?.length && (
+              <p className="text-muted-foreground text-xs">
+                Este workspace aún no tiene categorías. Créalas en Configuración.
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 text-sm">
             <Checkbox id="createRule" checked={createRule} onCheckedChange={(v) => setCreateRule(v === true)} />

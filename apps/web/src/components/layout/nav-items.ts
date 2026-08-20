@@ -30,8 +30,10 @@ const PERSONAL: NavItem[] = [
     href: '/movimientos',
     label: 'Movimientos',
     icon: ArrowLeftRight,
-    linkable: true,
-    children: [{ href: '/movimientos/detectados', label: 'Detectados', icon: MailCheck }],
+    children: [
+      { href: '/movimientos', label: 'Todos', icon: ArrowLeftRight },
+      { href: '/movimientos/detectados', label: 'Detectados', icon: MailCheck },
+    ],
   },
   { href: '/ahorros', label: 'Ahorros', icon: PiggyBank },
   { href: '/deudas', label: 'Deudas', icon: TrendingUp },

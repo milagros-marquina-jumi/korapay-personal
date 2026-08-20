@@ -8,6 +8,7 @@ import { Logo } from '@/components/layout/logo';
 import { WorkspaceSwitcher } from '@/components/layout/workspace-switcher';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useNavBadges } from '@/lib/use-nav-badges';
 import { cn } from '@/lib/utils';
 import { footerNavItems, type NavItem, navForType } from './nav-items';
 
@@ -21,6 +22,7 @@ export function SidebarNav({ onNavigate, collapsed = false, onToggleCollapse }: 
   const pathname = usePathname();
   const { activeWorkspace } = useWorkspace();
   const items = navForType(activeWorkspace?.type);
+  const badges = useNavBadges();
 
   const matches = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -50,6 +52,7 @@ export function SidebarNav({ onNavigate, collapsed = false, onToggleCollapse }: 
       collapsed={collapsed}
       active={exact ? pathname === item.href : isActive(item.href)}
       descendantActive={exact && pathname !== item.href && isActive(item.href)}
+      badge={badges[item.href]}
       onNavigate={onNavigate}
     />
   );
@@ -65,6 +68,7 @@ export function SidebarNav({ onNavigate, collapsed = false, onToggleCollapse }: 
         isActive={isActive}
         matches={matches}
         renderLink={renderLink}
+        badges={badges}
       />
     );
   };
@@ -131,10 +135,20 @@ interface NavLinkProps {
   collapsed: boolean;
   active: boolean;
   descendantActive: boolean;
+  badge?: number;
   onNavigate?: () => void;
 }
 
-function NavLink({ item, depth, index, collapsed, active, descendantActive, onNavigate }: Readonly<NavLinkProps>) {
+function NavLink({
+  item,
+  depth,
+  index,
+  collapsed,
+  active,
+  descendantActive,
+  badge,
+  onNavigate,
+}: Readonly<NavLinkProps>) {
   const Icon = item.icon;
 
   let paddingClass = 'px-3';
@@ -180,6 +194,22 @@ function NavLink({ item, depth, index, collapsed, active, descendantActive, onNa
       <span className={cn('truncate transition-all duration-200', collapsed && 'pointer-events-none w-0 opacity-0')}>
         {item.label}
       </span>
+      {!!badge && !collapsed && (
+        <span
+          title={`${badge} sin pagar`}
+          className={cn(
+            'ml-auto shrink-0 rounded-full px-1.5 py-0.5 font-semibold text-[10px] tabular-nums',
+            active
+              ? 'bg-brand-strong text-white dark:bg-brand dark:text-background'
+              : 'bg-brand-soft text-brand-strong dark:text-brand',
+          )}
+        >
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
+      {!!badge && collapsed && (
+        <span aria-hidden className="absolute right-1.5 top-1.5 size-2 rounded-full bg-brand-strong dark:bg-brand" />
+      )}
     </Link>
   );
 
@@ -202,10 +232,12 @@ interface NavGroupProps {
   isActive: (href: string) => boolean;
   matches: (href: string) => boolean;
   renderLink: (item: NavItem, depth?: number, exact?: boolean, index?: number) => React.ReactNode;
+  badges: Record<string, number>;
 }
 
-function NavGroup({ item, index, collapsed, isActive, matches, renderLink }: Readonly<NavGroupProps>) {
+function NavGroup({ item, index, collapsed, isActive, matches, renderLink, badges }: Readonly<NavGroupProps>) {
   const children = item.children ?? [];
+  const totalHijos = children.reduce((suma, c) => suma + (badges[c.href] ?? 0), 0);
   // El grupo se resalta y se abre si la ruta cae en cualquiera de sus hijos,
   // aunque el enlace activo sea solo uno de ellos.
   const groupActive = children.some((c) => matches(c.href)) || matches(item.href);
@@ -217,9 +249,11 @@ function NavGroup({ item, index, collapsed, isActive, matches, renderLink }: Rea
   }, [groupActive]);
 
   if (collapsed) {
+    const duplicaAlPadre = children.some((c) => c.href === item.href);
     return (
       <div className="space-y-1">
-        {renderLink({ href: item.href, label: item.label, icon: item.icon }, 0, item.linkable, index)}
+        {!duplicaAlPadre &&
+          renderLink({ href: item.href, label: item.label, icon: item.icon }, 0, item.linkable, index)}
         {children.map((c, i) => renderLink(c, 0, false, index + i + 1))}
       </div>
     );
@@ -247,6 +281,14 @@ function NavGroup({ item, index, collapsed, isActive, matches, renderLink }: Rea
             >
               <ItemIcon className="h-4.5 w-4.5 shrink-0 transition-transform duration-300 ease-spring group-hover:scale-110" />
               <span className="truncate">{item.label}</span>
+              {!open && totalHijos > 0 && (
+                <span
+                  title={`${totalHijos} sin pagar`}
+                  className="ml-auto shrink-0 rounded-full bg-brand-soft px-1.5 py-0.5 font-semibold text-[10px] text-brand-strong tabular-nums dark:text-brand"
+                >
+                  {totalHijos > 99 ? '99+' : totalHijos}
+                </span>
+              )}
             </button>
           )}
         </div>
@@ -281,6 +323,7 @@ function NavGroup({ item, index, collapsed, isActive, matches, renderLink }: Rea
                 isActive={isActive}
                 matches={matches}
                 renderLink={renderLink}
+                badges={badges}
               />
             ) : (
               renderLink(c, 1, false, index + i + 1)

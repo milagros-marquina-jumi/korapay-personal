@@ -23,8 +23,10 @@ export function isRentaInstallment(tags?: string[] | null): boolean {
   return tags?.includes(RENTA_TAG) ?? false;
 }
 
+export const EMAIL_IMPORT_TAG = 'EMAIL_IMPORT';
+
 export function meaningfulTags(tags?: string[] | null): string[] {
-  return (tags ?? []).filter((t) => !isExpenseTypeTag(t) && !isMonthTag(t));
+  return (tags ?? []).filter((t) => !isExpenseTypeTag(t) && !isMonthTag(t) && t !== EMAIL_IMPORT_TAG);
 }
 
 export interface TagCatalogs {

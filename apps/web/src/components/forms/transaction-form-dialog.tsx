@@ -682,8 +682,8 @@ export function TransactionFormDialog({
                     <Label htmlFor="isRecurring">Pago recurrente</Label>
                     <p className="text-xs text-muted-foreground">
                       {isRecurring
-                        ? 'La fecha de arriba es el inicio. Se generará un movimiento por cada periodo.'
-                        : 'Se repite periódicamente y genera un movimiento por periodo.'}
+                        ? 'Al guardar se crean todos los movimientos de una vez, desde la fecha de arriba.'
+                        : 'Crea de una vez un movimiento por cada periodo.'}
                     </p>
                   </div>
                   <Switch
@@ -727,6 +727,11 @@ export function TransactionFormDialog({
                       <Label htmlFor="recurrenceEndDate">O fecha de fin</Label>
                       <Input id="recurrenceEndDate" type="date" {...register('recurrenceEndDate')} />
                     </div>
+                    {!watch('recurrenceCount') && !watch('recurrenceEndDate') && (
+                      <p className="rounded-lg border border-warning/25 bg-warning/10 px-3 py-2 text-xs">
+                        Sin repeticiones ni fecha de fin se crearán 120 movimientos (el máximo). Define uno de los dos.
+                      </p>
+                    )}
                   </>
                 )}
               </div>

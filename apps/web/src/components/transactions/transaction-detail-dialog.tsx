@@ -44,7 +44,8 @@ export function TransactionDetailDialog({
   const showGross = gross && Number(gross) !== Number(transaction?.amountOriginal);
 
   const notes = transaction?.notes ?? '';
-  const account = looksLikeAccount(notes) ? accountNumber(notes) : null;
+  const esImportado = notes.startsWith('Importado desde correo');
+  const account = !esImportado && looksLikeAccount(notes) ? accountNumber(notes) : null;
   const freeNotes = account ? '' : notes;
 
   const esIngreso = transaction?.type === 'INCOME';

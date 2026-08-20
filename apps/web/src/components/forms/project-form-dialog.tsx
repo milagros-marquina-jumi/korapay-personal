@@ -20,6 +20,7 @@ import {
 import { IconPicker } from '@/components/ui/icon-picker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { apiFetch } from '@/lib/api';
 import type { Project } from '@/lib/api.types';
@@ -29,7 +30,15 @@ const schema = z.object({
   name: z.string().min(1, 'Requerido'),
   description: z.string().optional(),
   emoji: z.string().optional(),
+  status: z.enum(['ACTIVE', 'PAUSED', 'FINISHED', 'CANCELLED']),
 });
+
+export const PROJECT_STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Activo' },
+  { value: 'PAUSED', label: 'En pausa' },
+  { value: 'FINISHED', label: 'Finalizado' },
+  { value: 'CANCELLED', label: 'Cancelado' },
+] as const;
 
 type FormValues = z.infer<typeof schema>;
 
@@ -65,17 +74,17 @@ export function ProjectFormDialog({
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', description: '', emoji: 'Boxes' },
+    defaultValues: { name: '', description: '', emoji: 'Boxes', status: 'ACTIVE' },
   });
 
   useEffect(() => {
-    if (open && project) {
-      reset({
-        name: project.name,
-        description: project.description ?? '',
-        emoji: project.emoji ?? '',
-      });
-    }
+    if (!open) return;
+    reset({
+      name: project?.name ?? '',
+      description: project?.description ?? '',
+      emoji: project?.emoji ?? 'Boxes',
+      status: (project?.status as FormValues['status']) ?? 'ACTIVE',
+    });
   }, [open, project, reset]);
 
   const mutation = useMutation({
@@ -85,6 +94,7 @@ export function ProjectFormDialog({
         name: values.name,
         description: values.description || undefined,
         emoji: values.emoji || undefined,
+        status: values.status,
       };
       if (editing && project) {
         return apiFetch<Project>(`/projects/${project.id}?workspaceId=${workspaceId}`, {
@@ -117,6 +127,22 @@ export function ProjectFormDialog({
             <Label htmlFor="name">Nombre</Label>
             <Input id="name" placeholder="Ej. Mi Bolsillito, KoraPay" {...register('name')} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Estado</Label>
+            <Select value={watch('status')} onValueChange={(v) => setValue('status', v as FormValues['status'])}>
+              <SelectTrigger id="status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PROJECT_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <CollapsibleSection label="Ver más opciones">

@@ -20,6 +20,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   },
   ACTIVE: { label: 'Activo', className: 'border border-success/25 bg-success/10 text-success' },
   INACTIVE: { label: 'Inactivo', className: NEUTRAL },
+  PAUSED: { label: 'En pausa', className: 'border border-warning/25 bg-warning/10 text-warning' },
   FINISHED: { label: 'Finalizado', className: NEUTRAL },
   EXPIRING: { label: 'Por vencer', className: 'border border-warning/25 bg-warning/10 text-warning' },
   NUNCA_PAGO: { label: 'Nunca pagó', className: 'border border-destructive/25 bg-destructive/10 text-destructive' },

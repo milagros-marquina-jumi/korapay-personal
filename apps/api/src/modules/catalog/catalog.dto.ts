@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsArray, IsDateString, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsDateString, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
 import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class CreateApplicationDto {
@@ -51,6 +51,11 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   emoji?: string;
+
+  @ApiPropertyOptional({ enum: ['ACTIVE', 'PAUSED', 'FINISHED', 'CANCELLED'], default: 'ACTIVE' })
+  @IsOptional()
+  @IsIn(['ACTIVE', 'PAUSED', 'FINISHED', 'CANCELLED'])
+  status?: string;
 }
 
 export class UpdateProjectDto extends PartialType(CreateProjectDto) {}

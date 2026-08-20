@@ -3,13 +3,14 @@
 import { EmptyState, StatusBadge } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { SortableHeader } from '@/components/data-table/sortable-header';
+import { ProjectDetailDialog } from '@/components/forms/project-detail-dialog';
 import { ProjectFormDialog } from '@/components/forms/project-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { WorkspaceGate } from '@/components/layout/workspace-gate';
@@ -31,6 +32,7 @@ function ProyectosContent() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState(FILTER_ALL);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [detail, setDetail] = useState<Project | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.projects(activeWorkspaceId ?? ''),
@@ -95,6 +97,7 @@ function ProyectosContent() {
         header: '',
         cell: ({ row }) => (
           <IconActions>
+            <IconAction icon={Eye} label="Ver detalle" onClick={() => setDetail(row.original)} />
             <IconAction icon={Pencil} label="Editar" onClick={() => setEditing(row.original)} />
             <IconAction
               icon={Trash2}
@@ -160,6 +163,15 @@ function ProyectosContent() {
         onGlobalFilterChange={setSearch}
         rowClassName={(p) => highlightClass(p.id)}
         emptyState={<EmptyState title="Sin proyectos" description="Crea tu primer proyecto con el botón de arriba." />}
+      />
+
+      <ProjectDetailDialog
+        project={detail}
+        onOpenChange={(next) => !next && setDetail(null)}
+        onEdit={(p) => {
+          setDetail(null);
+          setEditing(p);
+        }}
       />
 
       {activeWorkspaceId && editing && (

@@ -837,6 +837,8 @@ export interface Project {
   description?: string | null;
   status: string;
   emoji?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Application {

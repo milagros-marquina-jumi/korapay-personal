@@ -1,5 +1,6 @@
 'use client';
 
+import { StatusBadge, statusLabel } from '@korapay/ui';
 import { useQuery } from '@tanstack/react-query';
 import { Mail, SlidersHorizontal } from 'lucide-react';
 import Link from 'next/link';
@@ -8,6 +9,7 @@ import { CatalogManager } from '@/components/catalog/catalog-manager';
 import { type CompanyContract, CompanyContractsDialog } from '@/components/catalog/company-contracts-dialog';
 import { ExchangeRatePanel } from '@/components/catalog/exchange-rate-panel';
 import { WorkspaceManager } from '@/components/catalog/workspace-manager';
+import { PROJECT_STATUS_OPTIONS } from '@/components/forms/project-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { SavingBucketsManager } from '@/components/savings/saving-buckets-manager';
@@ -15,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiFetch } from '@/lib/api';
 import { queryKeys } from '@/lib/query-keys';
+import { formatDateLong } from '@/lib/utils';
 
 interface GlobalCompanyItem {
   id: string;
@@ -121,6 +124,72 @@ function detalleEmpresa(item: { [key: string]: unknown }) {
         </div>
       )}
     </div>
+  );
+}
+
+function searchProyecto(item: { [key: string]: unknown }) {
+  return [text(item.name), text(item.description), statusLabel(text(item.status))].join(' ');
+}
+
+function displayProyecto(item: { [key: string]: unknown }) {
+  const descripcion = text(item.description);
+  return (
+    <span className="flex min-w-0 flex-col">
+      <span className="flex items-center gap-2">
+        <span className="truncate">{text(item.name)}</span>
+        <StatusBadge status={text(item.status) || 'ACTIVE'} />
+      </span>
+      {descripcion && <span className="truncate text-muted-foreground text-xs">{descripcion}</span>}
+    </span>
+  );
+}
+
+function detalleProyecto(item: { [key: string]: unknown }) {
+  const descripcion = text(item.description);
+  const creado = text(item.createdAt);
+  const actualizado = text(item.updatedAt);
+  return (
+    <div className="space-y-3">
+      <dl className="divide-y rounded-xl border text-sm">
+        <LineaDetalle label="Estado" value={<StatusBadge status={text(item.status) || 'ACTIVE'} />} />
+        <LineaDetalle label="Creado" value={creado ? formatDateLong(creado) : '—'} />
+        <LineaDetalle label="Última actualización" value={actualizado ? formatDateLong(actualizado) : '—'} />
+      </dl>
+      <div className="rounded-xl border px-4 py-3">
+        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Descripción</p>
+        <p className="mt-1 whitespace-pre-wrap text-sm">
+          {descripcion || <span className="text-muted-foreground">Sin descripción</span>}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function searchAplicacion(item: { [key: string]: unknown }) {
+  return [text(item.name), text(item.provider), text(item.category)].join(' ');
+}
+
+function displayAplicacion(item: { [key: string]: unknown }) {
+  const proveedor = text(item.provider);
+  const categoria = text(item.category);
+  return (
+    <span className="flex min-w-0 flex-col">
+      <span className="truncate">{text(item.name)}</span>
+      {(proveedor || categoria) && (
+        <span className="truncate text-muted-foreground text-xs">
+          {[proveedor, categoria].filter(Boolean).join(' · ')}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function detalleAplicacion(item: { [key: string]: unknown }) {
+  return (
+    <dl className="divide-y rounded-xl border text-sm">
+      <LineaDetalle label="Proveedor" value={text(item.provider) || '—'} />
+      <LineaDetalle label="Categoría" value={text(item.category) || '—'} />
+    </dl>
   );
 }
 
@@ -442,7 +511,10 @@ export default function ConfiguracionPage() {
                         { name: 'provider', label: 'Proveedor' },
                         { name: 'category', label: 'Categoría' },
                       ]}
-                      display={(a) => String(a.name)}
+                      display={displayAplicacion}
+                      renderDetail={detalleAplicacion}
+                      searchable
+                      searchText={searchAplicacion}
                     />
                   </CardContent>
                 </Card>
@@ -456,25 +528,17 @@ export default function ConfiguracionPage() {
                       fields={[
                         { name: 'name', label: 'Nombre', required: true },
                         { name: 'description', label: 'Descripción' },
-                        { name: 'emoji', label: 'Emoji', placeholder: '📦' },
+                        {
+                          name: 'status',
+                          label: 'Estado',
+                          required: true,
+                          options: [...PROJECT_STATUS_OPTIONS],
+                        },
                       ]}
-                      display={(p) => `${p.emoji ?? ''} ${p.name}`}
-                    />
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <CatalogManager
-                      title="Personas (equipo)"
-                      endpoint="/people"
-                      queryKey={queryKeys.people(ws)}
-                      extraBody={{ workspaceId: ws, kind: 'TEAM' }}
-                      fields={[
-                        { name: 'name', label: 'Nombre', required: true },
-                        { name: 'email', label: 'Email' },
-                        { name: 'phone', label: 'Teléfono' },
-                      ]}
-                      display={(p) => String(p.name)}
+                      display={displayProyecto}
+                      renderDetail={detalleProyecto}
+                      searchable
+                      searchText={searchProyecto}
                     />
                   </CardContent>
                 </Card>

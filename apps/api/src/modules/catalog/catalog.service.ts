@@ -59,7 +59,13 @@ export class CatalogService {
     });
   }
 
-  async createProject(data: { workspaceId: string; name: string; description?: string; emoji?: string }) {
+  async createProject(data: {
+    workspaceId: string;
+    name: string;
+    description?: string;
+    emoji?: string;
+    status?: string;
+  }) {
     const dup = await this.prisma.project.findFirst({
       where: { workspaceId: data.workspaceId, name: { equals: data.name, mode: 'insensitive' }, deletedAt: null },
     });

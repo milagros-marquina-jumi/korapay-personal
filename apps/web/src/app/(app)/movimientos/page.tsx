@@ -211,17 +211,22 @@ export default function MovimientosPage() {
       },
       {
         accessorKey: 'date',
-        size: 130,
+        size: 110,
         header: ({ column }) => <SortableHeader column={column} label="Fecha" />,
-        cell: ({ row }) => <span className="text-sm capitalize">{formatMonthYear(row.original.date)}</span>,
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-sm capitalize text-muted-foreground">
+            {formatMonthYear(row.original.date)}
+          </span>
+        ),
       },
       {
         accessorKey: 'concept',
-        size: 220,
+        size: 320,
+        minSize: 220,
         header: ({ column }) => <SortableHeader column={column} label="Concepto" />,
         cell: ({ row }) => (
-          <span className="flex max-w-[22rem] items-center gap-1.5 font-medium">
-            <span className="truncate" title={row.original.concept}>
+          <span className="flex min-w-0 items-center gap-1.5 font-medium">
+            <span className="min-w-0 truncate" title={row.original.concept}>
               {row.original.concept}
             </span>
             {row.original.isRecurring && (
@@ -240,12 +245,25 @@ export default function MovimientosPage() {
       },
       {
         id: 'category',
-        size: 160,
+        size: 152,
         header: 'Categoría',
-        cell: ({ row }) => <span className="text-muted-foreground">{row.original.category?.name ?? '-'}</span>,
+        cell: ({ row }) => {
+          const nombre = row.original.category?.name;
+          if (!nombre) return <span className="text-muted-foreground/50">—</span>;
+          return (
+            <div className="flex min-w-0">
+              <span className="min-w-0 rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                <span className="block truncate" title={nombre}>
+                  {nombre}
+                </span>
+              </span>
+            </div>
+          );
+        },
       },
       {
         id: 'amount',
+        size: 160,
         accessorFn: (r) => Number(r.amountBase),
         sortingFn: 'basic',
         header: ({ column }) => <SortableHeader column={column} label="Monto" className="ml-auto" />,
@@ -279,10 +297,10 @@ export default function MovimientosPage() {
       },
       {
         accessorKey: 'status',
-        size: 120,
+        size: 152,
         header: 'Estado',
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             {activeWorkspaceId && !row.original.isRecurring ? (
               <StatusToggle
                 transactionId={row.original.id}
@@ -298,7 +316,7 @@ export default function MovimientosPage() {
       },
       {
         id: 'actions',
-        size: 110,
+        size: 168,
         header: '',
         cell: ({ row }) => (
           <IconActions>

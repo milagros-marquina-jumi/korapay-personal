@@ -1425,16 +1425,27 @@ interface LedgerSnapshot {
   description?: string | null;
 }
 
-function snapshotLines(snap: LedgerSnapshot): string[] {
-  const lines: string[] = [];
-  if (snap.date) lines.push(`Fecha: ${formatDate(snap.date)}`);
-  if (snap.type) lines.push(`Tipo: ${TYPE_LABELS[snap.type] ?? snap.type}`);
-  if (snap.paidAmount !== undefined) lines.push(`Pagado: ${formatMoney(snap.paidAmount, 'PEN')}`);
-  if (snap.debtAmount !== undefined) lines.push(`Deuda: ${formatMoney(snap.debtAmount, 'PEN')}`);
-  if (snap.pendingAmount !== undefined) lines.push(`Falta pagar: ${formatMoney(snap.pendingAmount, 'PEN')}`);
-  if (snap.status) lines.push(`Estado: ${statusLabel(snap.status)}`);
-  if (snap.description) lines.push(`Descripción: ${snap.description}`);
-  return lines;
+function snapshotFields(snap: LedgerSnapshot): { key: string; line: string }[] {
+  const fields: { key: string; line: string }[] = [];
+  if (snap.date) fields.push({ key: 'date', line: `Fecha: ${formatDate(snap.date)}` });
+  if (snap.type) fields.push({ key: 'type', line: `Tipo: ${TYPE_LABELS[snap.type] ?? snap.type}` });
+  if (snap.paidAmount !== undefined)
+    fields.push({ key: 'paidAmount', line: `Pagado: ${formatMoney(snap.paidAmount, 'PEN')}` });
+  if (snap.debtAmount !== undefined)
+    fields.push({ key: 'debtAmount', line: `Deuda: ${formatMoney(snap.debtAmount, 'PEN')}` });
+  if (snap.pendingAmount !== undefined)
+    fields.push({ key: 'pendingAmount', line: `Falta pagar: ${formatMoney(snap.pendingAmount, 'PEN')}` });
+  if (snap.status) fields.push({ key: 'status', line: `Estado: ${statusLabel(snap.status)}` });
+  if (snap.description) fields.push({ key: 'description', line: `Descripción: ${snap.description}` });
+  return fields;
+}
+
+function tituloRegistro(snap?: LedgerSnapshot): string | null {
+  if (!snap) return null;
+  const descripcion = snap.description?.trim();
+  if (descripcion) return descripcion;
+  if (snap.type) return TYPE_LABELS[snap.type] ?? snap.type;
+  return null;
 }
 
 function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
@@ -1444,29 +1455,40 @@ function AuditDetail({ entry }: { entry: TalentAuditEntry }) {
   if (entry.action === 'DELETE' && before) {
     return (
       <div className="space-y-0.5 text-xs text-muted-foreground">
-        <p className="font-medium text-foreground">Registro eliminado</p>
-        {snapshotLines(before).map((l) => (
-          <p key={l}>{l}</p>
-        ))}
+        <p className="font-medium text-foreground">
+          Registro eliminado{tituloRegistro(before) ? `: ${tituloRegistro(before)}` : ''}
+        </p>
+        {snapshotFields(before)
+          .filter((f) => f.key !== 'description')
+          .map((f) => (
+            <p key={f.key}>{f.line}</p>
+          ))}
       </div>
     );
   }
 
   if (entry.action === 'UPDATE' && before && after) {
-    const changed = snapshotLines(after).filter((line, i) => line !== snapshotLines(before)[i]);
+    const previas = new Map(snapshotFields(before).map((f) => [f.key, f.line]));
+    const changed = snapshotFields(after).filter((f) => previas.get(f.key) !== f.line);
+    const titulo = tituloRegistro(after) ?? tituloRegistro(before);
     return (
       <div className="space-y-0.5 text-xs text-muted-foreground">
-        {changed.length ? changed.map((l) => <p key={l}>{l}</p>) : <p>Sin cambios de valor</p>}
+        {titulo && <p className="font-medium text-foreground">{titulo}</p>}
+        {changed.length ? changed.map((f) => <p key={f.key}>{f.line}</p>) : <p>Sin cambios de valor</p>}
       </div>
     );
   }
 
   if (after) {
+    const titulo = tituloRegistro(after);
     return (
       <div className="space-y-0.5 text-xs text-muted-foreground">
-        {snapshotLines(after).map((l) => (
-          <p key={l}>{l}</p>
-        ))}
+        {titulo && <p className="font-medium text-foreground">{titulo}</p>}
+        {snapshotFields(after)
+          .filter((f) => f.key !== 'description')
+          .map((f) => (
+            <p key={f.key}>{f.line}</p>
+          ))}
       </div>
     );
   }

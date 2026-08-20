@@ -23,6 +23,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   source: { year: number; month: number; count: number } | null;
   type?: string;
+  itemLabel?: { singular: string; plural: string };
 }
 
 interface DuplicateMonthResult {
@@ -31,7 +32,14 @@ interface DuplicateMonthResult {
   total: number;
 }
 
-export function DuplicateMonthDialog({ workspaceId, open, onOpenChange, source, type }: Readonly<Props>) {
+export function DuplicateMonthDialog({
+  workspaceId,
+  open,
+  onOpenChange,
+  source,
+  type,
+  itemLabel = { singular: 'movimiento', plural: 'movimientos' },
+}: Readonly<Props>) {
   const queryClient = useQueryClient();
   const [year, setYear] = useState(new Date().getUTCFullYear());
   const [month, setMonth] = useState(new Date().getUTCMonth() + 1);
@@ -77,7 +85,7 @@ export function DuplicateMonthDialog({ workspaceId, open, onOpenChange, source, 
           <DialogTitle>Copiar el mes completo</DialogTitle>
           <DialogDescription>
             {source
-              ? `Se copiarán los ${source.count} costos de ${MONTH_NAMES[source.month - 1]} ${source.year} como pendientes en el mes que elijas.`
+              ? `Se copiarán los ${source.count} ${source.count === 1 ? itemLabel.singular : itemLabel.plural} de ${MONTH_NAMES[source.month - 1]} ${source.year} como pendientes en el mes que elijas.`
               : ''}
           </DialogDescription>
         </DialogHeader>
@@ -116,7 +124,9 @@ export function DuplicateMonthDialog({ workspaceId, open, onOpenChange, source, 
         </div>
 
         {mismoMes && <p className="text-destructive text-xs">Elige un mes distinto al de origen.</p>}
-        <p className="text-muted-foreground text-xs">Los costos que ya existan en el mes destino no se duplican.</p>
+        <p className="text-muted-foreground text-xs">
+          Lo que ya exista en el mes destino con el mismo concepto no se duplica.
+        </p>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

@@ -4,7 +4,7 @@ import { formatMoney } from '@korapay/domain';
 import { EmptyState, StatusBadge, statusLabel } from '@korapay/ui';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
-import { ChevronDown, ChevronRight, Copy, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Copy, CopyPlus, Eye, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
@@ -14,6 +14,7 @@ import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
+import { DuplicateMonthDialog } from '@/components/forms/duplicate-month-dialog';
 import { DuplicateTransactionDialog } from '@/components/forms/duplicate-transaction-dialog';
 import { RecurrenceHistory } from '@/components/forms/recurrence-history';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
@@ -48,6 +49,7 @@ export default function MovimientosPage() {
   const [usdDetail, setUsdDetail] = useState<Transaction | null>(null);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [duplicating, setDuplicating] = useState<Transaction | null>(null);
+  const [duplicatingMonth, setDuplicatingMonth] = useState<{ year: number; month: number; count: number } | null>(null);
   const { markNew, highlightClass } = useHighlightNew();
   const isPersonalScope = activeWorkspace?.type === 'PERSONAL' || activeWorkspace?.type === 'SHARED';
 
@@ -478,6 +480,16 @@ export default function MovimientosPage() {
             isOpen={isMonthOpen}
             onToggle={toggleMonth}
             countLabel={(n) => `${n} ${n === 1 ? 'movimiento' : 'movimientos'}`}
+            headerAction={(group) => {
+              const [gy = 0, gm = 1] = group.key.split('-').map(Number);
+              return (
+                <IconAction
+                  icon={CopyPlus}
+                  label="Copiar el mes completo"
+                  onClick={() => setDuplicatingMonth({ year: gy, month: gm, count: group.items.length })}
+                />
+              );
+            }}
           >
             {(group) => (
               <DataTable
@@ -524,6 +536,15 @@ export default function MovimientosPage() {
           transaction={duplicating}
           onOpenChange={(next) => !next && setDuplicating(null)}
           onDuplicated={markNew}
+        />
+      )}
+
+      {activeWorkspaceId && (
+        <DuplicateMonthDialog
+          workspaceId={activeWorkspaceId}
+          open={duplicatingMonth !== null}
+          source={duplicatingMonth}
+          onOpenChange={(next) => !next && setDuplicatingMonth(null)}
         />
       )}
     </PageShell>

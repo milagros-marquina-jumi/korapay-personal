@@ -21,25 +21,25 @@ import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
 
 export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
-  const { data: allYears } = useQuery({
-    queryKey: queryKeys.personalReports(workspaceId, { years: true }),
+  const { data: todos } = useQuery({
+    queryKey: queryKeys.personalReports(workspaceId, {}),
     queryFn: () => apiFetch<PersonalReports>(`/reports/personal?workspaceId=${workspaceId}`),
     enabled: !!workspaceId,
-    select: (r) => r.years ?? [],
   });
+  const allYears = todos?.years;
 
   const [year, setYear] = useDefaultYear(allYears);
   const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
 
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.personalReports(workspaceId, selectedYear ? { year: selectedYear } : {}),
-    queryFn: () =>
-      apiFetch<PersonalReports>(
-        `/reports/personal?workspaceId=${workspaceId}${selectedYear ? `&year=${selectedYear}` : ''}`,
-      ),
-    enabled: !!workspaceId,
+  const { data: delAnio, isLoading: cargandoAnio } = useQuery({
+    queryKey: queryKeys.personalReports(workspaceId, { year: selectedYear }),
+    queryFn: () => apiFetch<PersonalReports>(`/reports/personal?workspaceId=${workspaceId}&year=${selectedYear}`),
+    enabled: !!workspaceId && !!selectedYear,
     placeholderData: (prev) => prev,
   });
+
+  const data = selectedYear ? delAnio : todos;
+  const isLoading = selectedYear ? cargandoAnio && !delAnio : !todos;
 
   const yearFilter = (
     <FilterSelect

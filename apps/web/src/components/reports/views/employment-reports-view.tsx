@@ -43,12 +43,12 @@ const COMPANY_SERIES = [{ key: 'total', name: 'Total recibido', color: INCOME_CO
 const OWN_COMPANY_CONCEPT = 'Empresas';
 
 export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: string }>) {
-  const { data: allYears } = useQuery({
-    queryKey: queryKeys.employmentReports(workspaceId, { years: true }),
+  const { data: todos } = useQuery({
+    queryKey: queryKeys.employmentReports(workspaceId, {}),
     queryFn: () => apiFetch<EmploymentReports>(`/reports/employment?workspaceId=${workspaceId}`),
     enabled: !!workspaceId,
-    select: (r) => r.years ?? [],
   });
+  const allYears = todos?.years;
 
   const [year, setYear] = useDefaultYear(allYears);
   const { data: companiesCatalog } = useQuery({
@@ -62,15 +62,15 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const [durationLimit, setDurationLimit] = useState<string>('5');
   const selectedYear = year !== FILTER_ALL ? Number(year) : undefined;
 
-  const { data, isLoading } = useQuery({
-    queryKey: queryKeys.employmentReports(workspaceId, selectedYear ? { year: selectedYear } : {}),
-    queryFn: () =>
-      apiFetch<EmploymentReports>(
-        `/reports/employment?workspaceId=${workspaceId}${selectedYear ? `&year=${selectedYear}` : ''}`,
-      ),
-    enabled: !!workspaceId,
+  const { data: delAnio, isLoading: cargandoAnio } = useQuery({
+    queryKey: queryKeys.employmentReports(workspaceId, { year: selectedYear }),
+    queryFn: () => apiFetch<EmploymentReports>(`/reports/employment?workspaceId=${workspaceId}&year=${selectedYear}`),
+    enabled: !!workspaceId && !!selectedYear,
     placeholderData: (prev) => prev,
   });
+
+  const data = selectedYear ? delAnio : todos;
+  const isLoading = selectedYear ? cargandoAnio && !delAnio : !todos;
 
   const { data: renta } = useQuery({
     queryKey: queryKeys.taxObligations(workspaceId),

@@ -25,6 +25,7 @@ import type { Application, Paginated, Project, Transaction } from '@/lib/api.typ
 import { MONTH_NAMES } from '@/lib/months';
 import { queryKeys } from '@/lib/query-keys';
 import { useDefaultYear } from '@/lib/use-default-year';
+import { useOpenMonth } from '@/lib/use-open-month';
 import { cn, formatDate, formatMonthYear } from '@/lib/utils';
 
 const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'secondary' | 'destructive'> = {
@@ -51,8 +52,6 @@ function CostosContent() {
   const [detailOpen, setDetailOpen] = useState<Transaction | null>(null);
   const [duplicating, setDuplicating] = useState<Transaction | null>(null);
   const [duplicatingMonth, setDuplicatingMonth] = useState<{ year: number; month: number; count: number } | null>(null);
-  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set());
-  const [touched, setTouched] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: queryKeys.transactions(ws, { type: 'BUSINESS_COST', all: true }),
@@ -184,17 +183,8 @@ function CostosContent() {
     projectId !== FILTER_ALL ||
     month !== FILTER_ALL;
 
-  const isOpen = (label: string) => {
-    if (touched) return expandedMonths.has(label);
-    if (filtering) return true;
-    return label === defaultKey;
-  };
-
-  const toggle = (label: string) => {
-    const willClose = isOpen(label);
-    setExpandedMonths(willClose ? new Set() : new Set([label]));
-    setTouched(true);
-  };
+  const { isOpen: isOpenGuardado, toggle } = useOpenMonth('costos-mimotech-meses', defaultKey);
+  const isOpen = (label: string) => (filtering ? true : isOpenGuardado(label));
 
   const hasFilters =
     search !== '' ||
@@ -520,6 +510,7 @@ function CostosContent() {
         <DuplicateMonthDialog
           workspaceId={ws}
           type="BUSINESS_COST"
+          itemLabel={{ singular: 'costo', plural: 'costos' }}
           open={duplicatingMonth !== null}
           source={duplicatingMonth}
           onOpenChange={(next) => !next && setDuplicatingMonth(null)}

@@ -2,6 +2,7 @@ import { NON_CONFIRMABLE_TYPES } from '@korapay/domain';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import Decimal from 'decimal.js';
 import { PrismaService } from '@/common/prisma/prisma.service';
+import { ExchangeRateService } from '@/modules/exchange-rate/exchange-rate.service';
 import type { UpdateDetectedDto } from './detected-transactions.dto';
 
 const INCOME_LIKE_TYPES = ['REFUND', 'REVERSAL'];
@@ -33,7 +34,10 @@ interface ConfirmData {
 
 @Injectable()
 export class DetectedTransactionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly exchangeRateService: ExchangeRateService,
+  ) {}
 
   async findAll(
     profileId: string,
@@ -172,8 +176,16 @@ export class DetectedTransactionsService {
     const amount = data.amount ?? detected.amount.toString();
     const currency = data.currency ?? detected.currency;
     const occurredAt = data.occurredAt ? new Date(data.occurredAt) : detected.occurredAt;
-    const exchangeRate = data.exchangeRate ?? (detected.exchangeRate ? detected.exchangeRate.toString() : '1');
-    const amountBase = new Decimal(amount).times(new Decimal(exchangeRate)).toFixed(2);
+    // En soles la tasa es 1. En dolares se toma la del correo y, si no vino, la
+    // real del dia: nunca 1, que registraria el monto sin convertir.
+    let exchangeRate = data.exchangeRate ?? detected.exchangeRate?.toString() ?? '1';
+    if (currency !== 'PEN' && !data.exchangeRate && !detected.exchangeRate) {
+      exchangeRate = await this.exchangeRateService.getRateForDate(occurredAt.toISOString().slice(0, 10));
+    }
+    const amountBase =
+      currency === 'PEN'
+        ? new Decimal(amount).toFixed(2)
+        : new Decimal(amount).times(new Decimal(exchangeRate)).toFixed(2);
 
     const banco = data.bank ?? (await this.bancoDelCatalogo(detected.bankName, detected.bankCode));
     const tags = ['EMAIL_IMPORT'];

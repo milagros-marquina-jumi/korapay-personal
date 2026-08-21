@@ -31,3 +31,6 @@ apps/web/public/fallback-*.js
 
 # Respaldos de produccion (nunca versionar)
 backup-prod/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

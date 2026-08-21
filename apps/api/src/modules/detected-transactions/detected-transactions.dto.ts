@@ -1,14 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsIn,
-  IsNotEmpty,
-  IsNumberString,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsArray, IsDateString, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
 import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class ListDetectedDto {
@@ -110,10 +101,6 @@ export class ConfirmDetectedDto {
   @VacioComoNulo()
   @IsNumberString()
   exchangeRate?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  createRule?: boolean;
 }
 
 export class BulkActionDto {

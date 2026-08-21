@@ -29,7 +29,6 @@ interface ConfirmData {
   amount?: string;
   currency?: string;
   exchangeRate?: string;
-  createRule?: boolean;
 }
 
 @Injectable()
@@ -226,22 +225,6 @@ export class DetectedTransactionsService {
       });
       return { transaction, updated };
     });
-
-    if (data.createRule && detected.merchantNormalized) {
-      await this.prisma.reconciliationRule.create({
-        data: {
-          profileId,
-          workspaceId: data.workspaceId,
-          name: `Auto: ${detected.merchantNormalized}`,
-          merchantPattern: detected.merchantNormalized,
-          bankCode: detected.bankCode,
-          targetWorkspaceId: data.workspaceId,
-          targetAccountId: data.accountId ?? null,
-          targetCategoryId: data.categoryId ?? null,
-          autoConfirm: false,
-        },
-      });
-    }
 
     return {
       status: 'confirmed',

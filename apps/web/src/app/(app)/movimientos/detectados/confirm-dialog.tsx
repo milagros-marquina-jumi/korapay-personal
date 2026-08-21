@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -35,7 +34,6 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
   const [categoryId, setCategoryId] = useState(detected.categoryId ?? '');
   const [bank, setBank] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
-  const [createRule, setCreateRule] = useState(false);
 
   const { data: accounts } = useQuery({
     queryKey: queryKeys.accounts(workspaceId),
@@ -87,7 +85,6 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
           categoryId: categoryId || undefined,
           bank: bank || undefined,
           paymentMethod: paymentMethod || undefined,
-          createRule,
         }),
       }),
     onSuccess: () => {
@@ -206,13 +203,6 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm">
-            <Checkbox id="createRule" checked={createRule} onCheckedChange={(v) => setCreateRule(v === true)} />
-            <Label htmlFor="createRule" className="font-normal">
-              Crear regla para futuros movimientos similares
-            </Label>
           </div>
         </div>
         <DialogFooter>

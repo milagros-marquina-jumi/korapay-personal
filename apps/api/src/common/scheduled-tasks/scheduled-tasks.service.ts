@@ -51,11 +51,13 @@ export class ScheduledTasksService {
     const today = new Date();
     const startOfMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
 
+    // Sin fecha limite el vencimiento se mide contra la fecha del movimiento:
+    // si no, un pendiente sin limite nunca se marcaria como vencido.
     return this.prisma.transaction.updateMany({
       where: {
         deletedAt: null,
         status: { in: ['PENDING', 'PARTIAL'] },
-        dueDate: { not: null, lt: startOfMonth },
+        OR: [{ dueDate: { not: null, lt: startOfMonth } }, { dueDate: null, date: { lt: startOfMonth } }],
       },
       data: { status: 'OVERDUE' },
     });

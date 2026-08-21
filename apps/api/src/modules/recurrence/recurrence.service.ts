@@ -4,6 +4,9 @@ import type { CreateRecurrenceDto, UpdateRecurrenceDto } from './recurrence.dto'
 
 const FIXED_TAG = 'Fijo';
 
+// Tope de periodos que una regla atrasada recupera por ejecucion.
+const MAX_ATRASO = 24;
+
 export function siguienteFecha(desde: Date, frequency: string, interval = 1): Date {
   const d = new Date(desde);
   const pasos = Math.max(interval, 1);
@@ -47,7 +50,7 @@ export class RecurrenceService {
 
   async create(data: CreateRecurrenceDto) {
     const inicio = new Date(data.startDate);
-    return this.prisma.recurrenceRule.create({
+    const regla = await this.prisma.recurrenceRule.create({
       data: {
         workspaceId: data.workspaceId,
         frequency: data.frequency,
@@ -67,6 +70,8 @@ export class RecurrenceService {
         status: 'ACTIVE',
       },
     });
+    await this.generarPendientes();
+    return this.findOne(regla.id, data.workspaceId);
   }
 
   async update(id: string, workspaceId: string, data: UpdateRecurrenceDto) {
@@ -127,68 +132,70 @@ export class RecurrenceService {
     for (const regla of reglas) {
       if (!regla.nextRunAt || !regla.workspaceId || !regla.concept || !regla.amount) continue;
 
-      const fecha = regla.nextRunAt;
-      if (regla.endDate && fecha > regla.endDate) {
-        await this.finalizar(regla.id);
-        finalizadas += 1;
-        continue;
-      }
-      if (regla.endAfterCount && regla.generatedCount >= regla.endAfterCount) {
-        await this.finalizar(regla.id);
-        finalizadas += 1;
-        continue;
-      }
+      let fecha = regla.nextRunAt;
+      let creadas = regla.generatedCount;
+      let termino = false;
 
-      const yaExiste = await this.prisma.transaction.findFirst({
-        where: { recurrenceRuleId: regla.id, date: fecha, deletedAt: null },
-        select: { id: true },
-      });
+      // Una regla atrasada se pone al dia en una sola pasada, sin esperar un cron por periodo.
+      while (fecha <= limite && creadas - regla.generatedCount < MAX_ATRASO) {
+        if (regla.endDate && fecha > regla.endDate) {
+          termino = true;
+          break;
+        }
+        if (regla.endAfterCount && creadas >= regla.endAfterCount) {
+          termino = true;
+          break;
+        }
 
-      if (!yaExiste) {
-        const tags: string[] = [];
-        if (regla.isFixedExpense) tags.push(FIXED_TAG);
-        if (regla.paymentMethod) tags.push(regla.paymentMethod);
-        if (regla.bank) tags.push(regla.bank);
-
-        await this.prisma.transaction.create({
-          data: {
-            workspaceId: regla.workspaceId,
-            type: regla.type ?? 'EXPENSE',
-            concept: regla.concept,
-            date: fecha,
-            amountOriginal: regla.amount,
-            currency: regla.currency ?? 'PEN',
-            amountBase: regla.amount,
-            categoryId: regla.categoryId,
-            notes: regla.notes,
-            status: 'PENDING',
-            isRecurring: true,
-            recurrenceRuleId: regla.id,
-            tags,
-          },
+        const yaExiste = await this.prisma.transaction.findFirst({
+          where: { recurrenceRuleId: regla.id, date: fecha, deletedAt: null },
+          select: { id: true },
         });
-        generadas += 1;
+
+        if (!yaExiste) {
+          const tags: string[] = [];
+          if (regla.isFixedExpense) tags.push(FIXED_TAG);
+          if (regla.paymentMethod) tags.push(regla.paymentMethod);
+          if (regla.bank) tags.push(regla.bank);
+
+          await this.prisma.transaction.create({
+            data: {
+              workspaceId: regla.workspaceId,
+              type: regla.type ?? 'EXPENSE',
+              concept: regla.concept,
+              date: fecha,
+              amountOriginal: regla.amount,
+              currency: regla.currency ?? 'PEN',
+              amountBase: regla.amount,
+              categoryId: regla.categoryId,
+              notes: regla.notes,
+              status: 'PENDING',
+              isRecurring: true,
+              recurrenceRuleId: regla.id,
+              tags,
+            },
+          });
+          generadas += 1;
+        }
+
+        creadas += 1;
+        fecha = siguienteFecha(fecha, regla.frequency, regla.interval);
       }
 
-      const siguiente = siguienteFecha(fecha, regla.frequency, regla.interval);
-      const alcanzoFin = regla.endDate && siguiente > regla.endDate;
-      const alcanzoConteo = regla.endAfterCount && regla.generatedCount + 1 >= regla.endAfterCount;
+      if (regla.endDate && fecha > regla.endDate) termino = true;
+      if (regla.endAfterCount && creadas >= regla.endAfterCount) termino = true;
 
       await this.prisma.recurrenceRule.update({
         where: { id: regla.id },
         data: {
-          lastRunAt: fecha,
-          generatedCount: { increment: yaExiste ? 0 : 1 },
-          ...(alcanzoFin || alcanzoConteo ? { status: 'FINISHED', nextRunAt: null } : { nextRunAt: siguiente }),
+          lastRunAt: new Date(),
+          generatedCount: creadas,
+          ...(termino ? { status: 'FINISHED', nextRunAt: null } : { nextRunAt: fecha }),
         },
       });
-      if (alcanzoFin || alcanzoConteo) finalizadas += 1;
+      if (termino) finalizadas += 1;
     }
 
     return { generadas, finalizadas };
-  }
-
-  private async finalizar(id: string) {
-    await this.prisma.recurrenceRule.update({ where: { id }, data: { status: 'FINISHED', nextRunAt: null } });
   }
 }

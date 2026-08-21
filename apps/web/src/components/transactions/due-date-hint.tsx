@@ -23,15 +23,19 @@ export function DueDateHint({
   transaction,
   compact = false,
 }: Readonly<{ transaction: Transaction; compact?: boolean }>) {
-  if (!transaction.dueDate || transaction.status === 'PAID' || transaction.status === 'CANCELLED') return null;
+  if (transaction.status === 'PAID' || transaction.status === 'CANCELLED') return null;
 
-  const days = daysUntilDue(transaction.dueDate);
+  // Sin fecha limite el vencimiento se mide contra la fecha del movimiento.
+  const limite = transaction.dueDate ?? transaction.date;
+  if (!limite) return null;
+
+  const days = daysUntilDue(limite);
   const vencido = days < 0;
   if (!vencido && days > WARN_WINDOW_DAYS) return null;
 
   return (
     <span
-      title={`${dueLabel(days)} · Fecha límite: ${formatDate(transaction.dueDate)}`}
+      title={`${dueLabel(days)} · Fecha límite: ${formatDate(limite)}`}
       className={cn(
         'inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 font-medium text-[10px]',
         vencido || days === 0 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning',

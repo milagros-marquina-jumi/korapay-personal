@@ -56,6 +56,12 @@ const TYPE_OPTIONS = [
   { value: 'TEAM_PAYMENT', label: 'Pago equipo' },
 ] as const;
 
+function siguienteMes(fecha: string): string {
+  const d = new Date(`${fecha.slice(0, 10)}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 const TYPES_BY_WORKSPACE: Record<string, string[]> = {
   PERSONAL: ['INCOME', 'EXPENSE'],
   SHARED: ['INCOME', 'EXPENSE'],
@@ -81,6 +87,7 @@ const schema = z.object({
   paymentMethod: z.string().optional(),
   bank: z.string().optional(),
   isFixed: z.boolean().optional(),
+  crearRecurrencia: z.boolean().optional(),
   notes: z.string().optional(),
   dueDate: z.string().optional(),
   isRecurring: z.boolean().optional(),
@@ -263,8 +270,8 @@ export function TransactionFormDialog({
   }, [open, transaction, reset, defaultType, catalogsReady, catalogs]);
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
-      const { recurrenceCount, paymentMethod, bank, projectIds, personId, isFixed, ...rest } = values;
+    mutationFn: async (values: FormValues) => {
+      const { recurrenceCount, paymentMethod, bank, projectIds, personId, isFixed, crearRecurrencia, ...rest } = values;
       const finalTags = buildTags({
         isFixedExpense: isFixed ?? false,
         applyExpenseType: rest.type === 'EXPENSE',
@@ -322,11 +329,36 @@ export function TransactionFormDialog({
         recurrenceCount: values.isRecurring && recurrenceCount ? Number(recurrenceCount) : undefined,
         dueDate: showDueDate ? values.dueDate || undefined : undefined,
       };
-      return apiFetch<{ id: string }>('/transactions', { method: 'POST', body: JSON.stringify(payload) });
+      const creado = await apiFetch<{ id: string }>('/transactions', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      if (crearRecurrencia) {
+        const inicio = siguienteMes(rest.date);
+        await apiFetch('/recurrences', {
+          method: 'POST',
+          body: JSON.stringify({
+            workspaceId,
+            type: rest.type,
+            concept: rest.concept,
+            amount: rest.amount,
+            currency: rest.currency,
+            frequency: 'MONTHLY',
+            startDate: inicio,
+            categoryId: categoriaFinal || undefined,
+            paymentMethod: paymentMethod || undefined,
+            bank: bank || undefined,
+            isFixedExpense: true,
+          }),
+        });
+      }
+      return creado;
     },
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['transactions', workspaceId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(workspaceId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.recurrences(workspaceId) });
       toast.success(editing ? 'Movimiento actualizado' : 'Movimiento creado');
       if (!editing && created?.id) onCreated?.(created.id);
       reset();
@@ -406,6 +438,27 @@ export function TransactionFormDialog({
                 </div>
               )}
             </div>
+          )}
+
+          {!editing && watch('isFixed') && watch('type') === 'EXPENSE' && (
+            <label
+              htmlFor="crearRecurrencia"
+              className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-brand/30 bg-brand-soft/40 px-3 py-2.5"
+            >
+              <Checkbox
+                id="crearRecurrencia"
+                checked={watch('crearRecurrencia') ?? false}
+                onCheckedChange={(v) => setValue('crearRecurrencia', v === true)}
+                className="mt-0.5"
+              />
+              <span className="space-y-0.5">
+                <span className="block font-medium text-sm">Repetir cada mes automáticamente</span>
+                <span className="block text-muted-foreground text-xs">
+                  Crea una recurrencia para que el próximo mes se registre solo. Podrás cancelarla en Movimientos ›
+                  Recurrentes.
+                </span>
+              </span>
+            </label>
           )}
 
           {showConcept && !showCompany && (
@@ -669,8 +722,8 @@ export function TransactionFormDialog({
               <div className="space-y-1.5">
                 <Label htmlFor="dueDate">Fecha límite de pago</Label>
                 <Input id="dueDate" type="date" {...register('dueDate')} />
-                <p className="text-xs text-muted-foreground">
-                  Si llega esa fecha y sigue sin pagarse, se marcará como vencido automáticamente.
+                <p className="text-muted-foreground text-xs">
+                  Solo si vence en otra fecha distinta a la de arriba. Si la dejas vacía se usa la fecha del movimiento.
                 </p>
               </div>
             )}

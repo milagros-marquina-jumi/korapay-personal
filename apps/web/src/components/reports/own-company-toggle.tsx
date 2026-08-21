@@ -4,13 +4,13 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-export const OWN_COMPANY = 'MIMOTECH';
-
 const STORAGE_KEY = 'korapay.showOwnCompany';
 
+// El nombre viene del catalogo (la empresa con syncTalentWorkspaceId). Sin ese
+// dato no hay empresa propia que ocultar: no se asume ningun nombre.
 export function useOwnCompanyVisibility(ownName?: string) {
   const [show, setShow] = useState(false);
-  const name = ownName ?? OWN_COMPANY;
+  const name = ownName;
 
   useEffect(() => {
     setShow(window.localStorage.getItem(STORAGE_KEY) === 'true');
@@ -24,7 +24,7 @@ export function useOwnCompanyVisibility(ownName?: string) {
     });
   }, []);
 
-  const isHidden = useCallback((n?: string | null) => !show && n === name, [show, name]);
+  const isHidden = useCallback((n?: string | null) => !!name && !show && n === name, [show, name]);
 
   return { show, toggle, isHidden, ownName: name };
 }
@@ -36,8 +36,9 @@ interface Props {
   name?: string;
 }
 
-export function OwnCompanyToggle({ show, onToggle, className, name = OWN_COMPANY }: Readonly<Props>) {
+export function OwnCompanyToggle({ show, onToggle, className, name }: Readonly<Props>) {
   const Icon = show ? Eye : EyeOff;
+  if (!name) return null;
   return (
     <button
       type="button"

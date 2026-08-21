@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Transaction } from '@/lib/api.types';
 import { cn, daysUntilDue, formatDate } from '@/lib/utils';
 
@@ -34,15 +35,25 @@ export function DueDateHint({
   if (!vencido && days > WARN_WINDOW_DAYS) return null;
 
   return (
-    <span
-      title={`${dueLabel(days)} · Fecha límite: ${formatDate(limite)}`}
-      className={cn(
-        'inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 font-medium text-[10px]',
-        vencido || days === 0 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning',
-      )}
-    >
-      <AlertTriangle className="size-3" aria-hidden />
-      {compact ? dueShort(days) : dueLabel(days)}
-    </span>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          className={cn(
+            'inline-flex shrink-0 cursor-help items-center gap-1 rounded-full px-1.5 py-0.5 font-medium text-[10px]',
+            vencido || days === 0 ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning',
+          )}
+        >
+          <AlertTriangle className="size-3" aria-hidden />
+          {compact ? dueShort(days) : dueLabel(days)}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="block font-medium">{dueLabel(days)}</span>
+        <span className="block text-muted-foreground">Fecha límite: {formatDate(limite)}</span>
+        {!transaction.dueDate && (
+          <span className="block text-muted-foreground">Sin límite propio: se usa la fecha del movimiento.</span>
+        )}
+      </TooltipContent>
+    </Tooltip>
   );
 }

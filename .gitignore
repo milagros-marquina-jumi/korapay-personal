@@ -2,6 +2,9 @@ node_modules/
 .next/
 dist/
 .turbo/
+
+# Cache incremental de TypeScript: cambia en cada build y genera conflictos
+*.tsbuildinfo
 *.log
 .env
 .env.local
@@ -31,3 +34,6 @@ apps/web/public/fallback-*.js
 
 # Respaldos de produccion (nunca versionar)
 backup-prod/
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

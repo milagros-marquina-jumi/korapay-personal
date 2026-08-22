@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useWorkspace } from '@/components/providers/workspace-provider';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,12 @@ import { apiFetch } from '@/lib/api';
 import type { Account, BankCatalog, Category, DetectedTransaction, PaymentMethodCatalog } from '@/lib/api.types';
 import { queryKeys } from '@/lib/query-keys';
 
+const INGRESO_TYPES = new Set(['REFUND', 'REVERSAL', 'TRANSFER_RECEIVED']);
+
+// Un consumo bancario solo cabe en un workspace que registre gastos propios.
+// Los de tipo EMPLOYMENT solo llevan ingresos por planilla.
+const TIPOS_DESTINO = new Set(['PERSONAL', 'SHARED', 'BUSINESS']);
+
 interface ConfirmDialogProps {
   detected: DetectedTransaction;
   open: boolean;
@@ -29,11 +36,19 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: ConfirmDialogProps) {
   const { workspaces } = useWorkspace();
-  const [workspaceId, setWorkspaceId] = useState(detected.workspaceId ?? workspaces[0]?.id ?? '');
+  const destinos = useMemo(
+    () => workspaces.filter((w) => w.status !== 'INACTIVE' && TIPOS_DESTINO.has(w.type)),
+    [workspaces],
+  );
+  const [workspaceId, setWorkspaceId] = useState(detected.workspaceId ?? destinos[0]?.id ?? '');
   const [accountId, setAccountId] = useState(detected.accountId ?? '');
   const [categoryId, setCategoryId] = useState(detected.categoryId ?? '');
   const [bank, setBank] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const [isFixedExpense, setIsFixedExpense] = useState(false);
+
+  // Mismo criterio que el backend: solo un egreso se clasifica en fijo/no fijo.
+  const esEgreso = !INGRESO_TYPES.has(detected.transactionType);
 
   const { data: accounts } = useQuery({
     queryKey: queryKeys.accounts(workspaceId),
@@ -41,7 +56,7 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
     enabled: open && !!workspaceId,
   });
 
-  const { data: categories, isSuccess: categoriesLoaded } = useQuery({
+  const { data: categories } = useQuery({
     queryKey: queryKeys.categories(workspaceId),
     queryFn: () => apiFetch<Category[]>(`/categories?workspaceId=${workspaceId}`),
     enabled: open && !!workspaceId,
@@ -58,6 +73,8 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
     queryFn: () => apiFetch<PaymentMethodCatalog[]>('/payment-methods'),
     enabled: open,
   });
+
+  const hayCategorias = (categories ?? []).length > 0;
 
   const bancoDetectado = useMemo(() => {
     const candidatos = [detected.bankName, detected.bankCode].filter(Boolean).map((v) => String(v).toLowerCase());
@@ -85,6 +102,7 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
           categoryId: categoryId || undefined,
           bank: bank || undefined,
           paymentMethod: paymentMethod || undefined,
+          ...(esEgreso && { isFixedExpense }),
         }),
       }),
     onSuccess: () => {
@@ -119,7 +137,7 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
                 <SelectValue placeholder="Selecciona un workspace" />
               </SelectTrigger>
               <SelectContent>
-                {workspaces.map((w) => (
+                {destinos.map((w) => (
                   <SelectItem key={w.id} value={w.id}>
                     {w.name}
                   </SelectItem>
@@ -144,26 +162,36 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
               </Select>
             </div>
           )}
-          <div className="space-y-2">
-            <Label>Categoría</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
-                <SelectValue
-                  placeholder={categoriesLoaded && !categories?.length ? 'Sin categorías' : 'Sin categoría'}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {(categories ?? []).map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {categoriesLoaded && !categories?.length && (
-              <p className="text-muted-foreground text-xs">
-                Este workspace aún no tiene categorías. Créalas en Configuración.
-              </p>
+          <div className="grid grid-cols-2 items-start gap-3">
+            {hayCategorias && (
+              <div className="space-y-2">
+                <Label>Categoría</Label>
+                <Select value={categoryId} onValueChange={setCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(categories ?? []).map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {esEgreso && (
+              <div className="flex h-10 flex-col justify-center">
+                <label htmlFor="detFijo" className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Checkbox
+                    id="detFijo"
+                    checked={isFixedExpense}
+                    onCheckedChange={(v) => setIsFixedExpense(v === true)}
+                  />
+                  <span className="font-medium">Gasto fijo</span>
+                </label>
+                <p className="mt-0.5 pl-6 text-muted-foreground text-xs">Solo lo clasifica en reportes.</p>
+              </div>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">

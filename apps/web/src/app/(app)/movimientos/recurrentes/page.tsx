@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
+import { RefreshButton } from '@/components/data-table/refresh-button';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { RecurrenceFormDialog } from '@/components/forms/recurrence-form-dialog';
 import { PageShell } from '@/components/layout/page-shell';
@@ -213,14 +214,17 @@ export default function RecurrentesPage() {
       description="Suscripciones y pagos que se generan solos cada periodo"
       action={
         ws && (
-          <RecurrenceFormDialog
-            workspaceId={ws}
-            trigger={
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Nueva recurrencia
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <RefreshButton workspaceId={ws} keys={[queryKeys.recurrences(ws), ['transactions', ws]]} />
+            <RecurrenceFormDialog
+              workspaceId={ws}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Nueva recurrencia
+                </Button>
+              }
+            />
+          </div>
         )
       }
     >

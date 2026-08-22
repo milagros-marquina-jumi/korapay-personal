@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsIn, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsNotEmpty,
+  IsNumberString,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { VacioComoNulo } from '@/common/dto/empty-as-null.decorator';
 
 export class ListDetectedDto {
@@ -78,6 +87,10 @@ export class ConfirmDetectedDto {
   @IsOptional()
   @IsString()
   paymentMethod?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isFixedExpense?: boolean;
 
   @IsOptional()
   @IsString()

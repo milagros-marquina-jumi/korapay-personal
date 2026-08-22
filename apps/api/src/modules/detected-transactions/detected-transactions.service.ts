@@ -23,6 +23,7 @@ interface ConfirmData {
   categoryId?: string;
   bank?: string;
   paymentMethod?: string;
+  isFixedExpense?: boolean;
   projectId?: string;
   applicationId?: string;
   description?: string;
@@ -189,6 +190,7 @@ export class DetectedTransactionsService {
 
     const banco = data.bank ?? (await this.bancoDelCatalogo(detected.bankName, detected.bankCode));
     const tags = ['EMAIL_IMPORT'];
+    if (type === 'EXPENSE') tags.push(data.isFixedExpense ? 'Fijo' : 'No Fijo');
     if (banco) tags.push(banco);
     if (data.paymentMethod) tags.push(data.paymentMethod);
 

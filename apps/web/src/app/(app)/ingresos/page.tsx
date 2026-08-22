@@ -11,6 +11,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
+import { RefreshButton } from '@/components/data-table/refresh-button';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
 import { buildIncomeColumns } from '@/components/income/income-columns';
 import { MimotalentMonthDialog, type MimotalentMonthSelection } from '@/components/income/mimotalent-month-dialog';
@@ -259,17 +260,20 @@ function IngresosContent() {
       description="Ingresos por trabajos y empleos, desglosados por mes"
       action={
         activeWorkspaceId && (
-          <TransactionFormDialog
-            workspaceId={activeWorkspaceId}
-            workspaceType={activeWorkspace?.type}
-            defaultType="INCOME"
-            onCreated={markNew}
-            trigger={
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Nuevo ingreso
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <RefreshButton workspaceId={activeWorkspaceId} />
+            <TransactionFormDialog
+              workspaceId={activeWorkspaceId}
+              workspaceType={activeWorkspace?.type}
+              defaultType="INCOME"
+              onCreated={markNew}
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo ingreso
+                </Button>
+              }
+            />
+          </div>
         )
       }
     >

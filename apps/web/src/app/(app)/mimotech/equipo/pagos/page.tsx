@@ -12,6 +12,7 @@ import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MonthAccordion } from '@/components/data-table/month-accordion';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
+import { RefreshButton } from '@/components/data-table/refresh-button';
 import { SortableHeader } from '@/components/data-table/sortable-header';
 import { StatusToggle } from '@/components/data-table/status-toggle';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
@@ -350,15 +351,18 @@ export default function PagosEquipoPage() {
               </Link>
             </Button>
             {activeWorkspaceId && (
-              <TransactionFormDialog
-                workspaceId={activeWorkspaceId}
-                defaultType="TEAM_PAYMENT"
-                trigger={
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" /> Nuevo pago
-                  </Button>
-                }
-              />
+              <>
+                <RefreshButton workspaceId={activeWorkspaceId} />
+                <TransactionFormDialog
+                  workspaceId={activeWorkspaceId}
+                  defaultType="TEAM_PAYMENT"
+                  trigger={
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" /> Nuevo pago
+                    </Button>
+                  }
+                />
+              </>
             )}
           </div>
         }

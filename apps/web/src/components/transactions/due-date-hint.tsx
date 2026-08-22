@@ -47,11 +47,11 @@ export function DueDateHint({
           {compact ? dueShort(days) : dueLabel(days)}
         </span>
       </TooltipTrigger>
-      <TooltipContent>
+      <TooltipContent side="top" align="end" className="py-2">
         <span className="block font-medium">{dueLabel(days)}</span>
-        <span className="block text-muted-foreground">Fecha límite: {formatDate(limite)}</span>
+        <span className="mt-0.5 block opacity-75">Fecha límite: {formatDate(limite)}</span>
         {!transaction.dueDate && (
-          <span className="block text-muted-foreground">Sin límite propio: se usa la fecha del movimiento.</span>
+          <span className="block opacity-75">Sin límite propio: se usa la fecha del movimiento.</span>
         )}
       </TooltipContent>
     </Tooltip>

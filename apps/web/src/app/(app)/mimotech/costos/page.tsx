@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
 import { FILTER_ALL, FilterSelect } from '@/components/data-table/filter-select';
 import { MonthYearFilter } from '@/components/data-table/month-year-filter';
+import { RefreshButton } from '@/components/data-table/refresh-button';
 import { DuplicateMonthDialog } from '@/components/forms/duplicate-month-dialog';
 import { DuplicateTransactionDialog } from '@/components/forms/duplicate-transaction-dialog';
 import { TransactionFormDialog } from '@/components/forms/transaction-form-dialog';
@@ -201,15 +202,18 @@ function CostosContent() {
       description="Costos de aplicaciones y servicios de MIMOTECH"
       action={
         ws && (
-          <TransactionFormDialog
-            workspaceId={ws}
-            defaultType="BUSINESS_COST"
-            trigger={
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Nuevo costo
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-2">
+            <RefreshButton workspaceId={ws} />
+            <TransactionFormDialog
+              workspaceId={ws}
+              defaultType="BUSINESS_COST"
+              trigger={
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Nuevo costo
+                </Button>
+              }
+            />
+          </div>
         )
       }
     >

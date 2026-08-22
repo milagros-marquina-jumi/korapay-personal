@@ -11,8 +11,6 @@ export async function sincronizarEmpresaCliente(
 
   let globalCompanyId: string | null = null;
   if (empresa) {
-    // Preferir siempre la fila activa: si existe una activa y otra soft-deleted con el
-    // mismo nombre, revivir la borrada recrea empresas duplicadas en el catalogo.
     const existente =
       (await prisma.globalCompany.findFirst({
         where: { name: { equals: empresa, mode: 'insensitive' }, deletedAt: null },

@@ -122,7 +122,6 @@ function ContratosContent() {
     [allContracts, status, type, currency, company, reingreso],
   );
 
-  // Gratificacion y CTS solo aplican a planilla, igual que en reportes.
   const sueldoPlanilla =
     allContracts
       .filter((c) => c.type === 'Planilla' && (c.salary ?? c.grossSalary))

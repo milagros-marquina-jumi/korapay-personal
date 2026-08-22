@@ -6,8 +6,6 @@ import { cn } from '@/lib/utils';
 
 const STORAGE_KEY = 'korapay.showOwnCompany';
 
-// El nombre viene del catalogo (la empresa con syncTalentWorkspaceId). Sin ese
-// dato no hay empresa propia que ocultar: no se asume ningun nombre.
 export function useOwnCompanyVisibility(ownName?: string) {
   const [show, setShow] = useState(false);
   const name = ownName;

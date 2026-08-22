@@ -109,8 +109,6 @@ export class DashboardService {
     const tipoCambio = await ultimoTipoCambio(this.prisma);
     const enSoles = distributions.map((d) => distribucionEnSoles(d, d.contract?.currency, tipoCambio));
     const saldoMimotalents = enSoles.reduce((s, d) => s.plus(new Decimal(String(d.amountRetained))), new Decimal(0));
-    // Los ingresos por talentos se registran con el sueldo que paga el cliente, pero
-    // MIMOTECH solo recibe una parte: el resto se lo queda el talento.
     const recibidoTalentos = enSoles.reduce((s, d) => s.plus(new Decimal(String(d.amountReceived))), new Decimal(0));
     const ingresoReal = recibidoTalentos.gt(0) ? recibidoTalentos : ingresos;
 

@@ -32,7 +32,6 @@ export function useLandingMotion({ scope }: Options): void {
           const { animar } = context.conditions as { animar: boolean; reducir: boolean };
 
           if (!animar) {
-            // Sin movimiento: el contenido aparece de una, nunca oculto.
             gsap.set([REVEAL, STAGGER_ITEM, PARALLAX], { clearProps: 'all', autoAlpha: 1 });
             return;
           }

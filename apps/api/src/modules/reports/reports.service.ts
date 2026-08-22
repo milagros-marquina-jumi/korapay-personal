@@ -173,7 +173,6 @@ export class ReportsService {
       })
       .sort((a, b) => a.year - b.year || a.month - b.month);
 
-    // La clasificacion fijo/no fijo viene de un tag heredado del Excel, no de un campo.
     let fixed = new Decimal(0);
     let variable = new Decimal(0);
     const monthlyFixedVar = new Map<string, { fixed: Decimal; variable: Decimal }>();
@@ -385,7 +384,6 @@ export class ReportsService {
     const today = new Date();
     return [...grouped.entries()]
       .map(([name, rows]) => {
-        // Varios contratos de la misma empresa se suman: son reingresos, no periodos paralelos.
         const periods = rows.map((r) => {
           const end = r.endDate ?? today;
           return {
@@ -471,8 +469,6 @@ export class ReportsService {
       } else if (t.type === 'TEAM_PAYMENT') bucket.team = bucket.team.add(amount);
     }
 
-    // La comision por periodo reemplaza al bruto facturado: sin esto los años y
-    // meses comparaban el sueldo del cliente contra los costos de MIMOTECH.
     const comisionAnio = new Map<number, Decimal>();
     const comisionMes = new Map<string, Decimal>();
     for (const d of distribucionesSoles) {
@@ -604,9 +600,6 @@ export class ReportsService {
       talentPending = talentPending.add(new Decimal(e.pendingAmount));
     }
 
-    // El ingreso de un talento se registra con el monto que factura el cliente,
-    // pero de ahi MIMOTECH cobra amountReceived y el talento se queda con
-    // amountRetained: esa comision es el ingreso real de la empresa.
     const paraTalento = distribucionesSoles.reduce(
       (s, d) => s.plus(new Decimal(String(d.amountRetained))),
       new Decimal(0),

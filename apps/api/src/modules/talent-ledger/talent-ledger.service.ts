@@ -83,14 +83,27 @@ export class TalentLedgerService {
     });
   }
 
-  private totals(entries: { paidAmount: unknown; debtAmount: unknown; pendingAmount: unknown }[]) {
+  private totals(
+    entries: { paidAmount: unknown; debtAmount: unknown; pendingAmount: unknown; debtOwner?: string | null }[],
+  ) {
     const totalPaid = entries.reduce((s, e) => s.plus(new Decimal(String(e.paidAmount))), new Decimal(0));
     const totalDebt = entries.reduce((s, e) => s.plus(new Decimal(String(e.debtAmount))), new Decimal(0));
     const totalPending = entries.reduce((s, e) => s.plus(new Decimal(String(e.pendingAmount))), new Decimal(0));
+
+    const sumaPorDueno = (dueno: string) =>
+      entries
+        .filter((e) => (e.debtOwner ?? 'TALENT') === dueno)
+        .reduce((s, e) => s.plus(new Decimal(String(e.pendingAmount))), new Decimal(0));
+    const meDeben = sumaPorDueno('TALENT');
+    const yoDebo = sumaPorDueno('MINE');
+
     return {
       totalPaid: totalPaid.toFixed(2),
       totalDebt: totalDebt.toFixed(2),
       totalPending: totalPending.toFixed(2),
+      pendingOwedToMe: meDeben.toFixed(2),
+      pendingOwedByMe: yoDebo.toFixed(2),
+      netBalance: meDeben.minus(yoDebo).toFixed(2),
       balance: totalPending.toFixed(2),
     };
   }

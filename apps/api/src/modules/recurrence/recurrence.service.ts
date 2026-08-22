@@ -4,7 +4,6 @@ import type { CreateRecurrenceDto, UpdateRecurrenceDto } from './recurrence.dto'
 
 const FIXED_TAG = 'Fijo';
 
-// Tope de periodos que una regla atrasada recupera por ejecucion.
 const MAX_ATRASO = 24;
 
 export function siguienteFecha(desde: Date, frequency: string, interval = 1): Date {
@@ -136,7 +135,6 @@ export class RecurrenceService {
       let creadas = regla.generatedCount;
       let termino = false;
 
-      // Una regla atrasada se pone al dia en una sola pasada, sin esperar un cron por periodo.
       while (fecha <= limite && creadas - regla.generatedCount < MAX_ATRASO) {
         if (regla.endDate && fecha > regla.endDate) {
           termino = true;

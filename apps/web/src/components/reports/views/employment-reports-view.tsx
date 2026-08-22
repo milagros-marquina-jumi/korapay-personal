@@ -140,8 +140,6 @@ export function EmploymentReportsView({ workspaceId }: Readonly<{ workspaceId: s
   const porCobrarPendiente = Number(data.receivable?.pending ?? 0);
   const porCobrar = porCobrarVencido + porCobrarPendiente;
 
-  // Gratificacion y CTS solo aplican a planilla, asi que se proyectan sobre el sueldo
-  // del contrato en planilla mas reciente, no sobre el promedio de todos los ingresos.
   const payrollSalary = (contratos ?? [])
     .filter((c) => c.type === 'Planilla' && (c.salary ?? c.grossSalary))
     .sort((a, b) => b.startDate.localeCompare(a.startDate))

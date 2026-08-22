@@ -42,21 +42,16 @@ export default function CalendarioPage() {
   const { data, isLoading } = useCalendar({ includePaid: verPagados });
 
   const byDate = useMemo(() => groupByDate(data?.events ?? []), [data]);
-  // "Proximos" es una lista de acciones: lo ya pagado nunca entra aqui.
   const proximos = useMemo(
     () => upcomingFirst((data?.events ?? []).filter((e) => e.status !== 'PAID')).slice(0, 12),
     [data],
   );
   const pagadosVisibles = useMemo(() => (data?.events ?? []).filter((e) => e.status === 'PAID').length, [data]);
 
-  // Si el mes actual no tiene nada, arranca en el mes con actividad mas cercano:
-  // abrir en un mes vacio hace parecer que el calendario no tiene datos.
   const mesInicial = useMemo(() => {
     const eventos = data?.events ?? [];
     if (!eventos.length) return hoy.slice(0, 7);
     if (eventos.some((e) => e.date.startsWith(hoy.slice(0, 7)))) return hoy.slice(0, 7);
-    // Se elige el mes con mas eventos cercano a hoy: saltar al unico evento
-    // futuro (a un año vista) dejaria fuera todo lo vencido, que es lo urgente.
     const porMes = new Map<string, number>();
     for (const e of eventos) porMes.set(e.date.slice(0, 7), (porMes.get(e.date.slice(0, 7)) ?? 0) + 1);
     const actual = hoy.slice(0, 7);
@@ -80,7 +75,6 @@ export default function CalendarioPage() {
   const anio = Number(activo.slice(0, 4));
   const mes = Number(activo.slice(5, 7)) - 1;
 
-  // Sin dia elegido se muestra el primero del mes visible que tenga eventos.
   const diaActivo =
     seleccion ??
     (byDate.has(hoy) ? hoy : [...byDate.keys()].sort((a, b) => a.localeCompare(b)).find((d) => d.startsWith(activo))) ??

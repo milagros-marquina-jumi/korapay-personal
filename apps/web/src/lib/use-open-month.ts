@@ -41,8 +41,6 @@ function parseKeys(raw: string): string[] {
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed.filter((k): k is string => typeof k === 'string');
-  } catch {
-    // Antes se guardaba una sola clave suelta: se respeta al migrar.
-  }
+  } catch {}
   return raw ? [raw] : [];
 }

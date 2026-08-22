@@ -234,7 +234,6 @@ export class TransactionService {
       exchangeRate: tx.exchangeRate?.toString() ?? null,
     };
   }
-  // El bruto se persiste siempre en soles y solo cuando difiere del neto.
   private grossInBase(gross: string | undefined, net: string, currency: string, rate: string) {
     if (!gross) return null;
     const value = currency === 'PEN' ? new Decimal(gross) : new Decimal(gross).mul(new Decimal(rate));

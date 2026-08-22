@@ -30,8 +30,6 @@ export function useHeroMotion({ scope }: Options): void {
 
           const tl = gsap.timeline({ defaults: { ease: EASE.entrance } });
 
-          // Posiciones absolutas en la timeline: los offsets relativos con
-          // stagger se acumulan y pueden dejar pasos posteriores sin ejecutar.
           tl.from('[data-hero="badge"]', { autoAlpha: 0, y: DISTANCE.subtle, duration: DURATION.base }, 0)
             .from(
               '[data-hero="line"]',
@@ -40,8 +38,6 @@ export function useHeroMotion({ scope }: Options): void {
             )
             .from('[data-hero="sub"]', { autoAlpha: 0, y: DISTANCE.standard, duration: DURATION.base }, 0.6);
 
-          // Estos nodos se montan con el resto del arbol de React; se animan con
-          // tweens propios para no depender del avance de la timeline principal.
           gsap.from('[data-hero="cta"]', {
             autoAlpha: 0,
             y: DISTANCE.standard,
@@ -57,7 +53,6 @@ export function useHeroMotion({ scope }: Options): void {
             delay: 0.95,
             ease: EASE.entrance,
           });
-          // Las barras del grafico crecen desde la base al entrar la ventana.
           gsap.from('[data-hero="panel"] [style*="height"]', {
             scaleY: 0,
             transformOrigin: 'bottom',
@@ -85,7 +80,6 @@ export function useHeroMotion({ scope }: Options): void {
             });
           }
 
-          // Brillo lento de fondo: decorativo, sin informacion asociada.
           gsap.to('[data-hero="glow"]', {
             scale: 1.12,
             autoAlpha: 0.75,

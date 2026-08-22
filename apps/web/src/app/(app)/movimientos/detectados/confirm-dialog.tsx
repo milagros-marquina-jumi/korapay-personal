@@ -23,8 +23,6 @@ import { queryKeys } from '@/lib/query-keys';
 
 const INGRESO_TYPES = new Set(['REFUND', 'REVERSAL', 'TRANSFER_RECEIVED']);
 
-// Un consumo bancario solo cabe en un workspace que registre gastos propios.
-// Los de tipo EMPLOYMENT solo llevan ingresos por planilla.
 const TIPOS_DESTINO = new Set(['PERSONAL', 'SHARED', 'BUSINESS']);
 
 interface ConfirmDialogProps {
@@ -47,7 +45,6 @@ export function ConfirmDialog({ detected, open, onOpenChange, onConfirmed }: Con
   const [paymentMethod, setPaymentMethod] = useState('');
   const [isFixedExpense, setIsFixedExpense] = useState(false);
 
-  // Mismo criterio que el backend: solo un egreso se clasifica en fijo/no fijo.
   const esEgreso = !INGRESO_TYPES.has(detected.transactionType);
 
   const { data: accounts } = useQuery({

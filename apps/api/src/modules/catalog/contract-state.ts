@@ -13,9 +13,6 @@ function startOfDayUtc(date: Date) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
-// Las fechas de contrato se guardan a medianoche UTC, pero "hoy" hay que leerlo
-// en hora local: en Peru (UTC-5) despues de las 19:00 el UTC ya avanzo de dia y
-// un contrato que vence hoy se marcaria como vencido antes de tiempo.
 function startOfLocalDay(date: Date) {
   return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
 }

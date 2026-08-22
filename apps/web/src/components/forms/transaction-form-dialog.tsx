@@ -56,10 +56,38 @@ const TYPE_OPTIONS = [
   { value: 'TEAM_PAYMENT', label: 'Pago equipo' },
 ] as const;
 
-function siguienteMes(fecha: string): string {
-  const d = new Date(`${fecha.slice(0, 10)}T00:00:00Z`);
-  d.setUTCMonth(d.getUTCMonth() + 1);
-  return d.toISOString().slice(0, 10);
+function proximoCobro(fecha: string): string {
+  const base = new Date(`${fecha.slice(0, 10)}T00:00:00Z`);
+  base.setUTCMonth(base.getUTCMonth() + 1);
+  const hoy = new Date();
+  const minimo = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, base.getUTCDate()));
+  return (base > minimo ? base : minimo).toISOString().slice(0, 10);
+}
+
+interface NuevaRecurrencia {
+  workspaceId: string;
+  type: string;
+  concept: string;
+  amount: string;
+  currency: string;
+  startDate: string;
+  categoryId?: string;
+  paymentMethod?: string;
+  bank?: string;
+}
+
+function crearRecurrenciaMensual(datos: NuevaRecurrencia) {
+  return apiFetch('/recurrences', {
+    method: 'POST',
+    body: JSON.stringify({
+      ...datos,
+      categoryId: datos.categoryId || undefined,
+      paymentMethod: datos.paymentMethod || undefined,
+      bank: datos.bank || undefined,
+      frequency: 'MONTHLY',
+      isFixedExpense: true,
+    }),
+  });
 }
 
 const TYPES_BY_WORKSPACE: Record<string, string[]> = {
@@ -143,7 +171,6 @@ export function TransactionFormDialog({
     queryFn: () => apiFetch<PaymentMethodCatalog[]>('/payment-methods'),
     enabled: open,
   });
-  // Medios de pago y bancos comparten el campo tags; se distinguen por su catalogo de origen.
   const catalogs = useMemo(
     () => ({
       paymentMethods: new Set((paymentMethods ?? []).map((p) => p.name)),
@@ -198,6 +225,8 @@ export function TransactionFormDialog({
     return contractOf({ companyId: companySeleccionada, date: fechaElegida }, contracts ?? []);
   }, [showCompany, companySeleccionada, fechaElegida, contracts]);
   const tieneDatosOpcionales = editing && !!(watch('notes') || watch('dueDate'));
+  const puedeCrearRecurrencia =
+    watch('isFixed') === true && watch('type') === 'EXPENSE' && !transaction?.recurrenceRule;
   const showBusinessFields = currentType === 'BUSINESS_COST';
   const showTeamFields = currentType === 'TEAM_PAYMENT';
   const showConcept = !showBusinessFields && !showTeamFields;
@@ -309,10 +338,24 @@ export function TransactionFormDialog({
           dueDate: showDueDate ? values.dueDate || null : null,
           tags: finalTags,
         };
-        return apiFetch<{ id: string }>(`/transactions/${transaction.id}?workspaceId=${workspaceId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(editPayload),
-        });
+        const actualizado = await apiFetch<{ id: string }>(
+          `/transactions/${transaction.id}?workspaceId=${workspaceId}`,
+          { method: 'PATCH', body: JSON.stringify(editPayload) },
+        );
+        if (crearRecurrencia) {
+          await crearRecurrenciaMensual({
+            workspaceId,
+            type: rest.type,
+            concept: rest.concept,
+            amount: rest.amount,
+            currency: rest.currency,
+            startDate: proximoCobro(rest.date),
+            categoryId: categoriaFinal || undefined,
+            paymentMethod,
+            bank,
+          });
+        }
+        return actualizado;
       }
       const payload = {
         ...rest,
@@ -335,22 +378,16 @@ export function TransactionFormDialog({
       });
 
       if (crearRecurrencia) {
-        const inicio = siguienteMes(rest.date);
-        await apiFetch('/recurrences', {
-          method: 'POST',
-          body: JSON.stringify({
-            workspaceId,
-            type: rest.type,
-            concept: rest.concept,
-            amount: rest.amount,
-            currency: rest.currency,
-            frequency: 'MONTHLY',
-            startDate: inicio,
-            categoryId: categoriaFinal || undefined,
-            paymentMethod: paymentMethod || undefined,
-            bank: bank || undefined,
-            isFixedExpense: true,
-          }),
+        await crearRecurrenciaMensual({
+          workspaceId,
+          type: rest.type,
+          concept: rest.concept,
+          amount: rest.amount,
+          currency: rest.currency,
+          startDate: proximoCobro(rest.date),
+          categoryId: categoriaFinal || undefined,
+          paymentMethod,
+          bank,
         });
       }
       return creado;
@@ -440,7 +477,7 @@ export function TransactionFormDialog({
             </div>
           )}
 
-          {!editing && watch('isFixed') && watch('type') === 'EXPENSE' && (
+          {puedeCrearRecurrencia && (
             <label
               htmlFor="crearRecurrencia"
               className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-brand/30 bg-brand-soft/40 px-3 py-2.5"

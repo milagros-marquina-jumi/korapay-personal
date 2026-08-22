@@ -23,8 +23,6 @@ interface Contexto {
   includePaid: boolean;
 }
 
-// Cada workspace expone rutas distintas en el sidebar: /movimientos no existe
-// en EMPLOYMENT ni en BUSINESS, asi que el destino depende del tipo.
 const TX_ROUTE: Record<string, string> = {
   PERSONAL: '/movimientos',
   SHARED: '/movimientos',
@@ -120,8 +118,6 @@ export class CalendarService {
 
     return rows.map((tx) => {
       const cobro = tx.type === 'INCOME';
-      // `concept` suele traer "Persona - Empresa"; es mas util que la
-      // descripcion, que en muchos movimientos importados viene vacia.
       const titulo = tx.concept?.trim() || tx.description?.trim();
       const pagado = tx.status === 'PAID';
       let estado: CalendarEventDto['status'] | undefined;
@@ -135,7 +131,6 @@ export class CalendarService {
           source: 'TRANSACTION',
           kind: cobro ? 'COLLECTION' : 'PAYMENT',
           title: titulo || (cobro ? 'Ingreso' : 'Movimiento'),
-          // Lo ya pagado se ancla a la fecha en que ocurrio, no a su vencimiento.
           at: pagado ? tx.date : (tx.dueDate ?? tx.date),
           amount: tx.amountBase.toString(),
           currency: tx.currency,
@@ -168,7 +163,6 @@ export class CalendarService {
     const eventos: CalendarEventDto[] = [];
     for (const row of rows) {
       const pagado = row.status === 'PAID';
-      // Una fila saldada tiene pendiente en 0: se muestra por lo que se pago.
       let monto = row.debtAmount;
       if (!pagado && new Decimal(row.pendingAmount).gt(0)) monto = row.pendingAmount;
       if (new Decimal(monto).lte(0)) continue;
@@ -389,8 +383,6 @@ export class CalendarService {
     let overdue = new Decimal(0);
 
     for (const event of events) {
-      // Las cards responden "que me falta": lo ya pagado no suma en ninguna,
-      // si no "Por pagar" dejaria de ser el dinero que todavia debo.
       if (event.status === 'PAID') continue;
 
       const monto = new Decimal(event.amount ?? 0);

@@ -16,8 +16,6 @@ export function WorkspaceSwitcher({ collapsed = false }: Readonly<WorkspaceSwitc
   const { workspaces, activeWorkspaceId, activeWorkspace, setActiveWorkspaceId, isLoading } = useWorkspace();
   const router = useRouter();
 
-  // Los inactivos se ocultan, salvo el que este seleccionado: si no, el Select
-  // quedaria sin opcion valida y se veria vacio.
   const visibles = workspaces.filter((w) => (w.status ?? 'ACTIVE') !== 'INACTIVE' || w.id === activeWorkspaceId);
 
   if (isLoading || !activeWorkspaceId) {

@@ -8,7 +8,6 @@ import { Character } from '@/components/landing/character';
 import { FEATURES, PWA, REPORTES, WORKSPACES } from '@/components/landing/landing-data';
 import { Button } from '@/components/ui/button';
 
-// Nombres y cifras inventados para la vitrina publica.
 const DURACION_DEMO = [
   { n: 'Cliente A', d: '1 año 6 meses', w: 'w-full', c: '2 contratos' },
   { n: 'Cliente B', d: '1 año 2 meses', w: 'w-[78%]', c: '1 contrato' },

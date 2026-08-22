@@ -44,8 +44,6 @@ function rate(tax: Decimal, income: Decimal) {
   return Number(tax.div(income).mul(100).toFixed(2));
 }
 
-// La renta de un ejercicio se declara y paga durante el año siguiente:
-// devengado la imputa al año que la genero, caja al año en que sale el dinero.
 export function buildTaxBurden(incomes: IncomeRow[], taxes: TaxRow[]): TaxBurden {
   const incomeByYear = new Map<number, Decimal>();
   for (const row of incomes) {

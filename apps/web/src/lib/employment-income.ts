@@ -25,7 +25,6 @@ export function accountNumber(notes?: string | null): string | null {
   return bare?.[0]?.trim() ?? null;
 }
 
-// amountGross solo se guarda cuando hubo descuento y siempre en soles; si falta, el bruto es el neto.
 export function grossOf(tx: Transaction): number {
   if (tx.currency === 'USD') return Number(tx.amountBase);
   return Number(tx.amountGross ?? tx.amountBase);
@@ -41,8 +40,6 @@ export interface ConceptOrdinal {
   total: number;
 }
 
-// Numera cada ingreso dentro de su empresa y concepto: el 3er sueldo de una
-// empresa es el 3 de N, contado en orden cronologico desde el mas antiguo.
 export function conceptOrdinals(transactions: Transaction[]): Map<string, ConceptOrdinal> {
   const groups = new Map<string, Transaction[]>();
   for (const tx of transactions) {
@@ -63,8 +60,6 @@ export function conceptOrdinals(transactions: Transaction[]): Map<string, Concep
   return result;
 }
 
-// El historico no guarda contractId: solo 12 de 322 ingresos lo tienen. Por eso
-// el contrato se resuelve por empresa y rango de fechas, no por la relacion.
 export function contractOf<T extends { companyId?: string | null; startDate: string; endDate?: string | null }>(
   tx: Pick<Transaction, 'companyId' | 'date'> & { contractId?: string | null },
   contracts: (T & { id: string })[],
@@ -75,8 +70,6 @@ export function contractOf<T extends { companyId?: string | null; startDate: str
   }
   if (!tx.companyId) return null;
 
-  // Se compara por mes y no por dia: los ingresos se registran el dia 1, asi que
-  // un contrato que arranca a mitad de mes igual cubre el sueldo de ese mes.
   const mes = tx.date.slice(0, 7);
   const suyos = contracts.filter((c) => c.companyId === tx.companyId);
   const vigente = suyos.find((c) => {
@@ -85,16 +78,12 @@ export function contractOf<T extends { companyId?: string | null; startDate: str
   });
   if (vigente) return vigente;
 
-  // Un ingreso puede pagarse despues de terminar el contrato (liquidacion): se
-  // toma el ultimo contrato que ya habia empezado en ese mes.
   const previos = suyos
     .filter((c) => rangoMeses(c)[0] <= mes)
     .toSorted((a, b) => b.startDate.localeCompare(a.startDate));
   return previos[0] ?? null;
 }
 
-// Un contrato con fin anterior al inicio esta mal capturado: se ordena el rango
-// para que el ingreso siga encontrando su contrato pese al dato invertido.
 function rangoMeses(c: { startDate: string; endDate?: string | null }): [string, string | null] {
   const inicio = c.startDate.slice(0, 7);
   const fin = c.endDate ? c.endDate.slice(0, 7) : null;

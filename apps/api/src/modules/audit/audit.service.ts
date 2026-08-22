@@ -16,7 +16,6 @@ export class AuditService {
   }) {
     const { changes, ...rest } = params;
     return this.prisma.auditLog.create({
-      // changes es una columna JSON: Prisma la tipa como InputJsonValue.
       data: { ...rest, ...(changes ? { changes: changes as Prisma.InputJsonObject } : {}) },
     });
   }

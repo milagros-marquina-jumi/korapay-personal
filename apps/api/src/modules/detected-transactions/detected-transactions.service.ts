@@ -177,8 +177,6 @@ export class DetectedTransactionsService {
     const amount = data.amount ?? detected.amount.toString();
     const currency = data.currency ?? detected.currency;
     const occurredAt = data.occurredAt ? new Date(data.occurredAt) : detected.occurredAt;
-    // En soles la tasa es 1. En dolares se toma la del correo y, si no vino, la
-    // real del dia: nunca 1, que registraria el monto sin convertir.
     let exchangeRate = data.exchangeRate ?? detected.exchangeRate?.toString() ?? '1';
     if (currency !== 'PEN' && !data.exchangeRate && !detected.exchangeRate) {
       exchangeRate = await this.exchangeRateService.getRateForDate(occurredAt.toISOString().slice(0, 10));

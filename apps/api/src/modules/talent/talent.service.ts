@@ -843,7 +843,6 @@ export class TalentService {
   }
   private mapTalentData(data: CreateTalentDto | UpdateTalentDto): Prisma.TalentProfileUncheckedUpdateInput {
     const out: Prisma.TalentProfileUncheckedUpdateInput = {};
-    // name y status no son anulables en el esquema: solo se escriben si traen valor.
     if (data.name) out.name = data.name;
     if (data.status) out.status = data.status;
     if (data.portalScope) out.portalScope = data.portalScope;

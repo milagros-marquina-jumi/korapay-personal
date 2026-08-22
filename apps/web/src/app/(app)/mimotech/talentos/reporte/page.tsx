@@ -200,8 +200,6 @@ function GlobalReportContent() {
     enabled: !!ws,
   });
 
-  // Por defecto las tablas muestran solo talentos activos: los inactivos
-  // agregan columnas que ya no cambian y ensanchan la tabla sin aportar.
   const activeNames = useMemo(
     () => new Set((talents ?? []).filter((t) => t.status === 'ACTIVE').map((t) => t.name)),
     [talents],

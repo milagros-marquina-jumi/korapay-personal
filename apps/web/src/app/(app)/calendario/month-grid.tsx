@@ -27,7 +27,6 @@ export function MonthGrid({
   today: string;
 }>) {
   const primero = new Date(Date.UTC(year, month, 1));
-  // getUTCDay() da 0=domingo; la semana peruana arranca en lunes.
   const offset = (primero.getUTCDay() + 6) % 7;
   const diasEnMes = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const celdas: (number | null)[] = [

@@ -96,7 +96,6 @@ function PagosEquipoContent() {
       const d = new Date(tx.date);
       if (year !== FILTER_ALL && d.getUTCFullYear() !== Number(year)) return false;
       if (month !== FILTER_ALL && d.getUTCMonth() + 1 !== Number(month)) return false;
-      // La tabla ya no filtra sola: al agrupar por mes la busqueda se aplica aqui.
       if (term) {
         const persona = tx.person?.name ?? personName(tx.personId) ?? tx.concept;
         if (!`${persona} ${tx.description ?? ''}`.toLowerCase().includes(term)) return false;

@@ -100,7 +100,6 @@ export default function DashboardPage() {
     const name = t.category?.name ?? SIN_CATEGORIA;
     byCategory.set(name, (byCategory.get(name) ?? 0) + Number(t.amountBase));
   }
-  // Sin categorias reales el donut solo muestra "Sin categoria": no aporta nada.
   const categorized = [...byCategory.keys()].some((name) => name !== SIN_CATEGORIA);
   const donutData = categorized
     ? [...byCategory.entries()]

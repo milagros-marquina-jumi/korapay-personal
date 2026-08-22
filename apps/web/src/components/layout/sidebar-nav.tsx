@@ -26,8 +26,6 @@ export function SidebarNav({ onNavigate, collapsed = false, onToggleCollapse }: 
 
   const matches = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
-  // Solo el href mas especifico que coincide queda activo: sin esto, estando en
-  // /mimotech/talentos/reporte se marcarian a la vez "Talentos" y "Reportes".
   const bestMatch = useMemo(() => {
     const hrefs: string[] = [];
     const collect = (list: NavItem[]) => {
@@ -238,8 +236,6 @@ interface NavGroupProps {
 function NavGroup({ item, index, collapsed, isActive, matches, renderLink, badges }: Readonly<NavGroupProps>) {
   const children = item.children ?? [];
   const totalHijos = children.reduce((suma, c) => suma + (badges[c.href] ?? 0), 0);
-  // El grupo se resalta y se abre si la ruta cae en cualquiera de sus hijos,
-  // aunque el enlace activo sea solo uno de ellos.
   const groupActive = children.some((c) => matches(c.href)) || matches(item.href);
   const [open, setOpen] = useState(groupActive);
   const ItemIcon = item.icon;

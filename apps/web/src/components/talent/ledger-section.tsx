@@ -3,7 +3,7 @@
 import { formatMoney } from '@korapay/domain';
 import { EmptyState, esCero, KPICard, statusLabel } from '@korapay/ui';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Banknote, Eye, Pencil, PiggyBank, Trash2, TrendingDown, Wallet } from 'lucide-react';
+import { Banknote, Eye, Pencil, PiggyBank, Scale, Trash2, TrendingDown, Wallet } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { DataTable } from '@/components/data-table/data-table';
 import { DataTableToolbar } from '@/components/data-table/data-table-toolbar';
@@ -91,11 +91,19 @@ export function LedgerSection({
     const paid = rows.reduce((s, e) => s + Number(e.paidAmount), 0);
     const debt = rows.reduce((s, e) => s + Number(e.debtAmount), 0);
     const pending = rows.reduce((s, e) => s + Number(e.pendingAmount), 0);
+    const porDueno = (dueno: string) =>
+      rows.filter((e) => (e.debtOwner ?? 'TALENT') === dueno).reduce((s, e) => s + Number(e.pendingAmount), 0);
+    const meDeben = porDueno('TALENT');
+    const yoDebo = porDueno('MINE');
     return {
       totalPaid: paid.toFixed(2),
       totalDebt: debt.toFixed(2),
       totalPending: pending.toFixed(2),
       totalReturned: Math.max(0, debt - pending).toFixed(2),
+      meDeben: meDeben.toFixed(2),
+      yoDebo: yoDebo.toFixed(2),
+      neto: (meDeben - yoDebo).toFixed(2),
+      hayAmbas: meDeben > 0 && yoDebo > 0,
     };
   }, [rows]);
 
@@ -111,20 +119,50 @@ export function LedgerSection({
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([key, items]) => {
         const pagado = items.reduce((s, e) => s + Number(e.paidAmount), 0);
-        const falta = items.reduce((s, e) => s + Number(e.pendingAmount), 0);
+        const pendientePorDueno = (dueno: string) =>
+          items.filter((e) => (e.debtOwner ?? 'TALENT') === dueno).reduce((s, e) => s + Number(e.pendingAmount), 0);
+        const meDebenMes = pendientePorDueno('TALENT');
+        const yoDeboMes = pendientePorDueno('MINE');
         return {
           key,
           label: formatMonthYear(`${key}-01T00:00:00.000Z`),
           items,
           metrics: [
             { label: 'Pagado', value: formatMoney(String(pagado), cur) },
-            ...(falta > 0
-              ? [{ label: 'Falta pagar', value: formatMoney(String(falta), cur), className: 'text-destructive' }]
+            ...(meDebenMes > 0
+              ? [
+                  {
+                    label: `${talentName ?? 'El talento'} debe`,
+                    value: formatMoney(String(meDebenMes), cur),
+                    className: 'text-destructive',
+                  },
+                ]
+              : []),
+            ...(yoDeboMes > 0
+              ? [
+                  {
+                    label: `${adminName ?? 'Yo'} debe`,
+                    value: formatMoney(String(yoDeboMes), cur),
+                    className: 'text-warning',
+                  },
+                ]
+              : []),
+            ...(meDebenMes > 0 && yoDeboMes > 0
+              ? [
+                  {
+                    label:
+                      meDebenMes >= yoDeboMes
+                        ? `Neto a favor de ${adminName ?? 'mí'}`
+                        : `Neto a favor de ${talentName ?? 'el talento'}`,
+                    value: formatMoney(String(Math.abs(meDebenMes - yoDeboMes)), cur),
+                    className: 'font-semibold',
+                  },
+                ]
               : []),
           ],
         };
       });
-  }, [rows, cur]);
+  }, [rows, cur, talentName, adminName]);
 
   const now = new Date();
   const currentMonthKey = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
@@ -289,6 +327,19 @@ export function LedgerSection({
                 : 'De esa deuda, cuánto sigue sin devolver a día de hoy.'
             }
           />
+          {totales.hayAmbas && (
+            <KPICard
+              label={
+                Number(totales.neto) >= 0
+                  ? `Neto a favor de ${adminName ?? 'mí'}`
+                  : `Neto a favor de ${talentName ?? 'el talento'}`
+              }
+              value={formatMoney(String(Math.abs(Number(totales.neto))), cur)}
+              icon={Scale}
+              color={Number(totales.neto) >= 0 ? 'text-success' : 'text-warning'}
+              tooltip={`${talentName ?? 'El talento'} debe ${formatMoney(totales.meDeben, cur)} y ${adminName ?? 'yo'} debe ${formatMoney(totales.yoDebo, cur)}. Al compensar queda esa diferencia.`}
+            />
+          )}
           <KPICard
             label="Ya devuelto"
             value={formatMoney(totales.totalReturned, cur)}

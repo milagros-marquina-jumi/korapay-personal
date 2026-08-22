@@ -32,7 +32,6 @@ export class CatalogController {
     private readonly rucLookup: RucLookupService,
   ) {}
 
-  // ---- Applications (por workspace) ----
   @Get('applications')
   @UseGuards(WorkspaceGuard)
   @ApiOperation({ summary: 'List applications' })
@@ -62,7 +61,6 @@ export class CatalogController {
     return this.catalogService.removeApplication(id, workspaceId);
   }
 
-  // ---- Projects (por workspace) ----
   @Get('projects')
   @UseGuards(WorkspaceGuard)
   @ApiOperation({ summary: 'List projects' })
@@ -88,7 +86,6 @@ export class CatalogController {
     return this.catalogService.removeProject(id, workspaceId);
   }
 
-  // ---- Read-only por workspace ----
   @Get('employment-contracts')
   @UseGuards(WorkspaceGuard)
   @ApiOperation({ summary: 'List employment contracts' })
@@ -118,7 +115,6 @@ export class CatalogController {
     return this.catalogService.removeEmploymentContract(id, workspaceId);
   }
 
-  // ---- Payment methods (global) ----
   @Get('payment-methods')
   @ApiOperation({ summary: 'List payment methods' })
   paymentMethods() {
@@ -140,7 +136,6 @@ export class CatalogController {
     return this.catalogService.removePaymentMethod(id);
   }
 
-  // ---- Currencies (global) ----
   @Get('currencies')
   @ApiOperation({ summary: 'List currencies' })
   currencies() {
@@ -157,7 +152,6 @@ export class CatalogController {
     return this.catalogService.removeCurrency(id);
   }
 
-  // ---- Global companies ----
   @Get('ruc-lookup/:ruc')
   @ApiOperation({ summary: 'Consultar razon social en SUNAT por RUC' })
   lookupRuc(@Param('ruc') ruc: string) {
@@ -185,7 +179,6 @@ export class CatalogController {
     return this.catalogService.removeGlobalCompany(id);
   }
 
-  // ---- Global clients ----
   @Get('global-clients')
   @ApiOperation({ summary: 'List global clients' })
   globalClients() {
@@ -207,7 +200,6 @@ export class CatalogController {
     return this.catalogService.removeGlobalClient(id);
   }
 
-  // ---- Banks (global) ----
   @Get('banks')
   @ApiOperation({ summary: 'List banks' })
   banks() {

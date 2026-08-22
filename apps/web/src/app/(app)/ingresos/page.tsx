@@ -78,8 +78,6 @@ function IngresosContent() {
     enabled: !!activeWorkspaceId,
   });
 
-  // La empresa propia se identifica por su vinculo en BD con el workspace de talentos,
-  // no por el nombre: renombrarla no rompe el toggle ni la sincronizacion.
   const ownCompanyRow = (companies ?? []).find((c) => c.syncTalentWorkspaceId);
   const { show: showOwn, toggle: toggleOwn, isHidden, ownName } = useOwnCompanyVisibility(ownCompanyRow?.name);
   const businessWorkspace = ownCompanyRow?.syncTalentWorkspaceId
@@ -102,7 +100,6 @@ function IngresosContent() {
     queryFn: () => apiFetch<BankCatalog[]>('/banks'),
   });
 
-  // El catalogo global decide si un tag es medio de pago o banco.
   const catalogs = useMemo(
     () => ({
       paymentMethods: new Set((paymentMethods ?? []).map((p) => p.name)),
@@ -158,8 +155,6 @@ function IngresosContent() {
 
   const companyName = (id?: string | null) => companies?.find((c) => c.id === id)?.name;
 
-  // Se numera sobre el total y no sobre lo filtrado: el sueldo 3 de 15 sigue
-  // siendo el 3 aunque la vista muestre un solo mes.
   const ordinals = useMemo(() => conceptOrdinals(data?.data ?? []), [data?.data]);
 
   const rows = useMemo(() => {

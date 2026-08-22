@@ -19,8 +19,6 @@ export class ContractIncomeService {
     });
     if (!contract?.companyId) return { created: 0, removed: 0 };
 
-    // El sueldo del contrato es el BRUTO: el neto lo escribe el usuario en cada
-    // movimiento, porque los descuentos varian mes a mes.
     const grossSalary = contract.salary?.toString() ?? (await this.latestGrossSalary(workspaceId, contract.companyId));
     const netSalary = contract.salary ? null : await this.latestNetSalary(workspaceId, contract.companyId);
 
@@ -73,7 +71,6 @@ export class ContractIncomeService {
     return { created: pending.length, removed: removed.count };
   }
 
-  // Al terminar un contrato antes de tiempo se descartan las cuotas que ya no ocurriran.
   async removeFutureIncomes(contractId: string, workspaceId: string) {
     const result = await this.prisma.transaction.deleteMany({
       where: { workspaceId, contractId, status: 'PENDING', date: { gt: new Date() } },

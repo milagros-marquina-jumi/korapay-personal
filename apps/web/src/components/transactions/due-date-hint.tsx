@@ -26,7 +26,6 @@ export function DueDateHint({
 }: Readonly<{ transaction: Transaction; compact?: boolean }>) {
   if (transaction.status === 'PAID' || transaction.status === 'CANCELLED') return null;
 
-  // Sin fecha limite el vencimiento se mide contra la fecha del movimiento.
   const limite = transaction.dueDate ?? transaction.date;
   if (!limite) return null;
 

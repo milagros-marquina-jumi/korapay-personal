@@ -28,6 +28,7 @@ function normalize(values: LedgerFormValues) {
   return {
     date: values.date,
     type: values.type,
+    debtOwner: values.debtOwner,
     paidAmount: values.paidAmount || '0',
     debtAmount: values.debtAmount || '0',
     pendingAmount: values.pendingAmount || '0',
@@ -137,6 +138,15 @@ export default function TalentPortalPage() {
       />
     );
   }
+
+  const debeElTalento = Number(profile.summary.pendingOwedToMe ?? 0);
+  const debeLaEmpresa = Number(profile.summary.pendingOwedByMe ?? 0);
+  const hayAmbasDirecciones = debeElTalento > 0 && debeLaEmpresa > 0;
+  const saldoNeto = debeElTalento - debeLaEmpresa;
+  const etiquetaSaldoNeto =
+    saldoNeto > 0
+      ? `Saldo neto: le debo a ${profile.owner?.name ?? 'la empresa'}`
+      : `Saldo neto: me debe ${profile.owner?.name ?? 'la empresa'}`;
 
   const verEgresos = profile.scope === 'DEBTS_EXPENSES';
   const egresos = (entries ?? []).filter((e) => e.type === 'EGRESO');
@@ -258,12 +268,39 @@ export default function TalentPortalPage() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {hayAmbasDirecciones && (
+                    <>
+                      <TableRow className="border-t-2">
+                        <TableCell colSpan={3} className="text-muted-foreground text-sm">
+                          Le debo a {profile.owner?.name ?? 'la empresa'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-right tabular-nums">
+                          {formatMoney(profile.summary.pendingOwedToMe, 'PEN')}
+                        </TableCell>
+                        <TableCell colSpan={3} />
+                      </TableRow>
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-muted-foreground text-sm">
+                          Me debe {profile.owner?.name ?? 'la empresa'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-right tabular-nums">
+                          {formatMoney(profile.summary.pendingOwedByMe, 'PEN')}
+                        </TableCell>
+                        <TableCell colSpan={3} />
+                      </TableRow>
+                    </>
+                  )}
                   <TableRow className="border-t-2 bg-muted/40">
                     <TableCell colSpan={3} className="font-semibold text-sm">
-                      Total
+                      {hayAmbasDirecciones ? etiquetaSaldoNeto : 'Total'}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-destructive">
-                      {formatMoney(profile.summary.totalPending, 'PEN')}
+                    <TableCell
+                      className={cn(
+                        'whitespace-nowrap text-right font-semibold tabular-nums',
+                        saldoNeto > 0 ? 'text-destructive' : 'text-success',
+                      )}
+                    >
+                      {formatMoney(String(Math.abs(saldoNeto)), 'PEN')}
                     </TableCell>
                     <TableCell colSpan={3} />
                   </TableRow>

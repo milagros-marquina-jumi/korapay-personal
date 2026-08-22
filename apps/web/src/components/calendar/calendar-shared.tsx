@@ -38,7 +38,6 @@ const STATUS_LABEL: Record<CalendarStatus, string> = {
 };
 
 export function dotColor(event: CalendarEvent): string {
-  // Lo pagado va en gris: esta en el calendario como historial, no como aviso.
   if (event.status === 'PAID') return 'bg-muted-foreground/40';
   if (event.status === 'OVERDUE') return 'bg-destructive';
   if (event.kind === 'COLLECTION') return 'bg-success';
@@ -68,7 +67,6 @@ export function EventRow({
   const pagado = event.status === 'PAID';
   const { activeWorkspaceId, setActiveWorkspaceId } = useWorkspace();
 
-  // Un cobro ya saldado no se pinta en verde: no es dinero por entrar.
   let tonoMonto = 'text-foreground';
   if (pagado) tonoMonto = 'text-muted-foreground';
   else if (cobro) tonoMonto = 'text-success';

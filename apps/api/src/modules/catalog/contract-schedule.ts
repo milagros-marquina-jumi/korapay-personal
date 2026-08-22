@@ -21,7 +21,6 @@ function payDateFor(year: number, month: number, payDay: number) {
   return new Date(Date.UTC(year, month, Math.min(payDay, lastDay)));
 }
 
-// El primer sueldo se cobra el mes siguiente al inicio; el ultimo, el mes en que termina.
 export function buildContractSchedule({
   startDate,
   endDate,

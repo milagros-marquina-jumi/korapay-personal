@@ -40,8 +40,6 @@ function ReporteEquipoContent() {
 
   const porPersona = data.teamByPerson ?? [];
   const totalEquipo = porPersona.reduce((s, p) => s + Number(p.total), 0);
-  // Se mide contra la comision que gana MIMOTECH, no contra lo que factura el
-  // cliente: de ese bruto la mayor parte se le paga al talento.
   const totalIngresos = Number(data.receivedIncome ?? data.income ?? 0);
   const pesoSobreIngresos = totalIngresos > 0 ? (totalEquipo / totalIngresos) * 100 : 0;
 

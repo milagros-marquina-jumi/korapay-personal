@@ -97,7 +97,6 @@ export function PersonalReportsView({ workspaceId }: Readonly<{ workspaceId: str
   const totalFixedVar = fixed + variable;
   const fixedPct = totalFixedVar > 0 ? (fixed / totalFixedVar) * 100 : 0;
 
-  // Sin categorias registradas la pestaña queda vacia: no se muestra.
   const hasCategories = (data.expenseByCategory ?? []).length > 0;
 
   const gastado = data.incomeVsExpense.reduce((s, m) => s + Number(m.expense), 0);

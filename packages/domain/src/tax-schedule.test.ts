@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseTaxSchedule, scheduleTotals } from './tax-schedule';
 
-// Cronograma real de la Resolucion 0230174078150 (Anexo N.º 2).
 const PDF = `Cuota
 Saldo
 N°
@@ -40,8 +39,6 @@ const ESPACIOS = `1   31/07/2025   1,419.00   144.00   1,563.00   16,289.00
 2   29/08/2025   1,429.00   117.00   1,546.00   14,860.00
 3   30/09/2025   1,439.00   107.00   1,546.00   13,421.00`;
 
-// Copiado del visor de PDF: una cuota por linea, columnas con UN solo espacio
-// y la cabecera/notas del anexo delante.
 const UN_ESPACIO = `ANEXO N.° 2: CRONOGRAMA
 Página: 4/4
 Nota: El pago de las cuotas mensuales podrá efectuarse con NPS o mediante Formulario1662, en cuyo caso, deberá indicarse el

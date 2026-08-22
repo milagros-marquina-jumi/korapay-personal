@@ -10,7 +10,6 @@ const NAV = [
   { icon: Receipt, label: 'Pendientes' },
 ];
 
-// Datos de demostracion: nombres y montos inventados para la vitrina.
 const KPI = [
   { label: 'Ingresos', valor: 'S/ 8,450', delta: '+12%', positivo: true },
   { label: 'Egresos', valor: 'S/ 3,120', delta: '-4%', positivo: false },
